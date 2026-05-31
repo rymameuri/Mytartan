@@ -1,0 +1,58 @@
+.scotty-avatar {
+  position: relative;
+  overflow: hidden;
+  background: transparent;
+}
+
+.scotty-avatar--hero {
+  width: min(280px, 70vw);
+  height: min(320px, 80vw);
+  border-radius: 20px;
+  background: #f3f3f3;
+}
+
+.scotty-avatar--compact {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  border: 1px solid #ececec;
+}
+
+.scotty-avatar--hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.scotty-avatar__video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.scotty-avatar__video--visible {
+  opacity: 1;
+}
+
+.scotty-avatar__overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  color: #999999;
+  background: #f3f3f3;
+}
+
+.scotty-avatar__overlay--error {
+  color: #c41230;
+  font-size: 0.6875rem;
+  padding: 8px;
+  text-align: center;
+}

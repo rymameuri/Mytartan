@@ -1,0 +1,97 @@
+{
+  "source": "scotty.qatar.cmu.edu",
+  "generated": "2026-05-31",
+  "total_files": 15,
+  "entries": [
+    {
+      "file": "studies/enrollment-eligibility.txt",
+      "topic": "Enrollment Eligibility",
+      "section": "studies",
+      "summary": "Defines enrollment statuses (eligible, conditionally enrolled, suspended, etc.) and types of registration holds that block course registration."
+    },
+    {
+      "file": "studies/registration-and-schedule-planning-resources.txt",
+      "topic": "Registration and Schedule Planning Resources",
+      "section": "studies",
+      "summary": "Central hub of tools and links for building a course schedule, including Stellic, SOC, cross-registration, minors, and conflict resolution procedures."
+    },
+    {
+      "file": "studies/plan-course-schedule.txt",
+      "topic": "Plan Course Schedule",
+      "section": "studies",
+      "summary": "Four-step guide to planning a semester: browse the Schedule of Classes, check progress in Stellic, plan in SIO, and register when registration week opens."
+    },
+    {
+      "file": "studies/micro-courses.txt",
+      "topic": "Micro Courses",
+      "section": "studies",
+      "summary": "Describes CMU-Q micro courses taught by Pittsburgh faculty in 4–6 week formats, including enrollment policies, camera requirements, and Ramadan scheduling."
+    },
+    {
+      "file": "studies/cross-registration.txt",
+      "topic": "Cross Registration",
+      "section": "studies",
+      "summary": "Covers Education City cross-registration for CMU-Q students at partner universities and for hosted students taking courses at CMU-Q, with Fall 2026 deadlines per institution."
+    },
+    {
+      "file": "studies/certificates.txt",
+      "topic": "Certificates",
+      "section": "studies",
+      "summary": "Explains CMU-Q certificate programs as targeted alternatives to minors, including the AI+Finance certificate requirements and faculty advisors."
+    },
+    {
+      "file": "studies/minors.txt",
+      "topic": "Minors",
+      "section": "studies",
+      "summary": "How to declare, change, or drop a minor at CMU-Q, submission deadlines, and the full list of available minors including student-defined options."
+    },
+    {
+      "file": "studies/course-overload.txt",
+      "topic": "Course Overload",
+      "section": "studies",
+      "summary": "Policy for registering beyond a normal course load, including advisor approval for up to 12 extra units and restrictions for first-year students."
+    },
+    {
+      "file": "studies/academic-calendar.txt",
+      "topic": "Academic Calendar",
+      "section": "studies",
+      "summary": "Links to current and archived CMU-Q academic calendars from 2016–2017 through 2027–2028."
+    },
+    {
+      "file": "studies/about-stuco.txt",
+      "topic": "About StuCo (Student College)",
+      "section": "studies",
+      "summary": "Overview of student-taught StuCo courses (Pass/No Pass, 3 units), current offerings, executive committee contacts, and how to apply to teach."
+    },
+    {
+      "file": "studies/student-forms.txt",
+      "topic": "Student Forms",
+      "section": "studies",
+      "summary": "Complete list of registration, schedule change, internal transfer, and student record forms with submission instructions and major-specific transfer requirements."
+    },
+    {
+      "file": "studies/spring-2026-schedule-of-classes.txt",
+      "topic": "Spring 2026 Schedule of Classes",
+      "section": "studies",
+      "summary": "Full Spring 2026 course listing with section numbers, units, meeting times, rooms, and instructors for all CMU-Q offerings."
+    },
+    {
+      "file": "help/accommodations-mental-health-learning-disabilities.txt",
+      "topic": "Accommodations for Mental Health and Learning Disabilities",
+      "section": "help",
+      "summary": "How to request academic accommodations through CaPS-Q for documented mental health or learning disabilities, including assessment and ODR referral process."
+    },
+    {
+      "file": "help/student-handbook.txt",
+      "topic": "Carnegie Mellon Student Handbook",
+      "section": "help",
+      "summary": "Introduction to the CMU Student Handbook with Qatar-specific contact mappings for deans, enrollment services, health, and community responsibility."
+    },
+    {
+      "file": "help/financial-aid-and-scholarship.txt",
+      "topic": "Financial Aid and Scholarship",
+      "section": "help",
+      "summary": "Covers QF financial aid, FAFSA eligibility for U.S. citizens, need-based grants, and TAFAWQ and TAMAIYUZ scholarship requirements and deadlines."
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "floor1": {
+    "rooms": [],
+    "labels": [],
+    "size": [
+      971,
+      823
+    ]
+  },
+  "floor2": {
+    "rooms": [],
+    "labels": [],
+    "size": [
+      949,
+      797
+    ]
+  },
+  "floor3": {
+    "rooms": [],
+    "labels": [],
+    "size": [
+      1018,
+      950
+    ]
+  }
+}

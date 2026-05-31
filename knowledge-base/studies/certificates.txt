@@ -1,0 +1,22 @@
+SOURCE: scotty.qatar.cmu.edu
+TOPIC: Certificates
+SECTION: studies
+---
+Page owner: Jarrin F Nevel
+Last Updated: December 16, 2024
+
+Certificates are designed to provide specialized knowledge and skills in a specific field or topic. These programs require fewer courses than minors, typically 4 courses (33-36 units minimum) including a capstone or ePortfolio course. Unlike minors, certificate programs may not cover a broad range of topics within a discipline; instead, they offer a targeted and practical focus. Certificate programs are often tailored to meet the demands of specific industries and provide students with a credential indicating their expertise in a particular area.
+
+The choice between a minor and a certificate depends on a student's goals, interests, and the level of expertise they wish to achieve in a particular field. Note that for majors that require a minor or concentration, a certificate will not satisfy the requirement. If in doubt, please discuss with your academic advisor.
+
+AI + Finance Certificate
+
+The CMUQ Certificate in AI+Finance provides students with a valuable skill set to excel in this field. It equips them with the necessary knowledge and skills to apply AI techniques to financial data analysis, develop investment strategies, and manage risk. Students who complete this certificate will be well-prepared to pursue careers in the financial industry, including roles such as financial analytics, data analyst, or risk management specialist. It provides students with a competitive edge in this rapidly-evolving landscape and helps meet the increasing demand for professionals with expertise in this field.
+
+Guidelines:
+- Faculty Advisors: Serkan Akguc and Gianni DiCaro
+- Minimum of 33 units
+- Declaration Form available on Scotty
+
+Available certificate programs on Scotty (each with expandable requirements):
+- AI + Finance

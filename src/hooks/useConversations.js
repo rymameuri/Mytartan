@@ -1,0 +1,168 @@
+import { useCallback, useEffect, useState } from "react";
+
+const STORAGE_KEY = "tartan-scotty-conversations";
+
+function generateId() {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+function deriveTitle(messages) {
+  const first = messages.find((m) => m.role === "user");
+  if (!first) return "New chat";
+  const text = first.content.trim();
+  return text.length > 42 ? `${text.slice(0, 42)}…` : text;
+}
+
+function loadFromStorage() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return { conversations: [], projects: [], activeConversationId: null };
+    const parsed = JSON.parse(raw);
+    return {
+      conversations: Array.isArray(parsed.conversations) ? parsed.conversations : [],
+      projects: Array.isArray(parsed.projects) ? parsed.projects : [],
+      activeConversationId: parsed.activeConversationId ?? null,
+    };
+  } catch {
+    return { conversations: [], projects: [], activeConversationId: null };
+  }
+}
+
+export function useConversations() {
+  const [store, setStore] = useState(loadFromStorage);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+  }, [store]);
+
+  const activeConversation = store.conversations.find(
+    (c) => c.id === store.activeConversationId
+  );
+
+  const persistCurrent = useCallback((messages, mode) => {
+    setStore((prev) => {
+      if (messages.length === 0 && !prev.activeConversationId) return prev;
+
+      const now = Date.now();
+      const title = deriveTitle(messages);
+
+      if (!prev.activeConversationId) {
+        const id = generateId();
+        const conversation = {
+          id,
+          title,
+          mode,
+          messages,
+          projectId: null,
+          createdAt: now,
+          updatedAt: now,
+        };
+        return {
+          ...prev,
+          activeConversationId: id,
+          conversations: [conversation, ...prev.conversations],
+        };
+      }
+
+      return {
+        ...prev,
+        conversations: prev.conversations.map((c) =>
+          c.id === prev.activeConversationId
+            ? { ...c, title, mode, messages, updatedAt: now }
+            : c
+        ),
+      };
+    });
+  }, []);
+
+  const newChat = useCallback(() => {
+    setStore((prev) => ({ ...prev, activeConversationId: null }));
+    return { messages: [], mode: "qa" };
+  }, []);
+
+  const selectConversation = useCallback((id) => {
+    setStore((prev) => ({ ...prev, activeConversationId: id }));
+    const conv = store.conversations.find((c) => c.id === id);
+    return conv
+      ? { messages: conv.messages, mode: conv.mode }
+      : { messages: [], mode: "qa" };
+  }, [store.conversations]);
+
+  const deleteConversation = useCallback((id) => {
+    setStore((prev) => ({
+      ...prev,
+      activeConversationId:
+        prev.activeConversationId === id ? null : prev.activeConversationId,
+      conversations: prev.conversations.filter((c) => c.id !== id),
+    }));
+    return id === store.activeConversationId;
+  }, [store.activeConversationId]);
+
+  const createProject = useCallback((name) => {
+    const trimmed = name.trim();
+    if (!trimmed) return null;
+    const project = { id: generateId(), name: trimmed, createdAt: Date.now() };
+    setStore((prev) => ({
+      ...prev,
+      projects: [...prev.projects, project],
+    }));
+    return project;
+  }, []);
+
+  const renameProject = useCallback((id, name) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    setStore((prev) => ({
+      ...prev,
+      projects: prev.projects.map((p) => (p.id === id ? { ...p, name: trimmed } : p)),
+    }));
+  }, []);
+
+  const deleteProject = useCallback((id) => {
+    setStore((prev) => ({
+      ...prev,
+      projects: prev.projects.filter((p) => p.id !== id),
+      conversations: prev.conversations.map((c) =>
+        c.projectId === id ? { ...c, projectId: null } : c
+      ),
+    }));
+  }, []);
+
+  const moveConversationToProject = useCallback((conversationId, projectId) => {
+    setStore((prev) => ({
+      ...prev,
+      conversations: prev.conversations.map((c) =>
+        c.id === conversationId ? { ...c, projectId, updatedAt: Date.now() } : c
+      ),
+    }));
+  }, []);
+
+  const ungroupedConversations = store.conversations
+    .filter((c) => !c.projectId)
+    .sort((a, b) => b.updatedAt - a.updatedAt);
+
+  const getProjectConversations = useCallback(
+    (projectId) =>
+      store.conversations
+        .filter((c) => c.projectId === projectId)
+        .sort((a, b) => b.updatedAt - a.updatedAt),
+    [store.conversations]
+  );
+
+  return {
+    conversations: store.conversations,
+    projects: store.projects,
+    activeConversationId: store.activeConversationId,
+    activeConversation,
+    ungroupedConversations,
+    getProjectConversations,
+    persistCurrent,
+    newChat,
+    selectConversation,
+    deleteConversation,
+    createProject,
+    renameProject,
+    deleteProject,
+    moveConversationToProject,
+  };
+}
