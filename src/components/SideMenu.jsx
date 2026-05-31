@@ -415,6 +415,8 @@ function SideMenu({
         <a href="https://scotty.qatar.cmu.edu" target="_blank" rel="noopener noreferrer">
           scotty.qatar.cmu.edu
         </a>
+        <br />
+        Made by Rym A. Ameuri · rameuri
       </p>
     </aside>
   );

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Html5Qrcode } from "html5-qrcode";
+import { SendIcon } from "./Icons";
 import mapData from "../data/mapData.json";
 import mapSizes from "../data/mapSizes.json";
 import floor1Img from "../assets/maps/floor1.png";
@@ -28,6 +29,13 @@ const FLOOR_IMAGES = {
 const FLOOR_KEYS = ["floor1", "floor2", "floor3"];
 const VERTICAL_TYPES = new Set(["elevator", "stairwell"]);
 
+const WELCOME_MESSAGE = {
+  id: "welcome",
+  role: "assistant",
+  content:
+    "Tell me where you are and where you'd like to go — for example, \"I'm at room 1051, heading to the library.\" You can also tap the map or scan a QR code to set your location.",
+};
+
 function distance(a, b) {
   return Math.hypot(a.x - b.x, a.y - b.y);
 }
@@ -51,6 +59,87 @@ function getAllLocations() {
     });
   });
   return list;
+}
+
+function toLocationRecord(loc, floorKeyOverride) {
+  const floorKey = floorKeyOverride || loc.floorKey;
+  return {
+    id: loc.id,
+    floorKey,
+    x: loc.x,
+    y: loc.y,
+    label: loc.label,
+    floor: loc.floor,
+    type: loc.type,
+  };
+}
+
+function scoreLocationMatch(text, loc) {
+  const lower = text.toLowerCase().trim();
+  if (!lower) return 0;
+
+  let score = 0;
+  const labelLower = loc.label.toLowerCase();
+  const idLower = loc.id.toLowerCase().replace(/_/g, " ");
+  const roomNum = loc.label.match(/\b(\d{3,4})\b/);
+
+  if (roomNum && lower.includes(roomNum[1])) score += 12;
+  if (lower.includes(labelLower) && labelLower.length > 3) score += 10;
+  if (lower.includes(idLower) && idLower.length > 3) score += 6;
+
+  const aliases = {
+    library: ["library", "1156"],
+    entrance: ["entrance"],
+    elevator: ["elevator", "lift"],
+    stairwell: ["stairs", "stairwell", "staircase"],
+    bathroom: ["bathroom", "restroom", "toilet"],
+    dining: ["dining", "cafeteria", "food"],
+  };
+
+  Object.entries(aliases).forEach(([type, words]) => {
+    if (loc.type !== type && !labelLower.includes(type)) return;
+    words.forEach((word) => {
+      if (lower.includes(word)) score += 8;
+    });
+  });
+
+  const floorMatch = lower.match(/\bfloor\s*([123])\b/i);
+  if (floorMatch && parseInt(floorMatch[1], 10) === loc.floor) score += 3;
+
+  return score;
+}
+
+function bestMatchInText(text, locations, minScore = 6) {
+  let best = null;
+  let bestScore = minScore;
+  locations.forEach((loc) => {
+    const score = scoreLocationMatch(text, loc);
+    if (score > bestScore) {
+      bestScore = score;
+      best = loc;
+    }
+  });
+  return best;
+}
+
+function resolveLocationsFromMessage(text, locations) {
+  const lower = text.toLowerCase();
+  const toSplit = lower.split(/\s+to\s+/i);
+  if (toSplit.length >= 2) {
+    const from = bestMatchInText(toSplit[0], locations);
+    const to = bestMatchInText(toSplit.slice(1).join(" to "), locations);
+    if (from || to) return { from, to };
+  }
+
+  const currentHint = /\b(i'?m\s+at|i am at|starting from|currently at|near|from)\b/i.test(text);
+  const destHint = /\b(to|going to|head(?:ing)? to|need to get to|want to go to|find)\b/i.test(text);
+
+  const match = bestMatchInText(text, locations);
+  if (!match) return { from: null, to: null };
+
+  if (currentHint && !destHint) return { from: match, to: null };
+  if (destHint && !currentHint) return { from: null, to: match };
+  return { from: match, to: null };
 }
 
 function findNearestLocation(floorKey, x, y, maxDist = SNAP_RADIUS, excludeTypes = new Set(["waypoint"])) {
@@ -149,9 +238,7 @@ function buildRoute(current, destination) {
 
   if (!transit) {
     return {
-      segments: [
-        { floor: from.floor, points: [from, to] },
-      ],
+      segments: [{ floor: from.floor, points: [from, to] }],
       directions: [
         "Cross-floor route unavailable. Please use stairs or elevators shown on the map.",
       ],
@@ -196,25 +283,18 @@ function parseQrPayload(raw) {
   return { floorKey, id: roomId, ...loc };
 }
 
-const DESTINATION_TYPES = new Set([
-  "classroom",
-  "conference",
-  "office",
-  "entrance",
-  "library",
-  "dining",
-  "common",
-  "department",
-  "elevator",
-  "stairwell",
-  "bathroom",
-]);
+function formatDirectionsReply(route, current, destination) {
+  if (!current || !destination) return null;
+  const header = `Route from ${current.label} to ${destination.label}:`;
+  return [header, ...route.directions.map((step, i) => `${i + 1}. ${step}`)].join("\n");
+}
 
 function MapNavigator() {
   const [activeFloor, setActiveFloor] = useState("floor1");
   const [currentLocation, setCurrentLocation] = useState(null);
-  const [destinationId, setDestinationId] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
+  const [destination, setDestination] = useState(null);
+  const [chatMessages, setChatMessages] = useState([WELCOME_MESSAGE]);
+  const [chatInput, setChatInput] = useState("");
   const [showQr, setShowQr] = useState(false);
   const [qrError, setQrError] = useState("");
   const [imageScale, setImageScale] = useState(1);
@@ -223,33 +303,14 @@ function MapNavigator() {
   const imageRef = useRef(null);
   const qrScannerRef = useRef(null);
   const html5QrRef = useRef(null);
+  const messagesEndRef = useRef(null);
+  const destinationRef = useRef(destination);
+
+  useEffect(() => {
+    destinationRef.current = destination;
+  }, [destination]);
 
   const allLocations = useMemo(() => getAllLocations(), []);
-
-  const destinationOptions = useMemo(() => {
-    return allLocations
-      .filter((loc) => DESTINATION_TYPES.has(loc.type))
-      .sort((a, b) => {
-        if (a.floorNum !== b.floorNum) return a.floorNum - b.floorNum;
-        return a.label.localeCompare(b.label);
-      });
-  }, [allLocations]);
-
-  const filteredDestinations = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) return destinationOptions;
-    return destinationOptions.filter(
-      (loc) =>
-        loc.label.toLowerCase().includes(q) ||
-        loc.id.toLowerCase().includes(q) ||
-        loc.type.toLowerCase().includes(q)
-    );
-  }, [destinationOptions, searchQuery]);
-
-  const destination = useMemo(() => {
-    if (!destinationId) return null;
-    return destinationOptions.find((loc) => loc.compositeKey === destinationId) || null;
-  }, [destinationId, destinationOptions]);
 
   const route = useMemo(
     () => buildRoute(currentLocation, destination),
@@ -270,6 +331,10 @@ function MapNavigator() {
     window.addEventListener("resize", updateImageScale);
     return () => window.removeEventListener("resize", updateImageScale);
   }, [updateImageScale, activeFloor]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages]);
 
   useEffect(() => {
     if (!showQr) {
@@ -301,16 +366,20 @@ function MapNavigator() {
               setQrError("Invalid QR code. Expected format: cmuq:floor1:room_1051");
               return;
             }
-            setCurrentLocation({
-              id: parsed.id,
-              floorKey: parsed.floorKey,
-              x: parsed.x,
-              y: parsed.y,
-              label: parsed.label,
-              floor: parsed.floor,
-              type: parsed.type,
-            });
+            const loc = toLocationRecord({ ...parsed, floorKey: parsed.floorKey }, parsed.floorKey);
+            setCurrentLocation(loc);
             setActiveFloor(parsed.floorKey);
+            setChatMessages((prev) => {
+              const content = `QR scanned. You're at ${loc.label} on Floor ${loc.floor}. Where would you like to go?`;
+              const idx = prev.findIndex((m) => m.role === "assistant" && m.kind === "location-status");
+              const message = { role: "assistant", kind: "location-status", content };
+              if (idx >= 0) {
+                const next = [...prev];
+                next[idx] = message;
+                return next;
+              }
+              return [...prev, message];
+            });
             setShowQr(false);
             setQrError("");
           },
@@ -335,6 +404,125 @@ function MapNavigator() {
     };
   }, [showQr]);
 
+  function upsertAssistant(kind, content) {
+    setChatMessages((prev) => {
+      const idx = prev.findIndex((m) => m.role === "assistant" && m.kind === kind);
+      const message = {
+        id: kind,
+        role: "assistant",
+        kind,
+        content,
+        updatedAt: Date.now(),
+      };
+      if (idx >= 0) {
+        const next = [...prev];
+        next[idx] = message;
+        return next;
+      }
+      return [...prev, message];
+    });
+  }
+
+  function appendAssistant(content) {
+    setChatMessages((prev) => [...prev, { role: "assistant", content }]);
+  }
+
+  function applyCurrentLocation(loc, source = "map") {
+    setCurrentLocation({ ...loc });
+    setActiveFloor(loc.floorKey);
+
+    const activeDest = destinationRef.current;
+    const prefix = source === "qr" ? "QR scanned. " : "";
+    const suffix = activeDest ? "" : " Where would you like to go?";
+    upsertAssistant(
+      "location-status",
+      `${prefix}You're at ${loc.label} on Floor ${loc.floor}.${suffix}`
+    );
+
+    if (activeDest) {
+      maybeReplyWithRoute(loc, activeDest);
+    }
+  }
+
+  function applyDestination(loc) {
+    setDestination(loc);
+    if (loc.floorKey !== activeFloor) {
+      setActiveFloor(loc.floorKey);
+    }
+  }
+
+  function maybeReplyWithRoute(nextCurrent, nextDest) {
+    if (!nextCurrent || !nextDest) return;
+    const nextRoute = buildRoute(nextCurrent, nextDest);
+    const reply = formatDirectionsReply(nextRoute, nextCurrent, nextDest);
+    if (reply) {
+      upsertAssistant("route-status", `${reply}\n\nRoute updated on the map.`);
+    }
+    setActiveFloor(`floor${nextCurrent.floor}`);
+  }
+
+  function handleChatSubmit(event) {
+    event.preventDefault();
+    const text = chatInput.trim();
+    if (!text) return;
+
+    setChatMessages((prev) => [
+      ...prev,
+      { id: `user-${Date.now()}`, role: "user", content: text },
+    ]);
+    setChatInput("");
+
+    const { from, to } = resolveLocationsFromMessage(text, allLocations);
+    let nextCurrent = currentLocation;
+    let nextDest = destination;
+
+    if (from) {
+      nextCurrent = toLocationRecord(from);
+      setCurrentLocation(nextCurrent);
+      setActiveFloor(nextCurrent.floorKey);
+    }
+    if (to) {
+      nextDest = toLocationRecord(to);
+      setDestination(nextDest);
+      if (nextDest.floorKey) setActiveFloor(nextDest.floorKey);
+    }
+
+    if (from && to) {
+      maybeReplyWithRoute(nextCurrent, nextDest);
+      return;
+    }
+
+    if (from && !to) {
+      const activeDest = destinationRef.current;
+      upsertAssistant(
+        "location-status",
+        `You're at ${from.label} on Floor ${from.floor}.${activeDest ? "" : " Where would you like to go?"}`
+      );
+      if (activeDest) {
+        maybeReplyWithRoute(nextCurrent, activeDest);
+      }
+      return;
+    }
+
+    if (to && !from) {
+      if (nextCurrent) {
+        applyDestination(toLocationRecord(to));
+        maybeReplyWithRoute(nextCurrent, toLocationRecord(to));
+      } else {
+        setDestination(toLocationRecord(to));
+        upsertAssistant(
+          "destination-status",
+          `Destination set to ${to.label} on Floor ${to.floor}. Tell me where you are so I can draw the route.`
+        );
+      }
+      return;
+    }
+
+    appendAssistant(
+      "I couldn't find that location. Try a room number (e.g. 1051), a place name (library, west entrance), or say \"I'm at room 1051, going to the library.\""
+    );
+  }
+
   function handleMapClick(event) {
     const img = imageRef.current;
     if (!img) return;
@@ -347,18 +535,11 @@ function MapNavigator() {
     const y = Math.round(relY * height);
 
     const snapped = findNearestLocation(activeFloor, x, y);
+    let loc;
     if (snapped) {
-      setCurrentLocation({
-        id: snapped.id,
-        floorKey: activeFloor,
-        x: snapped.x,
-        y: snapped.y,
-        label: snapped.label,
-        floor: snapped.floor,
-        type: snapped.type,
-      });
+      loc = toLocationRecord({ ...snapped, floorKey: activeFloor }, activeFloor);
     } else {
-      setCurrentLocation({
+      loc = {
         id: "custom",
         floorKey: activeFloor,
         x,
@@ -366,23 +547,26 @@ function MapNavigator() {
         label: `Custom (${x}, ${y})`,
         floor: parseInt(activeFloor.replace("floor", ""), 10),
         type: "custom",
-      });
+      };
     }
+
+    applyCurrentLocation(loc, "map");
   }
 
-  function renderRouteSvg() {
+  function renderMapOverlay() {
     const scale = imageScale;
     const { width: mapW, height: mapH } = getMapDimensions(activeFloor);
     const floorNum = parseInt(activeFloor.replace("floor", ""), 10);
     const segment = route.segments.find((s) => s.floor === floorNum);
-    if (!segment || segment.points.length < 2) return null;
-
-    const points = segment.points
-      .map((p) => `${p.x * scale},${p.y * scale}`)
-      .join(" ");
 
     const showCurrent = currentLocation && currentLocation.floor === floorNum;
     const showDest = destination && destination.floor === floorNum;
+    const showRoute = segment && segment.points.length >= 2;
+
+    if (!showCurrent && !showDest && !showRoute) return null;
+
+    const routePoints =
+      showRoute && segment.points.map((p) => `${p.x * scale},${p.y * scale}`).join(" ");
 
     return (
       <svg
@@ -390,18 +574,20 @@ function MapNavigator() {
         viewBox={`0 0 ${mapW * scale} ${mapH * scale}`}
         preserveAspectRatio="xMidYMid meet"
       >
-        <polyline
-          className="map-navigator__route"
-          points={points}
-          fill="none"
-          stroke="#C41230"
-          strokeWidth={4}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeDasharray="8 6"
-        />
+        {showRoute && (
+          <polyline
+            className="map-navigator__route"
+            points={routePoints}
+            fill="none"
+            stroke="#c41230"
+            strokeWidth={3}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        )}
         {showCurrent && (
           <circle
+            key={`current-${currentLocation.id}-${currentLocation.x}-${currentLocation.y}`}
             cx={currentLocation.x * scale}
             cy={currentLocation.y * scale}
             r={8}
@@ -415,7 +601,7 @@ function MapNavigator() {
             cx={destination.x * scale}
             cy={destination.y * scale}
             r={8}
-            fill="#dc2626"
+            fill="#111111"
             stroke="#ffffff"
             strokeWidth={2}
           />
@@ -424,124 +610,100 @@ function MapNavigator() {
     );
   }
 
-  const selectedDestLabel = destination
-    ? `${destination.label} (Floor ${destination.floor}, ${destination.type})`
-    : "";
-
   return (
     <div className="map-navigator">
-      <header className="map-navigator__header">
-        <h2 className="map-navigator__title">CMUQ Building Navigator</h2>
-        <div className="map-navigator__controls">
-          <div className="map-navigator__floor-tabs" role="tablist" aria-label="Floor">
-            {FLOOR_KEYS.map((key, i) => (
-              <button
-                key={key}
-                type="button"
-                role="tab"
-                aria-selected={activeFloor === key}
-                className={`map-navigator__floor-tab${
-                  activeFloor === key ? " map-navigator__floor-tab--active" : ""
-                }`}
-                onClick={() => setActiveFloor(key)}
-              >
-                Floor {i + 1}
-              </button>
-            ))}
-          </div>
-          <div className="map-navigator__search-wrap">
-            <input
-              type="search"
-              className="map-navigator__search"
-              placeholder="Search destination (room, library, entrance…)"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              list="map-destinations-list"
-              aria-label="Search destination"
-            />
-            <datalist id="map-destinations-list">
-              {filteredDestinations.map((loc) => (
-                <option
-                  key={loc.compositeKey}
-                  value={`${loc.label} — Floor ${loc.floor} (${loc.type})`}
-                />
+      <div className="map-navigator__split">
+        <div className="map-navigator__map-panel">
+          <div className="map-navigator__map-toolbar">
+            <div className="map-navigator__floor-tabs" role="tablist" aria-label="Floor">
+              {FLOOR_KEYS.map((key, i) => (
+                <button
+                  key={key}
+                  type="button"
+                  role="tab"
+                  aria-selected={activeFloor === key}
+                  className={`map-navigator__floor-tab${
+                    activeFloor === key ? " map-navigator__floor-tab--active" : ""
+                  }`}
+                  onClick={() => setActiveFloor(key)}
+                >
+                  Floor {i + 1}
+                </button>
               ))}
-            </datalist>
+            </div>
+            <button type="button" className="map-navigator__btn" onClick={() => setShowQr(true)}>
+              Scan QR
+            </button>
           </div>
-          <select
-            className="map-navigator__search"
-            style={{ maxWidth: 220 }}
-            value={destinationId}
-            onChange={(e) => {
-              setDestinationId(e.target.value);
-              const loc = destinationOptions.find((l) => l.compositeKey === e.target.value);
-              if (loc) setActiveFloor(loc.floorKey);
-            }}
-            aria-label="Select destination"
-          >
-            <option value="">Select destination…</option>
-            {filteredDestinations.map((loc) => (
-              <option key={loc.compositeKey} value={loc.compositeKey}>
-                {loc.label} — F{loc.floor} ({loc.type})
-              </option>
-            ))}
-          </select>
-          <button type="button" className="map-navigator__btn" onClick={() => setShowQr(true)}>
-            Scan QR Code
-          </button>
-        </div>
-      </header>
 
-      <div className="map-navigator__map-area">
-        {currentLocation && (
-          <p className="map-navigator__status">
-            You are at: <strong>{currentLocation.label}</strong> (Floor {currentLocation.floor})
-            {selectedDestLabel && (
-              <>
-                {" "}
-                → Destination: <strong>{destination.label}</strong>
-              </>
-            )}
-          </p>
-        )}
-        <div
-          className="map-navigator__map-container"
-          ref={mapContainerRef}
-          onClick={handleMapClick}
-          role="presentation"
-        >
-          <img
-            ref={imageRef}
-            src={FLOOR_IMAGES[activeFloor]}
-            alt={`CMUQ Floor ${activeFloor.replace("floor", "")} map`}
-            className="map-navigator__floor-image"
-            width={mapDimensions.width}
-            height={mapDimensions.height}
-            onLoad={updateImageScale}
-            draggable={false}
-          />
-          {renderRouteSvg()}
+          <div className="map-navigator__map-scroll">
+            <div
+              className="map-navigator__map-container"
+              ref={mapContainerRef}
+              onClick={handleMapClick}
+              role="presentation"
+            >
+              <img
+                ref={imageRef}
+                src={FLOOR_IMAGES[activeFloor]}
+                alt={`CMUQ Floor ${activeFloor.replace("floor", "")} map`}
+                className="map-navigator__floor-image"
+                width={mapDimensions.width}
+                height={mapDimensions.height}
+                onLoad={updateImageScale}
+                draggable={false}
+              />
+              {renderMapOverlay()}
+            </div>
+          </div>
+
+          <p className="map-navigator__hint">Tap the map to set your location.</p>
         </div>
-        <p className="map-navigator__status" style={{ marginTop: 8 }}>
-          Tap the map to set your location (snaps within {SNAP_RADIUS}px of labeled rooms).
-        </p>
+
+        <div className="map-navigator__chat-panel">
+          <div className="map-navigator__chat-messages">
+            {chatMessages.map((message) => {
+              const isUser = message.role === "user";
+              return (
+                <div
+                  key={message.id ?? `${message.role}-${message.kind}-${message.updatedAt ?? message.content}`}
+                  className={`map-navigator__message${isUser ? " map-navigator__message--user" : ""}`}
+                >
+                  <div
+                    className={`map-navigator__bubble${
+                      isUser ? " map-navigator__bubble--user" : " map-navigator__bubble--assistant"
+                    }`}
+                  >
+                    {message.content}
+                  </div>
+                </div>
+              );
+            })}
+            <div ref={messagesEndRef} />
+          </div>
+
+          <form className="map-navigator__chat-input-bar" onSubmit={handleChatSubmit}>
+            <div className="map-navigator__chat-input-wrap">
+              <input
+                type="text"
+                className="map-navigator__chat-input"
+                placeholder="I'm at room 1051, heading to the library…"
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                aria-label="Navigation message"
+              />
+              <button
+                type="submit"
+                className="map-navigator__chat-send"
+                disabled={!chatInput.trim()}
+                aria-label="Send"
+              >
+                <SendIcon />
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
-
-      <section className="map-navigator__directions" aria-live="polite">
-        <h3 className="map-navigator__directions-title">Directions</h3>
-        {!currentLocation || !destination ? (
-          <p className="map-navigator__directions-empty">
-            Set your location (map tap or QR scan) and choose a destination to see step-by-step
-            directions.
-          </p>
-        ) : (
-          <ol className="map-navigator__directions-list">
-            {route.directions.map((step, i) => (
-              <li key={i}>{step}</li>
-            ))}
-          </ol>
-        )}
-      </section>
 
       {showQr && (
         <div

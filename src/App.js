@@ -168,68 +168,66 @@ function App() {
       />
 
       <div className="app-main">
-        <div className="app-card">
-          <header className="app-topbar">
-            {isDesktop ? (
-              <div className="app-topbar__spacer" aria-hidden="true" />
-            ) : (
-              <button
-                type="button"
-                className="icon-btn icon-btn--menu"
-                aria-label="Open menu"
-                aria-expanded={menuOpen}
-                onClick={openMenu}
-              >
-                <MenuIcon />
-              </button>
-            )}
-
-            <div className="app-topbar__center">
-              <div className="app-brand">
-                <ScottyLogoIcon />
-                <span className="app-brand__title">Tartan Scotty</span>
-              </div>
-
-              <nav className="mode-nav" role="tablist" aria-label="Chat mode">
-                {MODES.map(({ id, label }, index) => (
-                  <span key={id} className="mode-nav__item">
-                    {index > 0 && <span className="mode-nav__divider" aria-hidden="true" />}
-                    <button
-                      type="button"
-                      role="tab"
-                      aria-selected={mode === id}
-                      className={`mode-nav__tab${mode === id ? " mode-nav__tab--active" : ""}`}
-                      onClick={() => setMode(id)}
-                    >
-                      {label}
-                    </button>
-                  </span>
-                ))}
-              </nav>
-            </div>
-
-            <div className="app-topbar__actions">
-              <button type="button" className="icon-btn" aria-label="Share">
-                <ShareIcon />
-              </button>
-              <button type="button" className="icon-btn" aria-label="Download">
-                <DownloadIcon />
-              </button>
-            </div>
-          </header>
-
-          {mode === "campus" ? (
-            <MapNavigator />
+        <header className="app-topbar">
+          {isDesktop ? (
+            <div className="app-topbar__spacer" aria-hidden="true" />
           ) : (
-            <ChatInterface
-              messages={messages}
-              onSend={handleSend}
-              isLoading={isLoading}
-              showHero={messages.length === 0 && !isLoading}
-              mascot={<ScottyMascot className="hero__mascot-img" />}
-            />
+            <button
+              type="button"
+              className="icon-btn icon-btn--menu"
+              aria-label="Open menu"
+              aria-expanded={menuOpen}
+              onClick={openMenu}
+            >
+              <MenuIcon />
+            </button>
           )}
-        </div>
+
+          <div className="app-topbar__center">
+            <div className="app-brand">
+              <ScottyLogoIcon />
+              <span className="app-brand__title">Tartan Scotty</span>
+            </div>
+
+            <nav className="mode-nav" role="tablist" aria-label="Chat mode">
+              {MODES.map(({ id, label }, index) => (
+                <span key={id} className="mode-nav__item">
+                  {index > 0 && <span className="mode-nav__divider" aria-hidden="true" />}
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={mode === id}
+                    className={`mode-nav__tab${mode === id ? " mode-nav__tab--active" : ""}`}
+                    onClick={() => setMode(id)}
+                  >
+                    {label}
+                  </button>
+                </span>
+              ))}
+            </nav>
+          </div>
+
+          <div className="app-topbar__actions">
+            <button type="button" className="icon-btn" aria-label="Share">
+              <ShareIcon />
+            </button>
+            <button type="button" className="icon-btn" aria-label="Download">
+              <DownloadIcon />
+            </button>
+          </div>
+        </header>
+
+        {mode === "campus" ? (
+          <MapNavigator />
+        ) : (
+          <ChatInterface
+            messages={messages}
+            onSend={handleSend}
+            isLoading={isLoading}
+            showHero={messages.length === 0 && !isLoading}
+            mascot={<ScottyMascot className="hero__mascot-img" />}
+          />
+        )}
       </div>
     </div>
   );
