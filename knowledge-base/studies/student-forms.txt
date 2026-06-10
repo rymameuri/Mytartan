@@ -27,7 +27,6 @@ Registration and schedule change forms:
 
 CMU-Q Only Forms:
 - Independent Study Proposal
-- Incomplete Grade Agreement
 - Internal Transfer Application
 - Internship/Practicum Approval Form
 - Student Defined Major/Minor Request
@@ -63,7 +62,6 @@ Information Systems:
 Policy on changing majors — available on Scotty.
 
 Application forms related to internal transfers:
-- Internal Transfer Application
 
 Student Record and Academic Record Forms
 

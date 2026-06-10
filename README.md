@@ -1,72 +1,165 @@
-# Getting Started with Create React App
+# Tartan Scotty 🏴󠁧󠁢󠁳󠁣󠁴󠁿
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+**Tartan Scotty** is an AI-powered student assistant for Carnegie Mellon University in Qatar (CMU-Q). Students can ask questions about academics, campus life, registration, and more — and get answers grounded in official CMU-Q information.
 
-## Available Scripts
+---
 
-In the project directory, you can run:
+## Features
 
-### `npm start`
+- **Q&A Mode** — Ask anything about CMU-Q policies, registration, minors, scholarships, and student services. Answers come from an official knowledge base, not hallucinated facts.
+- **Campus Guide Mode** — Interactive map navigator for finding rooms, offices, and buildings on campus.
+- **Chat Mode** — Casual conversation with Scotty, still grounded in CMU-Q knowledge.
+- **Tutor Mode** — Step-by-step academic tutoring. Scotty guides you toward answers rather than just giving them away.
+- **Conversation History** — All chats are saved locally and organized into projects.
+- **Dual AI Backend** — Supports both HuggingFace (open-source models) and Anthropic (Claude) as the LLM provider.
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+---
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## Tech Stack
 
-### `npm test`
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React 19, Create React App |
+| Backend | Node.js, Express |
+| AI Providers | HuggingFace Inference API, Anthropic Claude API |
+| Knowledge Retrieval | Custom RAG pipeline (keyword-based retrieval over a structured knowledge base) |
+| Avatar (optional) | LiveAvatar API |
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+---
 
-### `npm run build`
+## Project Structure
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+```
+tartan-scotty/
+├── src/                    # React frontend
+│   ├── components/         # UI components (ChatInterface, MapNavigator, SideMenu, etc.)
+│   ├── hooks/              # useConversations — chat history & project management
+│   └── App.js              # Main app shell, mode switching, API calls
+├── server/
+│   ├── server.js           # Express API server (/api/chat, /api/liveavatar-token)
+│   └── knowledgeBase.js    # Document loading, retrieval scoring, context building
+├── knowledge-base/         # Official CMU-Q content (.txt files)
+│   ├── studies/            # Registration, courses, minors, academic calendar
+│   ├── life/               # Campus life, student services
+│   └── help/               # StuCo, student forms, resources
+└── scripts/                # Data processing utilities (map data, OCR)
+```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+---
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## Prerequisites
 
-### `npm run eject`
+- Node.js 18 or higher
+- npm 9 or higher
+- At least one AI API key (HuggingFace or Anthropic) — see Configuration below
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+---
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+## Setup & Running
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+### 1. Install dependencies
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+```bash
+npm install
+```
 
-## Learn More
+### 2. Configure environment variables
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+```bash
+cp server/.env.example server/.env
+```
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+Open `server/.env` and fill in your API keys (see Configuration below).
 
-### Code Splitting
+### 3. Start the backend server
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+```bash
+npm run server
+```
 
-### Analyzing the Bundle Size
+The API server runs at `http://localhost:3001`.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+### 4. Start the frontend (in a separate terminal)
 
-### Making a Progressive Web App
+```bash
+npm start
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+The app opens at `http://localhost:3000`.
 
-### Advanced Configuration
+---
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+## Configuration (`server/.env`)
 
-### Deployment
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `HUGGINGFACE_API_KEY` | One of these two | Free at [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens) |
+| `ANTHROPIC_API_KEY` | One of these two | Get at [console.anthropic.com](https://console.anthropic.com) |
+| `HF_MODEL` | No | HuggingFace model to use (default: `meta-llama/Meta-Llama-3-8B-Instruct`) |
+| `LIVEAVATAR_API_KEY` | No | Optional — enables the AI avatar feature |
+| `PORT` | No | Backend port (default: `3001`) |
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+If neither AI key is configured, the app falls back to returning raw knowledge base excerpts.
 
-### `npm run build` fails to minify
+---
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
-# Mytartan
-# Mytartan
+## Knowledge Base Format
+
+Each `.txt` file in `knowledge-base/` follows this structure:
+
+```
+TOPIC: Registration and Schedule Planning
+SECTION: studies
+---
+Content goes here. This is what Scotty will use to answer questions.
+Multiple paragraphs are fine.
+```
+
+Files are organized into subdirectories (`studies/`, `life/`, `help/`) and loaded automatically at server startup.
+
+---
+
+## Architecture Overview
+
+```
+User
+ │
+ ▼
+React Frontend (port 3000)
+ │  POST /api/chat { messages, mode }
+ ▼
+Express Backend (port 3001)
+ │
+ ├── buildSystemPrompt(mode, userQuery)
+ │     │
+ │     └── retrieveRelevantDocs(userQuery)
+ │           └── Scores knowledge-base docs by keyword relevance
+ │                 → Returns top-2 matching documents
+ │
+ └── LLM API call (HuggingFace or Anthropic)
+       System prompt = role instructions + KB context
+       → Returns grounded answer
+```
+
+---
+
+## Running Tests
+
+```bash
+npm test
+```
+
+---
+
+## Known Limitations
+
+- **Retrieval is keyword-based**, not semantic. A production version would use text embeddings and cosine similarity for better accuracy.
+- **No user authentication** — conversation history is stored in the browser's local storage only.
+- **Knowledge base is static** — content must be manually updated as CMU-Q policies change.
+- **Avatar feature** requires a paid LiveAvatar API key and is optional.
+
+---
+
+## Team
+
+Built by students at Carnegie Mellon University in Qatar as part of the Emerging Technology course.

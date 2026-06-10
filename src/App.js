@@ -7,7 +7,8 @@ import { DownloadIcon, MenuIcon, ScottyLogoIcon, ShareIcon } from "./components/
 import { useConversations } from "./hooks/useConversations";
 import "./App.css";
 
-const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:3001";
+// In dev, CRA proxies /api/* to localhost:3001 (see package.json "proxy").
+const API_BASE = process.env.REACT_APP_API_URL || "";
 const DESKTOP_BREAKPOINT = 900;
 
 const MODES = [
@@ -112,6 +113,30 @@ function App() {
     handleSend(prompt, "qa");
   }
 
+  function handleShare() {
+    if (!messages.length) return;
+    const text = messages
+      .map((m) => `${m.role === "user" ? "You" : "Scotty"}: ${m.content}`)
+      .join("\n\n");
+    navigator.clipboard.writeText(text).then(() => {
+      alert("Chat copied to clipboard!");
+    });
+  }
+
+  function handleDownload() {
+    if (!messages.length) return;
+    const text = messages
+      .map((m) => `${m.role === "user" ? "You" : "Scotty"}: ${m.content}`)
+      .join("\n\n");
+    const blob = new Blob([text], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `scotty-chat-${new Date().toISOString().slice(0, 10)}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   async function handleSend(text, overrideMode) {
     const activeMode = overrideMode ?? mode;
     const userMessage = { role: "user", content: text };
@@ -135,11 +160,15 @@ function App() {
       const reply = data.reply;
       setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
     } catch (err) {
+      const isNetworkError =
+        err.message === "Failed to fetch" || err.name === "TypeError";
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
-          content: err.message || "Sorry, something went wrong. Please try again.",
+          content: isNetworkError
+            ? "Can't reach the AI server. Open a terminal in the project folder and run: npm run server"
+            : err.message || "Sorry, something went wrong. Please try again.",
         },
       ]);
     } finally {
@@ -208,10 +237,10 @@ function App() {
           </div>
 
           <div className="app-topbar__actions">
-            <button type="button" className="icon-btn" aria-label="Share">
+            <button type="button" className="icon-btn" aria-label="Share" onClick={handleShare} disabled={!messages.length}>
               <ShareIcon />
             </button>
-            <button type="button" className="icon-btn" aria-label="Download">
+            <button type="button" className="icon-btn" aria-label="Download" onClick={handleDownload} disabled={!messages.length}>
               <DownloadIcon />
             </button>
           </div>

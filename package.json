@@ -21,11 +21,14 @@
     "simli-client": "^3.0.1",
     "web-vitals": "^2.1.4"
   },
+  "proxy": "http://localhost:3001",
   "scripts": {
     "server": "node server/server.js",
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
+    "test:server": "jest server/ --testEnvironment node --no-coverage",
+    "test:all": "CI=true react-scripts test --watchAll=false && jest server/ --testEnvironment node --no-coverage",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
@@ -46,12 +49,20 @@
       "last 1 safari version"
     ]
   },
-  "description": "This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).",
+  "description": "AI-powered student assistant for Carnegie Mellon University in Qatar, built with React and a RAG knowledge base.",
   "main": "index.js",
   "devDependencies": {
-    "jest": "^27.5.1"
+    "jest": "^27.5.1",
+    "supertest": "^7.2.2"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "chatbot",
+    "RAG",
+    "CMU-Q",
+    "AI",
+    "education",
+    "student-assistant"
+  ],
+  "author": "Carnegie Mellon University in Qatar — Emerging Technology Team",
   "license": "ISC"
 }

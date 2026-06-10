@@ -2,7 +2,6 @@ SOURCE: scotty.qatar.cmu.edu
 TOPIC: Spring 2026 Schedule of Classes
 SECTION: studies
 ---
-
 Published: November 19, 2025
 
 Columns: COURSE | COURSE TITLE | SECTION | UNITS | DAY | BEGIN TIME | END TIME | ROOM | INSTRUCTORS
@@ -55,8 +54,7 @@ COURSE COURSE TITLE SECTION UNITS DAY BEGIN TIME END TIME ROOM INSTRUCTORS
 15112 Fundamentals of Programming and Computer Science (FNDMTLS OF PGMG & CS) W 12 W 11:30AM 12:45PM 1185 Gedawy, H (hkg)
 15122 Principles of Imperative Computation (PRIN IMPRTV COMPTATN) 3 12 UT 04:00PM 05:15PM 2152 Hammoud, M (mhhammou)
 15122 Principles of Imperative Computation (PRIN IMPRTV COMPTATN) W 12 MW 11:30AM 12:20PM 2152 Hammoud, M (mhhammou)
- 11/19/2025 
-COURSE COURSE TITLE SECTION UNITS DAY BEGIN TIME END TIME ROOM INSTRUCTORS
+ 11/19/2025
 15210 Parallel and Sequential Data Structures and Algorithms (PRL SEQ DATA STR ALG) W 12 UTR 10:00AM 11:15AM 3069 Salameh, M (msalameh); Kapoutsis, C (cak)
 15251 Great Ideas in Theoretical Computer Science (GRT IDEAS THERTCL CS) 2 12 MW 02:30PM 03:45PM 2052 Kapoutsis, C (cak)
 15251 Great Ideas in Theoretical Computer Science (GRT IDEAS THERTCL CS) W 12 UTR 11:30AM 12:20PM 2052 Kapoutsis, C (cak)
@@ -104,8 +102,6 @@ COURSE COURSE TITLE SECTION UNITS DAY BEGIN TIME END TIME ROOM INSTRUCTORS
 67373 Information Systems Consulting Project (IS CONSULTING PROJ) W 12 T 08:30AM 09:45AM 1030 Liginlal, D (liginlal)
 67373 Information Systems Consulting Project (IS CONSULTING PROJ) X 12 T 08:30AM 09:45AM 2062 Aazam, M (maazam)
 67373 Information Systems Consulting Project (IS CONSULTING PROJ) Y 12 T 08:30AM 09:45AM 2147 Huang, X (xinhuan2)
- 11/19/2025 
-COURSE COURSE TITLE SECTION UNITS DAY BEGIN TIME END TIME ROOM INSTRUCTORS
 67390 Independent Study in Information Systems (IND STDY INFO SYSTMS) W variable  TBA DNM Instructor TBA
 67425 Digitalization Capstone (DIGITAZATION CAPSTN) W 9 MW 10:00AM 11:15AM 3178 Vatanasakdakul, S (svatanas)
 67426 Data Science Capstone (DATA SCIENCE CAPSTN) W 9 MW 10:00AM 11:15AM 3204 Bouamor, H (hbouamor)
@@ -153,8 +149,6 @@ COURSE COURSE TITLE SECTION UNITS DAY BEGIN TIME END TIME ROOM INSTRUCTORS
 70503 Independent Study in Marketing (INDP STDY MARKETING) W variable  TBA DNM Farooqi, M (mfarooqi)
 70504 Independent Study in Organizational Behavior (INDP STDY ORG BEHAV) W variable  TBA DNM Farooqi, M (mfarooqi)
 70505 Independent Study in Finance (INDP STUDY FINANCE) W variable  TBA DNM Farooqi, M (mfarooqi)
- 11/19/2025 
-COURSE COURSE TITLE SECTION UNITS DAY BEGIN TIME END TIME ROOM INSTRUCTORS
 70506 Independent Study Management Information Systems (IND STUDY IN BAT) W variable  TBA DNM Farooqi, M (mfarooqi)
 70507 Independent Study in Business Communications (INDEP STDY BUS COMM) W variable  TBA DNM Farooqi, M (mfarooqi)
 70508 Independent Study in International Management (IND STDY INTL MNGMNT) W variable  TBA DNM Farooqi, M (mfarooqi)
@@ -202,8 +196,6 @@ COURSE COURSE TITLE SECTION UNITS DAY BEGIN TIME END TIME ROOM INSTRUCTORS
 85413 Perception (PERCEPTION) W 9 UT 02:30PM 03:45PM 1199 Bruder, J (jbruder)
 85458 Psychology of Sleep (PSYCH OF SLEEP) W 9 UT 10:00AM 11:15AM 2147 Crittenden, C (ccritten)
 95401 IdeaLab (IDEALAB) W4 3 UMW 08:00PM 09:20PM 3048 Labash, S (clabash)
- 11/19/2025 
-COURSE COURSE TITLE SECTION UNITS DAY BEGIN TIME END TIME ROOM INSTRUCTORS
 98000 Student Taught Courses (StuCo): Teaching Practicum (STUCO: TCHNG PRACTM) W 3 TBA DNM Helin, E (ehelin)
 98395 Student Taught Courses (StuCo): Principles of Jewelry Designing (JEWELRY DESIGN) W3 3 W 05:00PM 06:20PM 1030 Abdelatef, M (mabdelat); Al Shirawi, D (dshirawi)
 98486 Student Taught Courses (StuCo): The Business of Sports (BUSINESS SPORTS) W3 3 TW 05:00PM 06:20PM 1031 Leadbetter, C (cleadbet); Al-Taji, M (mtaji)
@@ -220,4 +212,3 @@ COURSE COURSE TITLE SECTION UNITS DAY BEGIN TIME END TIME ROOM INSTRUCTORS
 99430 General Studies Capstone Course (GENERAL STUDY CAP) W variable  TBA TBA Instructor TBA
 QC211 Introduction to Experimental Organic Chemistry (Lab) (INTRO EXPERM ORG CHM) 2 variable  U 04:00PM 04:50PM 3046 Murshid, N (nmurshid)
 QC211 Introduction to Experimental Organic Chemistry (Lab) (INTRO EXPERM ORG CHM) W variable  M 02:30PM 05:30PM TBA Murshid, N (nmurshid)
- 11/19/2025 

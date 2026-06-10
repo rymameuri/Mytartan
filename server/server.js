@@ -5,13 +5,39 @@ const cors = require("cors");
 const axios = require("axios");
 const {
   loadKnowledgeBase,
+  initializeEmbeddings,
   retrieveRelevantDocs,
+  retrieveRelevantDocsAsync,
   buildContextBlock,
 } = require("./knowledgeBase");
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 const HF_MODEL = process.env.HF_MODEL || "meta-llama/Meta-Llama-3-8B-Instruct";
+
+const PLACEHOLDER_KEYS = new Set([
+  "",
+  "your_key",
+  "your-key",
+  "your_api_key",
+  "changeme",
+  "placeholder",
+]);
+
+function isConfiguredKey(value) {
+  if (!value || typeof value !== "string") return false;
+  const trimmed = value.trim();
+  if (PLACEHOLDER_KEYS.has(trimmed.toLowerCase())) return false;
+  return trimmed.length >= 10;
+}
+
+function hasHuggingFaceKey() {
+  return isConfiguredKey(process.env.HUGGINGFACE_API_KEY);
+}
+
+function hasAnthropicKey() {
+  return isConfiguredKey(process.env.ANTHROPIC_API_KEY);
+}
 
 function formatApiError(err, fallback = "Request failed") {
   const data = err.response?.data;
@@ -37,7 +63,9 @@ CRITICAL RULES:
 - NEVER invent names, roles, emails, dates, policies, or contacts.
 - If the knowledge base does not contain the answer, say you do not have that information and suggest scotty.qatar.cmu.edu or the relevant CMU-Q office.
 - At CMU-Q, "StuCo" means the Student College (student-taught courses), NOT a generic student council or student government. Do not make up StuCo officer titles or members.
-- Speak in clear, natural, everyday English. Be warm and helpful, but do not use Scottish dialect, accent, or slang (no "laddie", "wee", "aye", "bonny", etc.). Write like a friendly student services assistant, not a cartoon character.`;
+- Speak in clear, natural, everyday English. Be warm and helpful, but do not use Scottish dialect, accent, or slang (no "laddie", "wee", "aye", "bonny", etc.). Write like a friendly student services assistant, not a cartoon character.
+- Do NOT include [Source:] labels, file names, or file paths anywhere in your response. Use the knowledge base to answer, but never echo back source citations.
+- If a question is ambiguous (e.g. "measure" likely means "major/degree", "stucco" means "StuCo"), interpret it charitably in the CMU-Q academic context before answering.`;
 
 const SYSTEM_PROMPTS = {
   qa: `${KB_GROUNDING_RULES} Be accurate, concise, and helpful about academics, registration, student life, policies, and CMU-Q resources.`,
@@ -48,11 +76,11 @@ const SYSTEM_PROMPTS = {
 
 const KB_MODES = new Set(["qa", "campus", "chat"]);
 
-function buildSystemPrompt(mode, userQuery) {
+async function buildSystemPrompt(mode, userQuery) {
   let prompt = SYSTEM_PROMPTS[mode];
   if (!KB_MODES.has(mode)) return prompt;
 
-  const docs = retrieveRelevantDocs(userQuery);
+  const docs = await retrieveRelevantDocsAsync(userQuery);
   if (docs.length) {
     prompt += `\n\nOFFICIAL CMU-Q KNOWLEDGE BASE (use this as your only source for factual answers):\n${buildContextBlock(docs)}`;
   } else {
@@ -63,9 +91,31 @@ function buildSystemPrompt(mode, userQuery) {
   return prompt;
 }
 
+function answerFromKnowledgeBase(userQuery) {
+  const docs = retrieveRelevantDocs(userQuery, { limit: 2, maxDocChars: 2000 });
+  if (!docs.length) {
+    return null;
+  }
+
+  const blocks = docs.map(
+    (doc) => `**${doc.topic}**\n${doc.body.trim()}`
+  );
+
+  return `${blocks.join("\n\n---\n\n")}\n\n— From CMU-Q official resources (scotty.qatar.cmu.edu). For more details, visit the relevant page on the Scotty portal.`;
+}
+
 app.use(
   cors({
-    origin: ["http://localhost:3000", "http://127.0.0.1:3000"],
+    origin(origin, callback) {
+      if (
+        !origin ||
+        /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)
+      ) {
+        callback(null, true);
+        return;
+      }
+      callback(new Error(`CORS blocked origin: ${origin}`));
+    },
   })
 );
 app.use(express.json());
@@ -131,12 +181,21 @@ app.post("/api/chat", async (req, res) => {
 
   const latestUserMessage = [...messages].reverse().find((m) => m.role === "user");
   const userQuery = latestUserMessage?.content || "";
-  const systemPrompt = buildSystemPrompt(mode, userQuery);
+  const systemPrompt = await buildSystemPrompt(mode, userQuery);
 
-  const useHuggingFace = Boolean(process.env.HUGGINGFACE_API_KEY);
-  if (!useHuggingFace && !process.env.ANTHROPIC_API_KEY) {
+  const useHuggingFace = hasHuggingFaceKey();
+  const useAnthropic = hasAnthropicKey();
+
+  if (!useHuggingFace && !useAnthropic) {
+    if (KB_MODES.has(mode)) {
+      const kbReply = answerFromKnowledgeBase(userQuery);
+      if (kbReply) {
+        return res.json({ reply: kbReply });
+      }
+    }
     return res.status(500).json({
-      error: "Configure HUGGINGFACE_API_KEY or ANTHROPIC_API_KEY in server/.env",
+      error:
+        "No AI API key configured. Add HUGGINGFACE_API_KEY or ANTHROPIC_API_KEY to server/.env (replace the placeholder your_key with a real key).",
     });
   }
 
@@ -229,8 +288,21 @@ app.post("/api/heygen-token", createLiveAvatarToken);
 
 const kbCount = loadKnowledgeBase();
 
-app.listen(PORT, () => {
-  const provider = process.env.HUGGINGFACE_API_KEY ? "Hugging Face" : "Anthropic";
-  console.log(`Server running on http://localhost:${PORT} (chat: ${provider})`);
-  console.log(`Knowledge base loaded: ${kbCount} documents`);
-});
+// Generate semantic embeddings in the background after startup
+// Falls back to keyword retrieval if no HuggingFace key is configured
+initializeEmbeddings();
+
+// Only start listening when run directly (not when imported by tests)
+if (require.main === module) {
+  app.listen(PORT, () => {
+    const provider = hasHuggingFaceKey()
+      ? "Hugging Face"
+      : hasAnthropicKey()
+        ? "Anthropic"
+        : "knowledge base only (add API key for AI replies)";
+    console.log(`Server running on http://localhost:${PORT} (chat: ${provider})`);
+    console.log(`Knowledge base loaded: ${kbCount} documents`);
+  });
+}
+
+module.exports = app;
