@@ -12,7 +12,7 @@ import {
 } from "@heygen/liveavatar-web-sdk";
 import "./ScottyAvatar.css";
 
-const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:3001";
+const API_BASE = process.env.REACT_APP_API_URL || "";
 
 function toErrorMessage(value, fallback) {
   if (typeof value === "string") return value;
@@ -36,7 +36,7 @@ async function fetchSessionToken() {
 }
 
 const ScottyAvatar = forwardRef(function ScottyAvatar(
-  { compact = false, hero = false, hidden = false },
+  { compact = false, hero = false, persona = false, hidden = false },
   ref
 ) {
   const videoRef = useRef(null);
@@ -63,6 +63,17 @@ const ScottyAvatar = forwardRef(function ScottyAvatar(
         return Promise.resolve();
       } catch (err) {
         return Promise.reject(err);
+      }
+    },
+    stop() {
+      const session = sessionRef.current;
+      if (!session || !isReadyRef.current) return;
+      if (session.state !== SessionState.CONNECTED) return;
+
+      try {
+        session.interrupt();
+      } catch (err) {
+        console.warn("[ScottyAvatar] interrupt failed:", err.message);
       }
     },
   }));
@@ -103,6 +114,7 @@ const ScottyAvatar = forwardRef(function ScottyAvatar(
       } catch (err) {
         if (cancelled) return;
         isReadyRef.current = false;
+        console.error("[ScottyAvatar] session failed:", err);
         setStatus("error");
         setError(err.message || "Failed to start avatar");
       }
@@ -130,6 +142,7 @@ const ScottyAvatar = forwardRef(function ScottyAvatar(
     "scotty-avatar",
     compact && "scotty-avatar--compact",
     hero && "scotty-avatar--hero",
+    persona && "scotty-avatar--persona",
     hidden && "scotty-avatar--hidden",
   ]
     .filter(Boolean)

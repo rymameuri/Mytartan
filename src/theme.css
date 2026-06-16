@@ -1,0 +1,85 @@
+@import url("https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&display=swap");
+
+:root {
+  --tartan-maroon: #9c2733;
+  --tartan-maroon-dark: #7a1c28;
+  --tartan-maroon-deep: #5c151e;
+  --tartan-crimson: #c41230;
+  --tartan-white: #ffffff;
+  --tartan-text-on-dark: rgba(255, 255, 255, 0.92);
+  --tartan-text-muted-on-dark: rgba(255, 255, 255, 0.58);
+  --tartan-text-faint-on-dark: rgba(255, 255, 255, 0.32);
+  --tartan-panel: rgba(255, 255, 255, 0.96);
+  --tartan-panel-soft: rgba(255, 255, 255, 0.88);
+  --tartan-panel-border: rgba(255, 255, 255, 0.22);
+  --tartan-shadow: rgba(0, 0, 0, 0.18);
+  --font-display: "Fredoka", "Arial Rounded MT Bold", "Helvetica Rounded", sans-serif;
+  --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.scotty-pattern {
+  position: absolute;
+  inset: 0;
+  background-color: var(--tartan-maroon);
+  background-image: url("./assets/scotty-pattern-tile.png");
+  background-size: 180px 180px;
+  background-repeat: repeat;
+  pointer-events: none;
+}
+
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .scotty-pattern {
+    background-image: url("./assets/scotty-pattern-tile@2x.png");
+  }
+}
+
+.brand-display {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--tartan-white);
+  -webkit-text-stroke: 1px var(--tartan-maroon-dark);
+  paint-order: stroke fill;
+}
+
+.tartan-btn {
+  appearance: none;
+  border: 2px solid var(--tartan-white);
+  border-radius: 999px;
+  padding: 0.65rem 1.25rem;
+  background: var(--tartan-white);
+  color: var(--tartan-maroon);
+  font-family: var(--font-display);
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.tartan-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px var(--tartan-shadow);
+  background: var(--tartan-maroon);
+  color: var(--tartan-white);
+}
+
+.tartan-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.tartan-btn--ghost {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--tartan-text-on-dark);
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
+.tartan-btn--ghost:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.18);
+  color: var(--tartan-white);
+}

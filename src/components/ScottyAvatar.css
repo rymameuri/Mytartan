@@ -18,6 +18,13 @@
   border: 1px solid #ececec;
 }
 
+.scotty-avatar--compact .scotty-avatar__video {
+  object-fit: cover;
+  object-position: var(--avatar-object-position, 58% 32%);
+  transform: scale(var(--avatar-scale, 1.28));
+  transform-origin: var(--avatar-origin-x, 58%) var(--avatar-origin-y, 32%);
+}
+
 .scotty-avatar--hidden {
   position: absolute;
   width: 1px;
@@ -48,6 +55,32 @@
   font-size: 0.75rem;
   color: #999999;
   background: #f3f3f3;
+}
+
+/* Persona mode — fills circular container in PersonaView */
+.scotty-avatar--persona {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: #1c1c2e;
+  overflow: hidden;
+}
+
+.scotty-avatar--persona .scotty-avatar__video {
+  object-fit: cover;
+  object-position: var(--avatar-object-position, 58% 32%);
+  transform: scale(var(--avatar-scale, 1.28));
+  transform-origin: var(--avatar-origin-x, 58%) var(--avatar-origin-y, 32%);
+  border-radius: 50%;
+}
+
+.scotty-avatar--persona .scotty-avatar__overlay {
+  border-radius: 50%;
+  background: #1c1c2e;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.8rem;
 }
 
 .scotty-avatar__overlay--error {

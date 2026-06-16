@@ -11,7 +11,7 @@
 - **Chat Mode** — Casual conversation with Scotty, still grounded in CMU-Q knowledge.
 - **Tutor Mode** — Step-by-step academic tutoring. Scotty guides you toward answers rather than just giving them away.
 - **Conversation History** — All chats are saved locally and organized into projects.
-- **Dual AI Backend** — Supports both HuggingFace (open-source models) and Anthropic (Claude) as the LLM provider.
+- **Claude-powered replies** — Uses Anthropic Claude for natural, grounded responses.
 
 ---
 
@@ -21,8 +21,8 @@
 |-------|-----------|
 | Frontend | React 19, Create React App |
 | Backend | Node.js, Express |
-| AI Providers | HuggingFace Inference API, Anthropic Claude API |
-| Knowledge Retrieval | Custom RAG pipeline (keyword-based retrieval over a structured knowledge base) |
+| AI Provider | Anthropic Claude API |
+| Knowledge Retrieval | Custom RAG pipeline (keyword matching with fuzzy correction and alias expansion) |
 | Avatar (optional) | LiveAvatar API |
 
 ---
@@ -51,7 +51,7 @@ tartan-scotty/
 
 - Node.js 18 or higher
 - npm 9 or higher
-- At least one AI API key (HuggingFace or Anthropic) — see Configuration below
+- Anthropic API key — see Configuration below
 
 ---
 
@@ -93,13 +93,16 @@ The app opens at `http://localhost:3000`.
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `HUGGINGFACE_API_KEY` | One of these two | Free at [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens) |
-| `ANTHROPIC_API_KEY` | One of these two | Get at [console.anthropic.com](https://console.anthropic.com) |
-| `HF_MODEL` | No | HuggingFace model to use (default: `meta-llama/Meta-Llama-3-8B-Instruct`) |
+| `AI_GATEWAY_BASE_URL` | Yes* | CMU AI Gateway URL: `https://ai-gateway.andrew.cmu.edu` |
+| `CLAUDE_API_KEY` | Yes* | Your CMU AI Gateway token (for Claude) |
+| `AI_MODEL` | No | Claude model (default: `us.anthropic.claude-haiku-4-5-20251001-v1:0`). Also: `claude-3-5-sonnet-20241022`, `claude-3-7-sonnet-20250219-v1:0` |
+| `ANTHROPIC_API_KEY` | Alt | Use Claude directly from Anthropic instead of the CMU gateway (leave `AI_GATEWAY_BASE_URL` empty) |
 | `LIVEAVATAR_API_KEY` | No | Optional — enables the AI avatar feature |
 | `PORT` | No | Backend port (default: `3001`) |
 
-If neither AI key is configured, the app falls back to returning raw knowledge base excerpts.
+\* Use either the CMU AI Gateway vars **or** `ANTHROPIC_API_KEY`, not both.
+
+If no AI key is configured, the app falls back to returning raw knowledge base excerpts.
 
 ---
 
@@ -132,13 +135,19 @@ Express Backend (port 3001)
  │
  ├── buildSystemPrompt(mode, userQuery)
  │     │
- │     └── retrieveRelevantDocs(userQuery)
+ │     └── retrieveRelevantDocsAsync(userQuery)
  │           └── Scores knowledge-base docs by keyword relevance
- │                 → Returns top-2 matching documents
+ │                 → Returns top matching documents
  │
- └── LLM API call (HuggingFace or Anthropic)
+ └── Claude API call (Anthropic)
        System prompt = role instructions + KB context
        → Returns grounded answer
+```
+
+Check retrieval status at runtime:
+
+```bash
+curl http://localhost:3001/api/kb/status
 ```
 
 ---
@@ -147,13 +156,14 @@ Express Backend (port 3001)
 
 ```bash
 npm test
+npm run test:server
 ```
 
 ---
 
 ## Known Limitations
 
-- **Retrieval is keyword-based**, not semantic. A production version would use text embeddings and cosine similarity for better accuracy.
+- **Retrieval is keyword-based**, not semantic embedding search.
 - **No user authentication** — conversation history is stored in the browser's local storage only.
 - **Knowledge base is static** — content must be manually updated as CMU-Q policies change.
 - **Avatar feature** requires a paid LiveAvatar API key and is optional.

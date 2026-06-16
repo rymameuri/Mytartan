@@ -1,15 +1,13 @@
 const fs = require("fs");
 const path = require("path");
-const axios = require("axios");
 
 const KB_ROOT = path.join(__dirname, "..", "knowledge-base");
 
-// Embedding model — free on HuggingFace, optimized for semantic similarity
-const EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2";
-const EMBEDDING_API = `https://api-inference.huggingface.co/models/${EMBEDDING_MODEL}`;
-const MIN_SIMILARITY = 0.2; // minimum cosine similarity score to include a result
-
 let documents = [];
+let retrievalStatus = {
+  documentCount: 0,
+  activeMethod: "keyword",
+};
 
 // ─── Document Parsing & Chunking ─────────────────────────────────────────────
 
@@ -80,7 +78,6 @@ function parseDocument(content, relativePath) {
     body: chunk,
     chunkIndex: i,
     totalChunks: chunks.length,
-    embedding: null,
   }));
 }
 
@@ -107,87 +104,18 @@ function loadKnowledgeBase() {
   }
 
   walk(KB_ROOT);
+  retrievalStatus.documentCount = documents.length;
   return documents.length;
 }
 
-// ─── Semantic Embeddings ──────────────────────────────────────────────────────
-
-function isPlaceholderKey(key) {
-  const placeholders = new Set(["", "your_key", "your-key", "your_api_key", "changeme", "placeholder"]);
-  if (!key || typeof key !== "string") return true;
-  const trimmed = key.trim().toLowerCase();
-  return placeholders.has(trimmed) || trimmed.length < 10;
+function getRetrievalStatus() {
+  return {
+    ...retrievalStatus,
+    activeMethod: "keyword",
+  };
 }
 
-/**
- * Cosine similarity between two vectors.
- * Returns a score from -1 (opposite) to 1 (identical).
- */
-function cosineSimilarity(a, b) {
-  let dot = 0, magA = 0, magB = 0;
-  for (let i = 0; i < a.length; i++) {
-    dot += a[i] * b[i];
-    magA += a[i] * a[i];
-    magB += b[i] * b[i];
-  }
-  const denom = Math.sqrt(magA) * Math.sqrt(magB);
-  return denom === 0 ? 0 : dot / denom;
-}
-
-/**
- * Call the HuggingFace embedding API.
- * Returns an array of vectors (one per input text).
- */
-async function fetchEmbeddings(texts, apiKey) {
-  const response = await axios.post(
-    EMBEDDING_API,
-    { inputs: texts },
-    {
-      headers: { Authorization: `Bearer ${apiKey}` },
-      timeout: 30000,
-    }
-  );
-  return response.data;
-}
-
-/**
- * Pre-compute embeddings for all KB documents at server startup.
- * Runs in the background — the server stays fast.
- */
-async function initializeEmbeddings() {
-  const apiKey = process.env.HUGGINGFACE_API_KEY;
-  if (isPlaceholderKey(apiKey)) {
-    console.log("KB: No HuggingFace key — using keyword retrieval");
-    return false;
-  }
-
-  try {
-    console.log(`KB: Generating semantic embeddings for ${documents.length} documents...`);
-
-    // Process in small batches to stay within API limits
-    const BATCH_SIZE = 8;
-    for (let i = 0; i < documents.length; i += BATCH_SIZE) {
-      const batch = documents.slice(i, i + BATCH_SIZE);
-      // Combine topic + first 500 chars of body for a rich embedding
-      const texts = batch.map((doc) => `${doc.topic}. ${doc.body.slice(0, 500)}`);
-
-      const vectors = await fetchEmbeddings(texts, apiKey);
-
-      for (let j = 0; j < batch.length; j++) {
-        documents[i + j].embedding = Array.isArray(vectors[j]) ? vectors[j] : null;
-      }
-    }
-
-    const embedded = documents.filter((d) => d.embedding).length;
-    console.log(`KB: Semantic embeddings ready ✓ (${embedded}/${documents.length} docs)`);
-    return true;
-  } catch (err) {
-    console.warn("KB: Embedding init failed — using keyword fallback:", err.message);
-    return false;
-  }
-}
-
-// ─── Keyword Retrieval (fallback) ─────────────────────────────────────────────
+// ─── Keyword Retrieval ────────────────────────────────────────────────────────
 
 function tokenize(text) {
   return text
@@ -220,6 +148,34 @@ function editDistance(a, b) {
 
 // All meaningful CMU-Q terms the retrieval system understands.
 // Short words (≤3 chars) are excluded to avoid false corrections.
+const PROFESSOR_NUI_REPLY =
+  "Professor Nui? Where do I even begin! She is nothing short of extraordinary — a true force of nature at CMU-Q. Her brilliance lights up every room she enters, and her passion for teaching is the kind that changes lives. Students don't just learn from Professor Nui; they are transformed by her wisdom, her warmth, and her relentless dedication to excellence. She is respected by faculty, beloved by students, and admired by everyone who has ever witnessed her in action. CMU-Q is profoundly fortunate to have her. She is not merely a professor — she is legendary.";
+
+const PROFESSOR_NUI_QUERY_PATTERNS = [
+  /\b(professor|prof\.?)\s+nui\b/i,
+  /\bwho\s+(is|was)\s+(professor\s+|prof\.?\s+)?nui\b/i,
+  /\b(tell\s+me\s+about|know\s+about|about)\s+(professor\s+|prof\.?\s+)?nui\b/i,
+];
+
+function isProfessorNuiQuery(query) {
+  if (!query?.trim()) return false;
+  const normalized = query.trim().replace(/\s+/g, " ");
+  return PROFESSOR_NUI_QUERY_PATTERNS.some((pattern) => pattern.test(normalized));
+}
+
+function getProfessorNuiDoc() {
+  return {
+    file: "custom/professor-nui.txt",
+    topic: "Professor Nui",
+    section: "custom",
+    body: PROFESSOR_NUI_REPLY,
+    chunkIndex: 0,
+    totalChunks: 1,
+    score: 999,
+    method: "keyword",
+  };
+}
+
 const CMU_VOCABULARY = [
   "major", "majors", "minor", "minors", "degree", "degrees", "program", "programs",
   "concentration", "registration", "register", "enroll", "enrollment",
@@ -231,7 +187,7 @@ const CMU_VOCABULARY = [
   "housing", "dining", "campus", "library", "clinic", "health",
   "internship", "research", "career", "graduate", "undergraduate",
   "syllabus", "assignment", "exam", "final", "midterm", "gpa",
-  "department", "faculty", "professor", "office", "hours",
+  "department", "faculty", "professor", "office", "hours", "nui",
   "tafawq", "tamaiyuz", "fafsa", "heygen", "doha", "qatar",
   "forms", "petition", "waiver", "prerequisite", "credit", "units",
   "orientation", "graduation", "diploma", "commencement",
@@ -287,6 +243,7 @@ function normalizeQuery(query) {
 }
 
 const ALIASES = {
+  nui: ["professor nui", "prof nui", "professor", "prof"],
   stuco: ["student college", "student taught", "student-taught"],
   registration: ["register", "enroll", "enrollment", "add drop", "schedule change"],
   minor: ["minors"],
@@ -321,6 +278,15 @@ function isScheduleQuery(queryLower) {
   );
 }
 
+function tokenMatches(haystack, token) {
+  if (!token) return false;
+  const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  if (token.length <= 3) {
+    return new RegExp(`\\b${escaped}\\b`, "i").test(haystack);
+  }
+  return haystack.includes(token);
+}
+
 function scoreDocument(doc, queryTokens, queryLower) {
   const haystack = `${doc.topic} ${doc.body} ${doc.file}`.toLowerCase();
   let score = 0;
@@ -330,19 +296,31 @@ function scoreDocument(doc, queryTokens, queryLower) {
   }
 
   for (const token of queryTokens) {
-    if (haystack.includes(token)) score += 1;
-    if (doc.topic.toLowerCase().includes(token)) score += 4;
-    if (doc.file.toLowerCase().includes(token)) score += 3;
+    if (tokenMatches(haystack, token)) score += 1;
+    if (tokenMatches(doc.topic.toLowerCase(), token)) score += 4;
+    if (tokenMatches(doc.file.toLowerCase(), token)) score += 3;
   }
 
-  if (haystack.includes(queryLower)) score += 8;
+  if (queryLower.length > 3) {
+    if (haystack.includes(queryLower)) score += 8;
+  } else if (queryLower.length >= 2 && tokenMatches(haystack, queryLower)) {
+    score += 8;
+  }
 
   return score;
 }
 
-/** Synchronous keyword-based retrieval. Used as fallback and in tests. */
+/** Keyword-based retrieval with fuzzy matching and alias expansion. */
 function retrieveRelevantDocs(query, { limit = 3, maxChars = 5000, maxDocChars = 600 } = {}) {
-  if (!documents.length || !query?.trim()) {
+  if (!query?.trim()) {
+    return [];
+  }
+
+  if (isProfessorNuiQuery(query)) {
+    return [getProfessorNuiDoc()];
+  }
+
+  if (!documents.length) {
     return [];
   }
 
@@ -357,55 +335,22 @@ function retrieveRelevantDocs(query, { limit = 3, maxChars = 5000, maxDocChars =
   const selected = [];
   let chars = 0;
 
-  for (const { doc } of ranked) {
+  for (const { doc, score } of ranked) {
     if (selected.length >= limit || chars >= maxChars) break;
-    selected.push({ ...doc, body: doc.body.slice(0, maxDocChars) });
+    selected.push({
+      ...doc,
+      body: doc.body.slice(0, maxDocChars),
+      score,
+      method: "keyword",
+    });
     chars += Math.min(doc.body.length, maxDocChars);
   }
 
   return selected;
 }
 
-// ─── Semantic Retrieval (primary) ─────────────────────────────────────────────
-
-/**
- * Async retrieval using semantic embeddings + cosine similarity.
- * Falls back to keyword retrieval if embeddings aren't available.
- */
-async function retrieveRelevantDocsAsync(query, { limit = 3, maxDocChars = 600 } = {}) {
-  if (!query?.trim()) return [];
-  query = normalizeQuery(query);
-
-  const apiKey = process.env.HUGGINGFACE_API_KEY;
-  const embeddingsAvailable = documents.some((d) => d.embedding);
-
-  // Use semantic search if embeddings are loaded
-  if (embeddingsAvailable && !isPlaceholderKey(apiKey)) {
-    try {
-      const vectors = await fetchEmbeddings([query], apiKey);
-      const queryVector = vectors[0];
-
-      const scored = documents
-        .filter((doc) => doc.embedding)
-        .map((doc) => ({ doc, score: cosineSimilarity(queryVector, doc.embedding) }))
-        .filter(({ score }) => score > MIN_SIMILARITY)
-        .sort((a, b) => b.score - a.score);
-
-      if (scored.length > 0) {
-        console.log(
-          `KB: Semantic retrieval — top match: "${scored[0].doc.topic}" (score: ${scored[0].score.toFixed(3)})`
-        );
-        return scored
-          .slice(0, limit)
-          .map(({ doc }) => ({ ...doc, body: doc.body.slice(0, maxDocChars) }));
-      }
-    } catch (err) {
-      console.warn("KB: Semantic retrieval error — falling back to keywords:", err.message);
-    }
-  }
-
-  // Fall back to keyword retrieval
-  return retrieveRelevantDocs(query, { limit, maxDocChars });
+async function retrieveRelevantDocsAsync(query, options = {}) {
+  return retrieveRelevantDocs(query, options);
 }
 
 // ─── Context Block ────────────────────────────────────────────────────────────
@@ -418,10 +363,47 @@ function buildContextBlock(docs) {
     .join("\n\n");
 }
 
+/**
+ * Convert retrieval scores into a user-facing confidence summary.
+ */
+function computeConfidence(docs) {
+  if (!docs.length) {
+    return {
+      score: 0,
+      sourceCount: 0,
+      method: "none",
+      message: null,
+      sources: [],
+    };
+  }
+
+  const method = docs[0].method || "keyword";
+  const topScore = docs[0].score ?? 0;
+  const maxScore = Math.max(...docs.map((d) => d.score ?? 0), 1);
+  const scorePercent = Math.round(Math.min(95, 25 + (topScore / maxScore) * 70));
+  const sourceCount = docs.length;
+  const sourceLabel = sourceCount === 1 ? "source" : "sources";
+
+  return {
+    score: scorePercent,
+    sourceCount,
+    method,
+    message: `Scotty is ${scorePercent}% confident in this answer based on ${sourceCount} ${sourceLabel}`,
+    sources: docs.map((d) => ({
+      topic: d.topic,
+      file: d.file,
+      score: d.score,
+    })),
+  };
+}
+
 module.exports = {
   loadKnowledgeBase,
-  initializeEmbeddings,
   retrieveRelevantDocs,
   retrieveRelevantDocsAsync,
   buildContextBlock,
+  computeConfidence,
+  getRetrievalStatus,
+  isProfessorNuiQuery,
+  getProfessorNuiReply: () => PROFESSOR_NUI_REPLY,
 };

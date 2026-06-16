@@ -304,7 +304,7 @@ function SideMenu({
       aria-label="Chat history"
     >
       <div className="side-menu__header">
-        <h2 className="side-menu__title">Chats</h2>
+        <h2 className="side-menu__title brand-display">MY TARTAN</h2>
         {!isPersistent && (
           <button type="button" className="icon-btn" aria-label="Close menu" onClick={onClose}>
             <CloseIcon />

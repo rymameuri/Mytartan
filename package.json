@@ -23,12 +23,14 @@
   },
   "proxy": "http://localhost:3001",
   "scripts": {
+    "dev": "concurrently -n server,web -c blue,green \"npm run server\" \"npm start\"",
     "server": "node server/server.js",
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "test:server": "jest server/ --testEnvironment node --no-coverage",
     "test:all": "CI=true react-scripts test --watchAll=false && jest server/ --testEnvironment node --no-coverage",
+    "eval:rag": "node scripts/eval_rag.js",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
@@ -52,6 +54,7 @@
   "description": "AI-powered student assistant for Carnegie Mellon University in Qatar, built with React and a RAG knowledge base.",
   "main": "index.js",
   "devDependencies": {
+    "concurrently": "^9.2.1",
     "jest": "^27.5.1",
     "supertest": "^7.2.2"
   },

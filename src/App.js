@@ -1,26 +1,20 @@
-import { useEffect, useState } from "react";
-import ChatInterface from "./components/ChatInterface";
+import { useEffect, useRef, useState } from "react";
+import LandingPage from "./components/LandingPage";
 import MapNavigator from "./components/MapNavigator";
-import ScottyMascot from "./components/ScottyMascot";
+import PersonaView from "./components/PersonaView";
 import SideMenu from "./components/SideMenu";
-import { DownloadIcon, MenuIcon, ScottyLogoIcon, ShareIcon } from "./components/Icons";
+import ScottyPattern from "./components/ScottyPattern";
 import { useConversations } from "./hooks/useConversations";
 import "./App.css";
 
-// In dev, CRA proxies /api/* to localhost:3001 (see package.json "proxy").
 const API_BASE = process.env.REACT_APP_API_URL || "";
 const DESKTOP_BREAKPOINT = 900;
 
-const MODES = [
-  { id: "qa", label: "Q&A" },
-  { id: "campus", label: "Campus Guide" },
-  { id: "chat", label: "Chat" },
-  { id: "tutor", label: "Tutor" },
-];
-
 function useIsDesktop() {
   const [isDesktop, setIsDesktop] = useState(
-    () => typeof window !== "undefined" && window.matchMedia(`(min-width: ${DESKTOP_BREAKPOINT}px)`).matches
+    () =>
+      typeof window !== "undefined" &&
+      window.matchMedia(`(min-width: ${DESKTOP_BREAKPOINT}px)`).matches
   );
 
   useEffect(() => {
@@ -56,7 +50,15 @@ function App() {
   const [mode, setMode] = useState(() => activeConversation?.mode ?? "qa");
   const [isLoading, setIsLoading] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [view, setView] = useState("landing");
+  const [chatSessionKey, setChatSessionKey] = useState(0);
+  const voiceModeRef = useRef(false);
+  const avatarRef = useRef(null);
+  const abortControllerRef = useRef(null);
   const isDesktop = useIsDesktop();
+
+  const lastReply =
+    [...messages].reverse().find((m) => m.role === "assistant")?.content ?? "";
 
   useEffect(() => {
     if (!menuOpen || isDesktop) return;
@@ -73,15 +75,21 @@ function App() {
     persistCurrent(messages, mode);
   }, [messages, mode, persistCurrent]);
 
-  function openMenu() {
-    setMenuOpen(true);
-  }
-
   function closeMenu() {
     setMenuOpen(false);
   }
 
+  function resetChatSession() {
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+    avatarRef.current?.stop?.();
+    window.speechSynthesis?.cancel();
+    setIsLoading(false);
+    setChatSessionKey((key) => key + 1);
+  }
+
   function handleNewChat() {
+    resetChatSession();
     const draft = newChat();
     setMessages(draft.messages);
     setMode(draft.mode);
@@ -89,6 +97,7 @@ function App() {
   }
 
   function handleSelectConversation(id) {
+    resetChatSession();
     const selected = selectConversation(id);
     setMessages(selected.messages);
     setMode(selected.mode);
@@ -98,6 +107,7 @@ function App() {
   function handleDeleteConversation(id) {
     const wasActive = deleteConversation(id);
     if (wasActive) {
+      resetChatSession();
       setMessages([]);
       setMode("qa");
     }
@@ -116,7 +126,7 @@ function App() {
   function handleShare() {
     if (!messages.length) return;
     const text = messages
-      .map((m) => `${m.role === "user" ? "You" : "Scotty"}: ${m.content}`)
+      .map((m) => `${m.role === "user" ? "You" : "MyTartan"}: ${m.content}`)
       .join("\n\n");
     navigator.clipboard.writeText(text).then(() => {
       alert("Chat copied to clipboard!");
@@ -126,13 +136,13 @@ function App() {
   function handleDownload() {
     if (!messages.length) return;
     const text = messages
-      .map((m) => `${m.role === "user" ? "You" : "Scotty"}: ${m.content}`)
+      .map((m) => `${m.role === "user" ? "You" : "MyTartan"}: ${m.content}`)
       .join("\n\n");
     const blob = new Blob([text], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `scotty-chat-${new Date().toISOString().slice(0, 10)}.txt`;
+    a.download = `mytartan-chat-${new Date().toISOString().slice(0, 10)}.txt`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -142,28 +152,88 @@ function App() {
     const userMessage = { role: "user", content: text };
     const updatedMessages = [...messages, userMessage];
 
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     setMessages(updatedMessages);
     setIsLoading(true);
 
+    let reply = "";
+    let confidence = null;
+    let gotTokens = false;
+
     try {
-      const response = await fetch(`${API_BASE}/api/chat`, {
+      const response = await fetch(`${API_BASE}/api/chat/stream`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: updatedMessages, mode: activeMode }),
+        signal: controller.signal,
       });
 
-      const data = await response.json();
       if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
         throw new Error(data.error || "Failed to get a response");
       }
 
-      const reply = data.reply;
-      setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          let event;
+          try {
+            event = JSON.parse(line.slice(6));
+          } catch {
+            continue;
+          }
+
+          if (event.type === "confidence") {
+            confidence = event.confidence;
+          } else if (event.type === "token") {
+            gotTokens = true;
+            reply += event.text;
+            setIsLoading(false);
+            setMessages([
+              ...updatedMessages,
+              { role: "assistant", content: reply, confidence, streaming: true },
+            ]);
+          } else if (event.type === "error") {
+            throw new Error(event.error || "Failed to get a response");
+          }
+        }
+      }
+
+      if (gotTokens) {
+        setMessages([
+          ...updatedMessages,
+          { role: "assistant", content: reply, confidence, streaming: false },
+        ]);
+      }
     } catch (err) {
+      if (err.name === "AbortError") {
+        if (gotTokens) {
+          setMessages([
+            ...updatedMessages,
+            { role: "assistant", content: reply, confidence, streaming: false },
+          ]);
+        }
+        return;
+      }
+
       const isNetworkError =
         err.message === "Failed to fetch" || err.name === "TypeError";
-      setMessages((prev) => [
-        ...prev,
+      setMessages([
+        ...updatedMessages,
         {
           role: "assistant",
           content: isNetworkError
@@ -172,12 +242,27 @@ function App() {
         },
       ]);
     } finally {
+      if (abortControllerRef.current === controller) {
+        abortControllerRef.current = null;
+      }
       setIsLoading(false);
     }
   }
 
+  function handleStopGeneration() {
+    abortControllerRef.current?.abort();
+    avatarRef.current?.stop?.();
+    window.speechSynthesis?.cancel();
+    setIsLoading(false);
+  }
+
+  if (view === "landing") {
+    return <LandingPage onStart={() => setView("app")} />;
+  }
+
   return (
     <div className={`app-shell${isDesktop ? " app-shell--with-sidebar" : ""}`}>
+      <ScottyPattern />
       <SideMenu
         isOpen={menuOpen || isDesktop}
         isPersistent={isDesktop}
@@ -196,65 +281,23 @@ function App() {
         getProjectConversations={getProjectConversations}
       />
 
-      <div className="app-main">
-        <header className="app-topbar">
-          {isDesktop ? (
-            <div className="app-topbar__spacer" aria-hidden="true" />
-          ) : (
-            <button
-              type="button"
-              className="icon-btn icon-btn--menu"
-              aria-label="Open menu"
-              aria-expanded={menuOpen}
-              onClick={openMenu}
-            >
-              <MenuIcon />
-            </button>
-          )}
-
-          <div className="app-topbar__center">
-            <div className="app-brand">
-              <ScottyLogoIcon />
-              <span className="app-brand__title">Tartan Scotty</span>
-            </div>
-
-            <nav className="mode-nav" role="tablist" aria-label="Chat mode">
-              {MODES.map(({ id, label }, index) => (
-                <span key={id} className="mode-nav__item">
-                  {index > 0 && <span className="mode-nav__divider" aria-hidden="true" />}
-                  <button
-                    type="button"
-                    role="tab"
-                    aria-selected={mode === id}
-                    className={`mode-nav__tab${mode === id ? " mode-nav__tab--active" : ""}`}
-                    onClick={() => setMode(id)}
-                  >
-                    {label}
-                  </button>
-                </span>
-              ))}
-            </nav>
-          </div>
-
-          <div className="app-topbar__actions">
-            <button type="button" className="icon-btn" aria-label="Share" onClick={handleShare} disabled={!messages.length}>
-              <ShareIcon />
-            </button>
-            <button type="button" className="icon-btn" aria-label="Download" onClick={handleDownload} disabled={!messages.length}>
-              <DownloadIcon />
-            </button>
-          </div>
-        </header>
-
+      <div className="app-main app-main--unified">
         {mode === "campus" ? (
           <MapNavigator />
         ) : (
-          <ChatInterface
+          <PersonaView
+            chatSessionKey={chatSessionKey}
             messages={messages}
-            onSend={handleSend}
             isLoading={isLoading}
-            showHero={messages.length === 0 && !isLoading}
-            mascot={<ScottyMascot className="hero__mascot-img" />}
+            onSend={handleSend}
+            onStop={handleStopGeneration}
+            onShare={handleShare}
+            onDownload={handleDownload}
+            onOpenMenu={() => setMenuOpen(true)}
+            isDesktop={isDesktop}
+            lastReply={lastReply}
+            voiceModeRef={voiceModeRef}
+            avatarRef={avatarRef}
           />
         )}
       </div>

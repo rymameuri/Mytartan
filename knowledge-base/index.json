@@ -1,8 +1,110 @@
 {
   "source": "scotty.qatar.cmu.edu",
   "generated": "2026-05-31",
-  "total_files": 15,
+  "total_files": 80,
   "entries": [
+    {
+      "file": "studies/cmu-q-academics.txt",
+      "topic": "CMU-Q Academics",
+      "section": "studies",
+      "summary": "Official CMU-Q academics overview: five undergraduate degree programs, humanities and sciences foundation, minors, study abroad, cross-registration, research, and academic support."
+    },
+    {
+      "file": "help/life-at-cmu-q.txt",
+      "topic": "Life at CMU-Q",
+      "section": "help",
+      "summary": "Student life at CMU-Q: Student Affairs support, clubs and leadership, career preparation, study abroad, wellness, campus, Education City, and Doha."
+    },
+    {
+      "file": "help/academic-policies/academic-policies-index.txt",
+      "topic": "Academic Policies Index",
+      "section": "help",
+      "summary": "Index of Carnegie Mellon Student Handbook academic policies from cmu.edu, including integrity, grading, leaves, appeals, and related university policies."
+    },
+    {
+      "file": "help/academic-policies/educational-goals.txt",
+      "topic": "Educational Goals",
+      "section": "help",
+      "summary": "CMU educational goals and expectations for undergraduate learning and academic development."
+    },
+    {
+      "file": "help/academic-policies/academic-and-individual-freedom.txt",
+      "topic": "Academic and Individual Freedom",
+      "section": "help",
+      "summary": "Policies on academic freedom and individual rights for CMU students and faculty."
+    },
+    {
+      "file": "help/academic-policies/statement-on-academic-integrity.txt",
+      "topic": "Statement on Academic Integrity",
+      "section": "help",
+      "summary": "CMU's statement on academic integrity, including expectations for students, faculty, and staff regarding honesty, plagiarism, and ethical conduct."
+    },
+    {
+      "file": "help/academic-policies/standards-for-academic-and-creative-life.txt",
+      "topic": "Standards for Academic and Creative Life",
+      "section": "help",
+      "summary": "Overview of standards governing academic and creative life at Carnegie Mellon."
+    },
+    {
+      "file": "help/academic-policies/academic-integrity-actions-overview.txt",
+      "topic": "Academic Integrity Actions Overview",
+      "section": "help",
+      "summary": "Overview of actions and procedures when academic integrity violations are alleged at CMU."
+    },
+    {
+      "file": "help/academic-policies/assistance-for-individuals-with-disabilities.txt",
+      "topic": "Assistance for Individuals with Disabilities",
+      "section": "help",
+      "summary": "CMU policy on assistance and accommodations for individuals with disabilities."
+    },
+    {
+      "file": "help/academic-policies/change-of-address.txt",
+      "topic": "Change of Address",
+      "section": "help",
+      "summary": "Requirements for students to update their address with the university."
+    },
+    {
+      "file": "help/academic-policies/conduct-of-classes.txt",
+      "topic": "Conduct of Classes (Undergraduate Students)",
+      "section": "help",
+      "summary": "Policies on undergraduate class conduct, attendance expectations, and related classroom standards."
+    },
+    {
+      "file": "help/academic-policies/final-examinations-for-graduate-courses.txt",
+      "topic": "Final Examinations for Graduate Courses",
+      "section": "help",
+      "summary": "Rules and procedures for final examinations in graduate-level courses at CMU."
+    },
+    {
+      "file": "help/academic-policies/financial-obligations.txt",
+      "topic": "Financial Obligations",
+      "section": "help",
+      "summary": "Student financial obligations to the university and related policy requirements."
+    },
+    {
+      "file": "help/academic-policies/library-policies.txt",
+      "topic": "Library Policies",
+      "section": "help",
+      "summary": "Carnegie Mellon library use policies and student responsibilities."
+    },
+    {
+      "file": "help/academic-policies/make-up-of-absence.txt",
+      "topic": "Make-Up of Absence from Class Due to Illness",
+      "section": "help",
+      "summary": "Policy for making up missed class work when a student is absent due to illness."
+    },
+    {
+      "file": "help/academic-policies/appeal-of-grades-and-academic-actions.txt",
+      "topic": "Appeal of Grades and Academic Actions",
+      "section": "help",
+      "summary": "Procedure for undergraduate students to appeal grades and other academic actions at CMU."
+    },
+    {
+      "file": "help/academic-policies/withdrawal-of-a-degree-policy.txt",
+      "topic": "Withdrawal of a Degree Policy",
+      "section": "help",
+      "summary": "Policy governing withdrawal or revocation of a conferred degree at Carnegie Mellon."
+    },
     {
       "file": "studies/enrollment-eligibility.txt",
       "topic": "Enrollment Eligibility",
@@ -25,7 +127,7 @@
       "file": "studies/micro-courses.txt",
       "topic": "Micro Courses",
       "section": "studies",
-      "summary": "Describes CMU-Q micro courses taught by Pittsburgh faculty in 4–6 week formats, including enrollment policies, camera requirements, and Ramadan scheduling."
+      "summary": "Describes CMU-Q micro courses taught by Pittsburgh faculty in 4\u20136 week formats, including enrollment policies, camera requirements, and Ramadan scheduling."
     },
     {
       "file": "studies/cross-registration.txt",
@@ -55,7 +157,7 @@
       "file": "studies/academic-calendar.txt",
       "topic": "Academic Calendar",
       "section": "studies",
-      "summary": "Links to current and archived CMU-Q academic calendars from 2016–2017 through 2027–2028."
+      "summary": "Links to current and archived CMU-Q academic calendars from 2016\u20132017 through 2027\u20132028."
     },
     {
       "file": "studies/about-stuco.txt",
@@ -92,6 +194,294 @@
       "topic": "Financial Aid and Scholarship",
       "section": "help",
       "summary": "Covers QF financial aid, FAFSA eligibility for U.S. citizens, need-based grants, and TAFAWQ and TAMAIYUZ scholarship requirements and deadlines."
+    },
+    {
+      "file": "help/academic-integrity-actions/academic-integrity-actions-index.txt",
+      "topic": "Academic Integrity Actions Index",
+      "section": "help",
+      "summary": "CMU Student Handbook / university policy content scraped from cmu.edu: Academic Integrity Actions Index."
+    },
+    {
+      "file": "help/academic-integrity-actions/academic-integrity-actions-records-retention.txt",
+      "topic": "Academic Integrity Actions Records Retention and Reporting",
+      "section": "help",
+      "summary": "CMU Student Handbook / university policy content scraped from cmu.edu: Academic Integrity Actions Records Retention and Reporting."
+    },
+    {
+      "file": "help/academic-integrity-actions/academic-responsibility-panel.txt",
+      "topic": "Academic Responsibility Panel",
+      "section": "help",
+      "summary": "CMU Student Handbook / university policy content scraped from cmu.edu: Academic Responsibility Panel."
+    },
+    {
+      "file": "help/academic-integrity-actions/academic-review-meeting.txt",
+      "topic": "Academic Review Meeting",
+      "section": "help",
+      "summary": "CMU Student Handbook / university policy content scraped from cmu.edu: Academic Review Meeting."
+    },
+    {
+      "file": "help/academic-integrity-actions/appeals-academic-responsibility-panels.txt",
+      "topic": "Appeals of Academic Responsibility Panel Decisions",
+      "section": "help",
+      "summary": "CMU Student Handbook / university policy content scraped from cmu.edu: Appeals of Academic Responsibility Panel Decisions."
+    },
+    {
+      "file": "help/academic-integrity-actions/appeals-course-level-action.txt",
+      "topic": "Appeals of Course-Level Action",
+      "section": "help",
+      "summary": "CMU Student Handbook / university policy content scraped from cmu.edu: Appeals of Course-Level Action."
+    },
+    {
+      "file": "help/academic-integrity-actions/course-level-review-decision-action.txt",
+      "topic": "Course-Level Review, Decision, and Action",
+      "section": "help",
+      "summary": "CMU Student Handbook / university policy content scraped from cmu.edu: Course-Level Review, Decision, and Action."
+    },
+    {
+      "file": "help/academic-integrity-actions/definitions.txt",
+      "topic": "Important Definitions",
+      "section": "help",
+      "summary": "CMU Student Handbook / university policy content scraped from cmu.edu: Important Definitions."
+    },
+    {
+      "file": "help/academic-integrity-actions/multiple-violation-reports.txt",
+      "topic": "Multiple Violation Reports",
+      "section": "help",
+      "summary": "CMU Student Handbook / university policy content scraped from cmu.edu: Multiple Violation Reports."
+    },
+    {
+      "file": "help/academic-integrity-actions/outcomes.txt",
+      "topic": "Outcomes",
+      "section": "help",
+      "summary": "CMU Student Handbook / university policy content scraped from cmu.edu: Outcomes."
+    },
+    {
+      "file": "help/academic-integrity-actions/requests-for-additional-action.txt",
+      "topic": "Requests for Additional Action",
+      "section": "help",
+      "summary": "CMU Student Handbook / university policy content scraped from cmu.edu: Requests for Additional Action."
+    },
+    {
+      "file": "help/academic-integrity-actions/statute-of-limitations.txt",
+      "topic": "Statute of Limitations",
+      "section": "help",
+      "summary": "CMU Student Handbook / university policy content scraped from cmu.edu: Statute of Limitations."
+    },
+    {
+      "file": "help/academic-integrity-actions/withholding-a-degree.txt",
+      "topic": "Withholding a Degree",
+      "section": "help",
+      "summary": "CMU Student Handbook / university policy content scraped from cmu.edu: Withholding a Degree."
+    },
+    {
+      "file": "help/community-policies/activities.txt",
+      "topic": "Activities",
+      "section": "help",
+      "summary": "CMU Student Handbook / university policy content scraped from cmu.edu: Activities."
+    },
+    {
+      "file": "help/community-policies/advertising-on-campus.txt",
+      "topic": "Advertising on Campus - Graffiti and Poster Policy of Student Government",
+      "section": "help",
+      "summary": "CMU Student Handbook / university policy content scraped from cmu.edu: Advertising on Campus - Graffiti and Poster Policy of Student Government."
+    },
+    {
+      "file": "help/community-policies/amap.txt",
+      "topic": "Active Medical Assistance Protocol (AMAP)",
+      "section": "help",
+      "summary": "CMU Student Handbook / university policy content scraped from cmu.edu: Active Medical Assistance Protocol (AMAP)."
+    },
+    {
+      "file": "help/community-policies/broadcasting.txt",
+      "topic": "Broadcasting",
+      "section": "help",
+      "summary": "CMU Student Handbook / university policy content scraped from cmu.edu: Broadcasting."
+    },
+    {
+      "file": "help/community-policies/community-policies-index.txt",
+      "topic": "Community Policies Index",
+      "section": "help",
+      "summary": "CMU Student Handbook / university policy content scraped from cmu.edu: Community Policies Index."
+    },
+    {
+      "file": "help/community-policies/emergency-contact.txt",
+      "topic": "Emergency Contact",
+      "section": "help",
+      "summary": "CMU Student Handbook / university policy content scraped from cmu.edu: Emergency Contact."
+    },
+    {
+      "file": "help/community-policies/employment-verification.txt",
+      "topic": "Employment Verification",
+      "section": "help",
+      "summary": "CMU Student Handbook / university policy content scraped from cmu.edu: Employment Verification."
+    },
+    {
+      "file": "help/community-policies/fire-extinguisher-sprinkler-systems.txt",
+      "topic": "Fire Extinguisher and Sprinkler Systems",
+      "section": "help",
+      "summary": "CMU Student Handbook / university policy content scraped from cmu.edu: Fire Extinguisher and Sprinkler Systems."
+    },
+    {
+      "file": "help/community-policies/hazing.txt",
+      "topic": "Hazing",
+      "section": "help",
+      "summary": "CMU Student Handbook / university policy content scraped from cmu.edu: Hazing."
+    },
+    {
+      "file": "help/community-policies/missing-student-protocol.txt",
+      "topic": "Missing Student Protocol and Confidential Contact",
+      "section": "help",
+      "summary": "CMU Student Handbook / university policy content scraped from cmu.edu: Missing Student Protocol and Confidential Contact."
+    },
+    {
+      "file": "help/community-policies/no-contact-agreements-no-contact-orders.txt",
+      "topic": "No Contact Agreements/No Contact Orders",
+      "section": "help",
+      "summary": "CMU Student Handbook / university policy content scraped from cmu.edu: No Contact Agreements/No Contact Orders."
+    },
+    {
+      "file": "help/community-policies/on-campus-emergencies.txt",
+      "topic": "On-Campus Emergencies",
+      "section": "help",
+      "summary": "CMU Student Handbook / university policy content scraped from cmu.edu: On-Campus Emergencies."
+    },
+    {
+      "file": "help/community-policies/on-campus-noise.txt",
+      "topic": "On-Campus Noise",
+      "section": "help",
+      "summary": "CMU Student Handbook / university policy content scraped from cmu.edu: On-Campus Noise."
+    },
+    {
+      "file": "help/community-policies/pets.txt",
+      "topic": "Pets",
+      "section": "help",
+      "summary": "CMU Student Handbook / university policy content scraped from cmu.edu: Pets."
+    },
+    {
+      "file": "help/community-policies/publications.txt",
+      "topic": "Publications",
+      "section": "help",
+      "summary": "CMU Student Handbook / university policy content scraped from cmu.edu: Publications."
+    },
+    {
+      "file": "help/community-policies/safety-hazards.txt",
+      "topic": "Safety Hazards",
+      "section": "help",
+      "summary": "CMU Student Handbook / university policy content scraped from cmu.edu: Safety Hazards."
+    },
+    {
+      "file": "help/community-policies/safety-intervention-protocol.txt",
+      "topic": "Safety Intervention Protocol",
+      "section": "help",
+      "summary": "CMU Student Handbook / university policy content scraped from cmu.edu: Safety Intervention Protocol."
+    },
+    {
+      "file": "help/community-policies/scheduling-of-university-facilities.txt",
+      "topic": "Scheduling of University Facilities",
+      "section": "help",
+      "summary": "CMU Student Handbook / university policy content scraped from cmu.edu: Scheduling of University Facilities."
+    },
+    {
+      "file": "help/community-policies/social-regulations.txt",
+      "topic": "Social Regulations",
+      "section": "help",
+      "summary": "CMU Student Handbook / university policy content scraped from cmu.edu: Social Regulations."
+    },
+    {
+      "file": "help/community-policies/steam-tunnels.txt",
+      "topic": "Steam Tunnels",
+      "section": "help",
+      "summary": "CMU Student Handbook / university policy content scraped from cmu.edu: Steam Tunnels."
+    },
+    {
+      "file": "help/community-policies/student-accounts-receivable.txt",
+      "topic": "Student Accounts Receivable Collection Policy and Procedures",
+      "section": "help",
+      "summary": "CMU Student Handbook / university policy content scraped from cmu.edu: Student Accounts Receivable Collection Policy and Procedures."
+    },
+    {
+      "file": "help/community-policies/student-enterprises.txt",
+      "topic": "Student Enterprises",
+      "section": "help",
+      "summary": "CMU Student Handbook / university policy content scraped from cmu.edu: Student Enterprises."
+    },
+    {
+      "file": "help/community-policies/student_fundraising_and_on-campus_sales.txt",
+      "topic": "Student Fundraising and On-campus Sales",
+      "section": "help",
+      "summary": "CMU Student Handbook / university policy content scraped from cmu.edu: Student Fundraising and On-campus Sales."
+    },
+    {
+      "file": "help/community-policies/tents-encampments-and-other-structures.txt",
+      "topic": "Policy on Tents and Encampments",
+      "section": "help",
+      "summary": "CMU Student Handbook / university policy content scraped from cmu.edu: Policy on Tents and Encampments."
+    },
+    {
+      "file": "help/community-policies/unauthorized-keys.txt",
+      "topic": "Unauthorized Keys",
+      "section": "help",
+      "summary": "CMU Student Handbook / university policy content scraped from cmu.edu: Unauthorized Keys."
+    },
+    {
+      "file": "help/community-policies/university_access_and_entry.txt",
+      "topic": "University Access and Entry",
+      "section": "help",
+      "summary": "CMU Student Handbook / university policy content scraped from cmu.edu: University Access and Entry."
+    },
+    {
+      "file": "help/community-policies/utility-lines.txt",
+      "topic": "Utility Lines and Building Alterations",
+      "section": "help",
+      "summary": "CMU Student Handbook / university policy content scraped from cmu.edu: Utility Lines and Building Alterations."
+    },
+    {
+      "file": "help/policies/statement-of-assurance.txt",
+      "topic": "Statement of Assurance",
+      "section": "help",
+      "summary": "CMU Student Handbook / university policy content scraped from cmu.edu: Statement of Assurance."
+    },
+    {
+      "file": "help/the-word-2025-2026/welcome-and-index.txt",
+      "topic": "Welcome to The Word 2025-2026",
+      "section": "help",
+      "summary": "Introduction and table of contents for The Word 2025-2026 CMU Student Handbook PDF."
+    },
+    {
+      "file": "help/the-word-2025-2026/vision-mission-and-code.txt",
+      "topic": "Carnegie Mellon Vision, Mission, and Code",
+      "section": "help",
+      "summary": "Carnegie Mellon vision, mission, and community code from The Word handbook."
+    },
+    {
+      "file": "help/the-word-2025-2026/academic-policies.txt",
+      "topic": "Academic Policies (Student Handbook)",
+      "section": "help",
+      "summary": "Full academic policies section from The Word 2025-2026 handbook (grading, integrity, leaves, appeals, and related policies)."
+    },
+    {
+      "file": "help/the-word-2025-2026/academic-integrity-actions.txt",
+      "topic": "Academic Integrity Actions (Student Handbook)",
+      "section": "help",
+      "summary": "Academic integrity violation procedures and outcomes from The Word 2025-2026 handbook."
+    },
+    {
+      "file": "help/the-word-2025-2026/community-policies.txt",
+      "topic": "Community Policies (Student Handbook)",
+      "section": "help",
+      "summary": "Full community policies section from The Word 2025-2026 handbook (housing, conduct, safety, hazing, and campus rules)."
+    },
+    {
+      "file": "help/the-word-2025-2026/community-standards-and-procedures.txt",
+      "topic": "Community Standards and Procedures (Student Handbook)",
+      "section": "help",
+      "summary": "Community standards, conduct procedures, and disciplinary processes from The Word handbook."
+    },
+    {
+      "file": "help/the-word-2025-2026/student-resources.txt",
+      "topic": "Student Resources (Student Handbook)",
+      "section": "help",
+      "summary": "Student resources appendix from The Word 2025-2026 handbook."
     }
   ]
 }

@@ -6,15 +6,16 @@
   align-items: center;
   justify-content: center;
   padding: 16px;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(92, 21, 30, 0.55);
 }
 
 .project-modal {
   width: min(400px, 100%);
   padding: 20px;
-  border-radius: 16px;
-  background: #ffffff;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+  border-radius: 18px;
+  background: var(--tartan-white);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(156, 39, 51, 0.1);
 }
 
 .project-modal__header {
@@ -26,9 +27,10 @@
 
 .project-modal__title {
   margin: 0;
-  font-size: 1.125rem;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
   font-weight: 700;
-  color: #111111;
+  color: var(--tartan-maroon);
 }
 
 .project-modal__label {
@@ -36,24 +38,25 @@
   margin-bottom: 8px;
   font-size: 0.875rem;
   font-weight: 500;
-  color: #444444;
+  color: rgba(122, 28, 40, 0.75);
 }
 
 .project-modal__input {
   width: 100%;
   margin-bottom: 20px;
   padding: 12px 14px;
-  border: 1px solid #ddd;
-  border-radius: 10px;
+  border: 1.5px solid rgba(156, 39, 51, 0.18);
+  border-radius: 12px;
   font-family: inherit;
   font-size: 0.9375rem;
-  color: #111111;
+  color: #2a1216;
   outline: none;
-  transition: border-color 0.15s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .project-modal__input:focus {
-  border-color: #c41230;
+  border-color: var(--tartan-maroon);
+  box-shadow: 0 0 0 3px rgba(156, 39, 51, 0.1);
 }
 
 .project-modal__actions {
@@ -65,30 +68,30 @@
 .project-modal__btn {
   padding: 10px 16px;
   border: none;
-  border-radius: 10px;
-  font-family: inherit;
+  border-radius: 999px;
+  font-family: var(--font-display);
   font-size: 0.875rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
 .project-modal__btn--secondary {
-  background: #efefef;
-  color: #333333;
+  background: rgba(156, 39, 51, 0.08);
+  color: var(--tartan-maroon);
 }
 
 .project-modal__btn--secondary:hover {
-  background: #e4e4e4;
+  background: rgba(156, 39, 51, 0.14);
 }
 
 .project-modal__btn--primary {
-  background: #c41230;
-  color: #ffffff;
+  background: var(--tartan-maroon);
+  color: var(--tartan-white);
 }
 
 .project-modal__btn--primary:hover:not(:disabled) {
-  background: #a30f28;
+  background: var(--tartan-maroon-dark);
 }
 
 .project-modal__btn--primary:disabled {
