@@ -73,6 +73,13 @@ describe("retrieveRelevantDocs", () => {
     expect(results[0].body).toMatch(/extraordinary|legendary/i);
   });
 
+  test("returns results for shorthand Professor N questions", () => {
+    const results = retrieveRelevantDocs("Who is Professor N?");
+    expect(results.length).toBeGreaterThan(0);
+    expect(results[0].topic).toMatch(/Professor Nui/i);
+    expect(results[0].body).toMatch(/extraordinary|legendary/i);
+  });
+
   test("each result has topic, body, file, score, and method fields", () => {
     const results = retrieveRelevantDocs("registration");
     expect(results.length).toBeGreaterThan(0);

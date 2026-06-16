@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import ChatInputBar from "./ChatInputBar";
 import ScottyAvatar from "./ScottyAvatar";
-import { MicIcon, MenuIcon, ShareIcon, DownloadIcon, VolumeIcon } from "./Icons";
+import { MicIcon, MenuIcon, ShareIcon, DownloadIcon, VolumeIcon, ChevronIcon } from "./Icons";
 import "./PersonaView.css";
 import "./ChatInterface.css";
 
@@ -17,7 +17,6 @@ function readMutedPreference() {
 
 function usePersonaSpeech(avatarRef) {
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [caption, setCaption] = useState("");
   const speakTimerRef = useRef(null);
 
   const speakBrowser = useCallback((text) => {
@@ -26,12 +25,9 @@ function usePersonaSpeech(avatarRef) {
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = 0.92;
     utterance.pitch = 1;
-    utterance.onstart = () => { setIsSpeaking(true); setCaption(""); };
-    utterance.onboundary = (e) => {
-      if (e.name === "word") setCaption(text.slice(0, e.charIndex + e.charLength));
-    };
-    utterance.onend = () => { setIsSpeaking(false); setCaption(text); };
-    utterance.onerror = () => { setIsSpeaking(false); setCaption(text); };
+    utterance.onstart = () => setIsSpeaking(true);
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
     window.speechSynthesis.speak(utterance);
   }, []);
 
@@ -41,7 +37,6 @@ function usePersonaSpeech(avatarRef) {
       try {
         await avatarRef.current.speak(text);
         setIsSpeaking(true);
-        setCaption(text);
         const ms = Math.max(2500, text.split(" ").length * 450);
         speakTimerRef.current = setTimeout(() => setIsSpeaking(false), ms);
         return;
@@ -61,7 +56,7 @@ function usePersonaSpeech(avatarRef) {
 
   useEffect(() => () => { clearTimeout(speakTimerRef.current); window.speechSynthesis?.cancel(); }, []);
 
-  return { isSpeaking, caption, speak, stop, setCaption };
+  return { isSpeaking, speak, stop };
 }
 
 function useMicInput({ onResult }) {
@@ -90,7 +85,6 @@ function PersonaView({
   messages = [],
   isLoading,
   onSend,
-  onStop,
   onShare,
   onDownload,
   onOpenMenu,
@@ -99,32 +93,57 @@ function PersonaView({
   voiceModeRef,
   avatarRef,
 }) {
-  const { isSpeaking, caption, speak, stop, setCaption } = usePersonaSpeech(avatarRef);
+  const { isSpeaking, speak, stop } = usePersonaSpeech(avatarRef);
   const [isMuted, setIsMuted] = useState(readMutedPreference);
   const prevLoadingRef = useRef(false);
-  const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
+  const isNearBottomRef = useRef(true);
+  const [showScrollDown, setShowScrollDown] = useState(false);
   const hasMessages = messages.length > 0;
+
+  const SCROLL_THRESHOLD = 72;
+
+  const checkScrollPosition = useCallback(() => {
+    const el = messagesContainerRef.current;
+    if (!el) return;
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    const nearBottom = distanceFromBottom <= SCROLL_THRESHOLD;
+    isNearBottomRef.current = nearBottom;
+    setShowScrollDown(!nearBottom);
+  }, []);
+
+  const scrollToBottom = useCallback((behavior = "smooth") => {
+    const el = messagesContainerRef.current;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior });
+    isNearBottomRef.current = true;
+    setShowScrollDown(false);
+  }, []);
 
   useEffect(() => {
     stop();
-    setCaption("");
     prevLoadingRef.current = false;
     voiceModeRef.current = false;
-  }, [chatSessionKey, stop, setCaption, voiceModeRef]);
-
-  const handleStop = useCallback(() => {
-    stop();
-    onStop?.();
-  }, [stop, onStop]);
+    isNearBottomRef.current = true;
+    setShowScrollDown(false);
+  }, [chatSessionKey, stop, voiceModeRef]);
 
   const handleVoiceResult = useCallback((transcript) => {
     stop();
     voiceModeRef.current = true;
-    setCaption("");
     onSend(transcript);
-  }, [onSend, voiceModeRef, stop, setCaption]);
+  }, [onSend, voiceModeRef, stop]);
 
   const { listening, toggle: toggleMic } = useMicInput({ onResult: handleVoiceResult });
+
+  const handleMicClick = useCallback(() => {
+    if (isLoading) return;
+    if (isSpeaking) {
+      stop();
+      return;
+    }
+    toggleMic();
+  }, [isLoading, isSpeaking, stop, toggleMic]);
 
   const toggleMute = useCallback(() => {
     setIsMuted((prev) => {
@@ -142,28 +161,44 @@ function PersonaView({
   useEffect(() => {
     const wasLoading = prevLoadingRef.current;
     prevLoadingRef.current = isLoading;
-    if (wasLoading && !isLoading && lastReply) {
+    if (wasLoading && !isLoading && lastReply && !isMuted) {
       voiceModeRef.current = false;
-      if (isMuted) {
-        setCaption(lastReply);
-      } else {
-        speak(lastReply);
-      }
+      speak(lastReply);
     }
-  }, [isLoading, lastReply, isMuted, voiceModeRef, speak, setCaption]);
+  }, [isLoading, lastReply, isMuted, voiceModeRef, speak]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isLoading]);
+    if (!hasMessages) return undefined;
 
-  const micLabel = isLoading ? "Processing…" : listening ? "Listening…" : "Tap to speak";
+    const el = messagesContainerRef.current;
+    if (!el) return undefined;
 
-  const captionText = isLoading
-    ? "Thinking…"
-    : caption || null;
+    el.addEventListener("scroll", checkScrollPosition, { passive: true });
+    checkScrollPosition();
+
+    return () => el.removeEventListener("scroll", checkScrollPosition);
+  }, [hasMessages, checkScrollPosition]);
+
+  useEffect(() => {
+    if (!hasMessages) return;
+    if (isNearBottomRef.current) {
+      const isStreaming = messages.some((message) => message.streaming);
+      requestAnimationFrame(() => scrollToBottom(isStreaming ? "auto" : "smooth"));
+    } else {
+      checkScrollPosition();
+    }
+  }, [messages, isLoading, hasMessages, scrollToBottom, checkScrollPosition]);
+
+  const micLabel = isLoading
+    ? "Processing…"
+    : listening
+      ? "Listening…"
+      : isSpeaking
+        ? "Tap to stop"
+        : "Tap to speak";
 
   const avatarState = isSpeaking ? "speaking" : listening ? "listening" : "idle";
-  const showIdleHint = !captionText && !isSpeaking && !isLoading && !hasMessages;
+  const showIdleHint = !isSpeaking && !isLoading && !hasMessages;
 
   return (
     <div className="pv">
@@ -217,44 +252,80 @@ function PersonaView({
 
       <main className={`pv-body${hasMessages ? " pv-body--chat" : " pv-body--idle"}`}>
         {hasMessages && (
-          <div className="pv-messages message-history">
-            {messages.map((message, index) => {
-              const isUser = message.role === "user";
-              const msgId = message.id ?? index;
-              return (
-                <div
-                  key={msgId}
-                  className={`msg-row${isUser ? " msg-row--user" : " msg-row--assistant"}`}
-                >
-                  <div className={`msg-bubble msg-bubble--on-pattern${isUser ? " msg-bubble--user" : " msg-bubble--assistant"}`}>
-                    {message.content}
-                    {!isUser && message.confidence?.message && (
-                      <p className="msg-confidence" title={message.confidence.message}>
-                        {message.confidence.message}
-                      </p>
-                    )}
+          <div className="pv-messages-wrap">
+            <div
+              className="pv-messages message-history"
+              ref={messagesContainerRef}
+              role="log"
+              aria-live="polite"
+              aria-relevant="additions"
+            >
+              {messages.map((message, index) => {
+                const isUser = message.role === "user";
+                const msgId = message.id ?? index;
+                return (
+                  <div
+                    key={msgId}
+                    className={`msg-row${isUser ? " msg-row--user" : " msg-row--assistant"}`}
+                  >
+                    <div className={`msg-bubble msg-bubble--on-pattern${isUser ? " msg-bubble--user" : " msg-bubble--assistant"}`}>
+                      {message.content}
+                      {!isUser && message.confidence?.message && (
+                        <p className="msg-confidence" title={message.confidence.message}>
+                          {message.confidence.message}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {isLoading && (
+                <div className="msg-row msg-row--assistant">
+                  <div className="msg-bubble msg-bubble--assistant msg-bubble--on-pattern typing-indicator">
+                    <span className="typing-dot typing-dot--on-pattern" />
+                    <span className="typing-dot typing-dot--on-pattern" />
+                    <span className="typing-dot typing-dot--on-pattern" />
                   </div>
                 </div>
-              );
-            })}
+              )}
+            </div>
 
-            {isLoading && (
-              <div className="msg-row msg-row--assistant">
-                <div className="msg-bubble msg-bubble--assistant msg-bubble--on-pattern typing-indicator">
-                  <span className="typing-dot typing-dot--on-pattern" />
-                  <span className="typing-dot typing-dot--on-pattern" />
-                  <span className="typing-dot typing-dot--on-pattern" />
-                </div>
-              </div>
+            {showScrollDown && (
+              <button
+                type="button"
+                className="pv-scroll-down"
+                aria-label="Scroll to latest message"
+                onClick={() => scrollToBottom()}
+              >
+                <ChevronIcon />
+              </button>
             )}
-            <div ref={messagesEndRef} />
           </div>
         )}
 
         <div className="pv-stage">
           <div className={`pv-avatar-frame pv-avatar-frame--${avatarState}`}>
+            <div className="pv-scotty-ears" aria-hidden="true">
+              <span className="pv-dog-ear pv-dog-ear--left">
+                <span className="pv-dog-ear__inner" />
+                <span className="pv-dog-ear__fur" />
+              </span>
+              <span className="pv-dog-ear pv-dog-ear--right">
+                <span className="pv-dog-ear__inner" />
+                <span className="pv-dog-ear__fur" />
+              </span>
+            </div>
             <div className="pv-avatar-inner">
               <ScottyAvatar ref={avatarRef} persona />
+            </div>
+            <div className="pv-scotty-whiskers" aria-hidden="true">
+              <span className="pv-scotty-whisker pv-scotty-whisker--l1" />
+              <span className="pv-scotty-whisker pv-scotty-whisker--l2" />
+              <span className="pv-scotty-whisker pv-scotty-whisker--l3" />
+              <span className="pv-scotty-whisker pv-scotty-whisker--r1" />
+              <span className="pv-scotty-whisker pv-scotty-whisker--r2" />
+              <span className="pv-scotty-whisker pv-scotty-whisker--r3" />
             </div>
             <div className="pv-avatar-ring" aria-hidden="true" />
           </div>
@@ -266,18 +337,6 @@ function PersonaView({
                 <span className="pv-identity__dot" />
                 CMU-Q Student Assistant
               </p>
-            </div>
-          )}
-
-          {(captionText || isSpeaking) && (
-            <div className={`pv-captions${isLoading ? " pv-captions--thinking" : ""}`}>
-              <p className="pv-captions__text">{captionText}</p>
-              {(isSpeaking || isLoading) && (
-                <button type="button" className="pv-stop-btn" onClick={handleStop}>
-                  <span className="pv-stop-btn__icon" />
-                  Stop
-                </button>
-              )}
             </div>
           )}
 
@@ -299,9 +358,9 @@ function PersonaView({
           <button
             type="button"
             className={`pv-mic-btn${listening ? " pv-mic-btn--active" : ""}`}
-            onClick={toggleMic}
+            onClick={handleMicClick}
             disabled={isLoading}
-            aria-label={listening ? "Stop listening" : "Speak to MyTartan"}
+            aria-label={isSpeaking ? "Stop speaking" : listening ? "Stop listening" : "Speak to MyTartan"}
           >
             <MicIcon active={listening} />
           </button>

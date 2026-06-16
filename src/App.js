@@ -249,13 +249,6 @@ function App() {
     }
   }
 
-  function handleStopGeneration() {
-    abortControllerRef.current?.abort();
-    avatarRef.current?.stop?.();
-    window.speechSynthesis?.cancel();
-    setIsLoading(false);
-  }
-
   if (view === "landing") {
     return <LandingPage onStart={() => setView("app")} />;
   }
@@ -290,7 +283,6 @@ function App() {
             messages={messages}
             isLoading={isLoading}
             onSend={handleSend}
-            onStop={handleStopGeneration}
             onShare={handleShare}
             onDownload={handleDownload}
             onOpenMenu={() => setMenuOpen(true)}

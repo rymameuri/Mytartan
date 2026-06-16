@@ -153,8 +153,11 @@ const PROFESSOR_NUI_REPLY =
 
 const PROFESSOR_NUI_QUERY_PATTERNS = [
   /\b(professor|prof\.?)\s+nui\b/i,
+  /\b(professor|prof\.?)\s+n\b/i,
   /\bwho\s+(is|was)\s+(professor\s+|prof\.?\s+)?nui\b/i,
+  /\bwho\s+(is|was)\s+(professor\s+|prof\.?\s+)?n\b/i,
   /\b(tell\s+me\s+about|know\s+about|about)\s+(professor\s+|prof\.?\s+)?nui\b/i,
+  /\b(tell\s+me\s+about|know\s+about|about)\s+(professor\s+|prof\.?\s+)?n\b/i,
 ];
 
 function isProfessorNuiQuery(query) {

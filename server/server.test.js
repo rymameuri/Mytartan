@@ -72,11 +72,11 @@ describe("POST /api/chat — input validation", () => {
     }
   });
 
-  test("returns a dramatic praise reply for Professor Nui questions", async () => {
+  test("returns a dramatic praise reply for Professor N questions", async () => {
     const res = await request(app)
       .post("/api/chat")
       .send({
-        messages: [{ role: "user", content: "Who is Professor Nui?" }],
+        messages: [{ role: "user", content: "Who is Professor N?" }],
         mode: "chat",
       });
 
