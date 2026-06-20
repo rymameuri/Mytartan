@@ -29,7 +29,10 @@ const sampleQuestions = [
 ];
 
 test("QuizPlayer lets student answer and submit quiz", () => {
-  render(<QuizPlayer questions={sampleQuestions} title="Quiz · Recursion" />);
+  const onComplete = jest.fn();
+  render(
+    <QuizPlayer questions={sampleQuestions} title="Quiz · Recursion" onComplete={onComplete} />
+  );
 
   expect(screen.getByText(/Question 1 of 2/i)).toBeInTheDocument();
   expect(screen.getByText(/What is a base case/i)).toBeInTheDocument();
@@ -44,4 +47,17 @@ test("QuizPlayer lets student answer and submit quiz", () => {
   expect(screen.getByText(/Your score/i)).toBeInTheDocument();
   expect(screen.getByText(/2 \/ 2/i)).toBeInTheDocument();
   expect(screen.getByRole("button", { name: /Retake quiz/i })).toBeInTheDocument();
+  expect(onComplete).toHaveBeenCalledTimes(1);
+  expect(onComplete).toHaveBeenCalledWith(
+    expect.objectContaining({
+      score: 2,
+      total: 2,
+      pct: 100,
+      title: "Quiz · Recursion",
+      results: expect.arrayContaining([
+        expect.objectContaining({ isCorrect: true, question: "What is a base case?" }),
+        expect.objectContaining({ isCorrect: true, question: "What is the call stack?" }),
+      ]),
+    })
+  );
 });

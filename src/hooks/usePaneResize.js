@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useAuth } from "../context/AuthContext";
+import { getUserStorageKey } from "../utils/userStorage";
 
 const STORAGE_KEY = "tartan-ws-pane-widths";
 const DEFAULTS = { sources: 280, studio: 300 };
@@ -7,9 +9,9 @@ const LIMITS = {
   studio: { min: 260, max: 560 },
 };
 
-function readStoredWidths() {
+function readStoredWidths(userId) {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(getUserStorageKey(STORAGE_KEY, userId));
     if (!raw) return DEFAULTS;
     const parsed = JSON.parse(raw);
     return {
@@ -26,16 +28,25 @@ export function clamp(value, { min, max }) {
 }
 
 export function usePaneResize(containerRef) {
-  const [widths, setWidths] = useState(readStoredWidths);
+  const { user } = useAuth();
+  const userId = user?.id;
+  const [widths, setWidths] = useState(() => readStoredWidths(userId));
   const dragRef = useRef(null);
 
-  const persistWidths = useCallback((next) => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-    } catch {
-      /* ignore quota errors */
-    }
-  }, []);
+  useEffect(() => {
+    setWidths(readStoredWidths(userId));
+  }, [userId]);
+
+  const persistWidths = useCallback(
+    (next) => {
+      try {
+        localStorage.setItem(getUserStorageKey(STORAGE_KEY, userId), JSON.stringify(next));
+      } catch {
+        /* ignore quota errors */
+      }
+    },
+    [userId]
+  );
 
   const stopDrag = useCallback(() => {
     if (!dragRef.current) return;

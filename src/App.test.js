@@ -7,11 +7,12 @@ jest.mock('./components/ScottyAvatar', () => {
   };
 });
 
-test('renders landing page call to action', () => {
+test('renders login form when not authenticated', () => {
   render(<App />);
-  expect(screen.getByRole('button', { name: /start chatting with mytartan/i })).toBeInTheDocument();
+  expect(screen.getByRole('tab', { name: /log in/i })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /^log in$/i })).toBeInTheDocument();
 });
 
-test('renders without crashing when no messages exist', () => {
+test('renders without crashing', () => {
   expect(() => render(<App />)).not.toThrow();
 });

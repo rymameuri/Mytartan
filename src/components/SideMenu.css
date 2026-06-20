@@ -564,6 +564,58 @@
   color: var(--tartan-text-faint-on-dark);
 }
 
+.side-menu__profile {
+  flex-shrink: 0;
+  margin-top: auto;
+  padding: 12px 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.side-menu__profile-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 8px;
+  min-width: 0;
+}
+
+.side-menu__profile-email {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--tartan-text-on-dark);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.side-menu__profile-major {
+  font-size: 0.75rem;
+  color: var(--tartan-text-muted-on-dark);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.side-menu__logout {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 8px;
+  padding: 6px 12px;
+  background: transparent;
+  color: var(--tartan-text-muted-on-dark);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.side-menu__logout:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.35);
+  color: var(--tartan-white);
+}
+
 .side-menu__footer {
   flex-shrink: 0;
   margin: 12px 0 0;

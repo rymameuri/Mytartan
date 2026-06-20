@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import "./QuizPlayer.css";
 
-function QuizPlayer({ questions, title = "Quiz" }) {
+function QuizPlayer({ questions, title = "Quiz", onComplete, onHelp, onQuestionChange, helpDisabled = false }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState({});
   const [phase, setPhase] = useState("taking");
@@ -25,6 +25,10 @@ function QuizPlayer({ questions, title = "Quiz" }) {
     setAnswers({});
     setPhase("taking");
   }, [questionsKey]);
+
+  useEffect(() => {
+    onQuestionChange?.(currentIndex);
+  }, [currentIndex, onQuestionChange]);
 
   if (!questions.length) return null;
 
@@ -50,8 +54,33 @@ function QuizPlayer({ questions, title = "Quiz" }) {
     }
   }
 
+  function buildQuizResults() {
+    const pct = Math.round((score / total) * 100);
+    return {
+      score,
+      total,
+      pct,
+      title,
+      results: questions.map((q, index) => {
+        const selected = answers[index];
+        const selectedOpt = q.options.find((opt) => opt.id === selected);
+        const correctOpt = q.options.find((opt) => opt.id === q.correct);
+        return {
+          question: q.text,
+          selected: selected ?? null,
+          selectedText: selectedOpt?.text ?? "",
+          correct: q.correct,
+          correctText: correctOpt?.text ?? "",
+          isCorrect: selected === q.correct,
+          explanation: q.explanation ?? "",
+        };
+      }),
+    };
+  }
+
   function handleSubmit() {
     setPhase("submitted");
+    onComplete?.(buildQuizResults());
   }
 
   function handleRetake() {
@@ -184,6 +213,17 @@ function QuizPlayer({ questions, title = "Quiz" }) {
         >
           Previous
         </button>
+
+        {onHelp && (
+          <button
+            type="button"
+            className="quiz-player__help-btn"
+            disabled={helpDisabled}
+            onClick={() => onHelp(currentIndex)}
+          >
+            Help with this question
+          </button>
+        )}
 
         {isLast ? (
           <button

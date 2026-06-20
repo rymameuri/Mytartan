@@ -9,6 +9,7 @@ import {
   TrashIcon,
 } from "./Icons";
 import ProjectModal from "./ProjectModal";
+import { useAuth } from "../context/AuthContext";
 import "./SideMenu.css";
 
 const MENU_SECTIONS = [
@@ -258,6 +259,7 @@ function SideMenu({
   projects,
   getProjectConversations,
 }) {
+  const { user, logout } = useAuth();
   const [topicsExpanded, setTopicsExpanded] = useState(false);
   const [expandedProjects, setExpandedProjects] = useState(() => new Set());
   const [projectModal, setProjectModal] = useState(null);
@@ -441,6 +443,20 @@ function SideMenu({
             ))}
         </div>
       </div>
+
+      {!collapsed && (
+        <div className="side-menu__profile">
+          <div className="side-menu__profile-info">
+            <span className="side-menu__profile-email">{user?.email}</span>
+            {user?.profile?.major && (
+              <span className="side-menu__profile-major">{user.profile.major}</span>
+            )}
+          </div>
+          <button type="button" className="side-menu__logout" onClick={logout}>
+            Log out
+          </button>
+        </div>
+      )}
 
       {!collapsed && (
         <p className="side-menu__footer">

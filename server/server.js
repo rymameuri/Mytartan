@@ -3,21 +3,31 @@ require("dotenv").config({ path: path.join(__dirname, ".env") });
 const express = require("express");
 const cors = require("cors");
 const axios = require("axios");
+// Dev tools (e.g. Cursor) often set HTTP_PROXY to a local port that is not running.
+axios.defaults.proxy = false;
 const {
   loadKnowledgeBase,
   retrieveRelevantDocs,
   retrieveRelevantDocsAsync,
+  buildStudentContext,
   buildContextBlock,
+  buildKeyFactsBlock,
+  checkKeyFacts,
   computeConfidence,
   getRetrievalStatus,
   isProfessorNuiQuery,
   getProfessorNuiReply,
+  hasContentKeywords,
 } = require("./knowledgeBase");
+const { optionalAuth } = require("./auth");
 const {
   buildTutorSystemPrompt,
   hasValidCourseContext,
+  formatCourseContextBlock,
 } = require("./tutorPrompt");
+const { buildPersonaPrompt, resolvePersonaMode } = require("./personaPrompt");
 const { generateTutorSpeechScript } = require("./tutorSpeech");
+const { generateQuizRecap } = require("./tutorQuizRecap");
 const {
   listCourses,
   getCourse,
@@ -30,12 +40,30 @@ const {
   addMaterial,
   deleteMaterial,
 } = require("./courseStore");
+const {
+  getUserByEmail,
+  getUserById,
+  createUser,
+  updateUserProfile,
+} = require("./userStore");
+const {
+  hashPassword,
+  comparePassword,
+  signToken,
+  requireAuth,
+} = require("./auth");
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 const AI_MAX_TOKENS = 200;
 const AI_MAX_TOKENS_TUTOR = 512;
 const AI_TEMPERATURE = 0.3;
+
+// Tune after eval: scores below this skip full LLM generation (weak retrieval / hallucination risk).
+const LOW_CONFIDENCE_THRESHOLD = 40;
+
+const LOW_CONFIDENCE_REPLY =
+  "I'm not confident I have accurate information on this topic right now. For the most reliable answer, please check scotty.qatar.cmu.edu or contact the relevant CMU-Q office directly — Enrollment Services for registration and academic dates, Qatar Foundation Financial Aid for scholarships, or your academic advisor for degree-specific questions.";
 
 const PLACEHOLDER_KEYS = new Set([
   "",
@@ -95,6 +123,15 @@ function getAiProviderLabel() {
   return "knowledge base only (add AI_GATEWAY_BASE_URL + CLAUDE_API_KEY, or ANTHROPIC_API_KEY)";
 }
 
+function toPublicUser(user) {
+  if (!user) return null;
+  return {
+    id: user.id,
+    email: user.email,
+    profile: user.profile,
+  };
+}
+
 function formatApiError(err, fallback = "Request failed") {
   const status = err.response?.status;
   if (status === 401) {
@@ -123,26 +160,24 @@ function formatApiError(err, fallback = "Request failed") {
 const NO_KB_MATCH_REPLY =
   "I don't have that information in my knowledge base right now. For the most up-to-date details, please check scotty.qatar.cmu.edu or contact the relevant CMU-Q office.";
 
-const KB_GROUNDING_RULES = `You are Tartan Scotty, Carnegie Mellon University in Qatar's (CMU-Q) student assistant. Answer questions like a knowledgeable friend — naturally and conversationally, not like a formal document.
+const KB_GROUNDING_RULES = `KNOWLEDGE BASE GROUNDING RULES
+Answer CMU-Q questions using ONLY the official knowledge base excerpts and authoritative key facts provided below.
 
 CRITICAL RULES:
-- Answer CMU-Q questions using ONLY the official knowledge base excerpts provided below.
-- NEVER invent names, roles, emails, dates, policies, or contacts.
+- NEVER invent names, roles, emails, dates, policies, dollar amounts, or contacts.
 - If the knowledge base does not contain the answer — or the excerpts do not actually address what the user asked — you MUST say clearly that you do not have that information. Do not guess, infer, or fill gaps from general knowledge.
+- When authoritative key facts are provided, prefer their exact values over conflicting prose excerpts on the same topic.
 - When you do not have the answer, always direct the user to scotty.qatar.cmu.edu for official CMU-Q resources, and mention the relevant CMU-Q office when appropriate.
 - At CMU-Q, "StuCo" means the Student College (student-taught courses), NOT a generic student council or student government. Do not make up StuCo officer titles or members.
-- Speak in clear, natural, everyday English. Be warm and helpful, but do not use Scottish dialect, accent, or slang (no "laddie", "wee", "aye", "bonny", etc.). Write like a friendly student services assistant, not a cartoon character.
-- Do NOT include [Source:] labels, file names, or file paths anywhere in your response. Use the knowledge base to answer, but never echo back source citations.
-- Do NOT use markdown formatting in responses — no asterisks, bold, italics, or backticks. Write plain text only.
+- Briefly name the human-readable source when answering from context (for example "according to the Financial Aid page" or "based on the Cross Registration page"). Do NOT include [Source:] labels, file names, or file paths.
 - If a question is ambiguous (e.g. "measure" likely means "major/degree", "stucco" means "StuCo"), interpret it charitably in the CMU-Q academic context before answering.
 
 RESPONSE STYLE:
-- Be warm but get to the point fast — lead with the direct answer in the first sentence.
-- Keep answers to 1–3 short sentences unless the user asks for more detail.
+- Lead with the direct answer in the first sentence.
 - Never open with stiff phrases like "According to the official knowledge base" or "Here's how it works:"
 - Do not number every step unless the user is explicitly asking for a process in order.
 - Avoid bullet points for simple answers — weave the info into natural sentences.
-- Skip filler affirmations like "Great question!" or "That's an exciting opportunity!" Do not repeat the question back or use formulaic greetings.
+- Skip filler affirmations like "Great question!" Do not repeat the question back or use formulaic greetings.
 - If there are important caveats, mention them naturally at the end, not as a separate bulleted list.
 - If you do not know, say so plainly in one sentence, then tell the user to check scotty.qatar.cmu.edu for official information.`;
 
@@ -154,18 +189,110 @@ const SYSTEM_PROMPTS = {
 
 const KB_MODES = new Set(["qa", "campus", "chat"]);
 
-const CONVERSATIONAL_PATTERNS = [
+const MAX_SMALL_TALK_WORDS = 8;
+
+const SMALL_TALK_PATTERNS = [
   /^(hi|hello|hey|howdy|yo|sup|hiya)(\s+scotty)?[\s!.?]*$/i,
   /^good\s+(morning|afternoon|evening)(\s+scotty)?[\s!.?]*$/i,
   /^(thanks|thank\s+you|thx|ty)[\s!.?]*$/i,
-  /^(bye|goodbye|see\s+ya|see\s+you)[\s!.?]*$/i,
-  /^(how\s+are\s+you|what'?s\s+up)[\s?!.]*$/i,
+  /^(bye|goodbye|see\s+ya|see\s+you|that'?s\s+all|thats\s+all)[\s!.?]*$/i,
+  /^(how\s+are\s+you|what'?s\s+up|whats\s+up|wassup)[\s?!.]*$/i,
+  /^(ok|okay|cool|nice|lol|haha|awesome|great|perfect|sure|got\s+it|sounds\s+good)[\s!.?]*$/i,
+  /^(hi|hello|hey)[\s,!.]*(how\s+are\s+you|what'?s\s+up|whats\s+up)[\s?!.]*$/i,
+  /^good\s+(morning|afternoon|evening)[\s,!.]*(how\s+are\s+you|scotty)?[\s?!.]*$/i,
 ];
 
-function isConversationalQuery(query) {
-  const normalized = query.trim().replace(/\s+/g, " ");
+const SMALL_TALK_FILLER = new Set([
+  "scotty",
+  "please",
+  "pls",
+  "there",
+  "a",
+  "the",
+  "so",
+  "just",
+  "well",
+  "too",
+  "very",
+  "much",
+]);
+
+const SMALL_TALK_VOCAB = new Set([
+  "hi",
+  "hello",
+  "hey",
+  "howdy",
+  "yo",
+  "sup",
+  "hiya",
+  "good",
+  "morning",
+  "afternoon",
+  "evening",
+  "how",
+  "are",
+  "you",
+  "u",
+  "r",
+  "what",
+  "s",
+  "up",
+  "whats",
+  "wassup",
+  "doing",
+  "going",
+  "today",
+  "thanks",
+  "thank",
+  "thx",
+  "ty",
+  "ok",
+  "okay",
+  "cool",
+  "nice",
+  "lol",
+  "haha",
+  "awesome",
+  "great",
+  "perfect",
+  "sure",
+  "got",
+  "it",
+  "sounds",
+  "bye",
+  "goodbye",
+  "see",
+  "ya",
+  "later",
+  "cya",
+  "all",
+  "that",
+  "thats",
+  "fine",
+  "not",
+  "bad",
+]);
+
+function isSmallTalk(message) {
+  const normalized = message.trim().replace(/\s+/g, " ");
   if (!normalized) return false;
-  return CONVERSATIONAL_PATTERNS.some((pattern) => pattern.test(normalized));
+
+  const words = normalized.split(/\s+/);
+  if (words.length > MAX_SMALL_TALK_WORDS) return false;
+  if (hasContentKeywords(normalized)) return false;
+
+  if (SMALL_TALK_PATTERNS.some((pattern) => pattern.test(normalized))) {
+    return true;
+  }
+
+  const tokens = normalized
+    .toLowerCase()
+    .replace(/[,!.?]+/g, " ")
+    .split(/\s+/)
+    .filter((word) => word && !SMALL_TALK_FILLER.has(word));
+
+  if (tokens.length === 0) return true;
+  return tokens.every((token) => SMALL_TALK_VOCAB.has(token.replace(/'s$/, "")));
 }
 
 function getAiGenerationOptions(mode) {
@@ -175,49 +302,81 @@ function getAiGenerationOptions(mode) {
   };
 }
 
-async function retrieveForQuery(mode, userQuery) {
+async function retrieveForQuery(mode, userQuery, recentMessages = []) {
   if (!KB_MODES.has(mode)) {
     return { docs: [], confidence: null };
   }
 
-  const docs = await retrieveRelevantDocsAsync(userQuery);
+  const docs = await retrieveRelevantDocsAsync(userQuery, { recentMessages });
   const confidence = computeConfidence(docs);
   return { docs, confidence };
+}
+
+function assembleSystemPrompt(appMode, studentContext, body) {
+  const parts = [buildPersonaPrompt(resolvePersonaMode(appMode))];
+  if (studentContext?.trim()) parts.push(studentContext.trim());
+  if (body?.trim()) parts.push(body.trim());
+  return parts.join("\n\n");
 }
 
 function buildSystemPrompt(
   mode,
   docs,
   {
-    conversational = false,
+    smallTalk = false,
     courseContext = null,
     tutorActivity = null,
     lectureTopic = "",
     studioGeneration = false,
+    speechMode = null,
+    studioItemContext = null,
+    studentContext = "",
+    keyFacts = [],
   } = {}
 ) {
   if (mode === "tutor") {
-    return buildTutorSystemPrompt(courseContext, {
-      tutorActivity,
-      lectureTopic,
-      studioGeneration,
-    });
+    return assembleSystemPrompt(
+      mode,
+      studentContext,
+      buildTutorSystemPrompt(courseContext, {
+        tutorActivity,
+        lectureTopic,
+        studioGeneration,
+        speechMode,
+        studioItemContext,
+      })
+    );
   }
 
   let prompt = SYSTEM_PROMPTS[mode];
-  if (!KB_MODES.has(mode)) return prompt;
+  if (!KB_MODES.has(mode)) {
+    return assembleSystemPrompt(mode, studentContext, prompt);
+  }
 
-  if (conversational) {
-    prompt +=
-      "\n\nThe user is greeting you or making casual small talk. Reply warmly in one or two short sentences and invite them to ask about CMU-Q if they'd like. No knowledge base lookup is needed for this.";
-  } else if (docs.length) {
-    prompt += `\n\nOFFICIAL CMU-Q KNOWLEDGE BASE (use this as your only source for factual answers):\n${buildContextBlock(docs)}`;
+  if (smallTalk) {
+    return assembleSystemPrompt(
+      mode,
+      studentContext,
+      "The user is greeting you or making casual small talk. Reply warmly in one or two short sentences and invite them to ask about CMU-Q if they'd like."
+    );
+  }
+
+  const contextSections = [];
+  const keyFactsBlock = buildKeyFactsBlock(keyFacts);
+  if (keyFactsBlock) contextSections.push(keyFactsBlock);
+  if (docs.length) {
+    contextSections.push(
+      `OFFICIAL CMU-Q KNOWLEDGE BASE EXCERPTS (use as your source for factual answers):\n${buildContextBlock(docs)}`
+    );
+  }
+  if (contextSections.length) {
+    prompt += `\n\n${contextSections.join("\n\n")}`;
   } else {
     prompt +=
       "\n\nNo matching knowledge base excerpts were found for this question. You MUST tell the user you do not have that information. Do not guess or invent CMU-Q-specific facts. Direct them to scotty.qatar.cmu.edu for official resources.";
   }
 
-  return prompt;
+  return assembleSystemPrompt(mode, studentContext, prompt);
 }
 
 function answerFromKnowledgeBase(userQuery) {
@@ -381,6 +540,10 @@ app.get("/", (_req, res) => {
     message: "Tartan Scotty API server",
     frontend: "http://localhost:3000",
     routes: [
+      "POST /api/auth/signup",
+      "POST /api/auth/login",
+      "GET /api/auth/me",
+      "PATCH /api/auth/profile",
       "GET /api/kb/status",
       "GET /api/courses",
       "POST /api/courses",
@@ -393,6 +556,78 @@ app.get("/", (_req, res) => {
       "POST /api/liveavatar-token",
     ],
   });
+});
+
+app.post("/api/auth/signup", async (req, res) => {
+  const { email, password } = req.body ?? {};
+
+  if (!email || !password) {
+    return res.status(400).json({ error: "email and password are required" });
+  }
+
+  if (getUserByEmail(email)) {
+    return res.status(409).json({ error: "Email is already registered" });
+  }
+
+  try {
+    const passwordHash = await hashPassword(password);
+    const user = createUser({ email, passwordHash });
+    const token = signToken(user);
+    return res.status(201).json({ token, user: toPublicUser(user) });
+  } catch (err) {
+    return res.status(400).json({ error: err.message || "Failed to create account" });
+  }
+});
+
+app.post("/api/auth/login", async (req, res) => {
+  const { email, password } = req.body ?? {};
+
+  if (!email || !password) {
+    return res.status(400).json({ error: "email and password are required" });
+  }
+
+  const user = getUserByEmail(email);
+  if (!user) {
+    return res.status(401).json({ error: "Invalid email or password" });
+  }
+
+  const match = await comparePassword(password, user.passwordHash);
+  if (!match) {
+    return res.status(401).json({ error: "Invalid email or password" });
+  }
+
+  const token = signToken(user);
+  return res.json({ token, user: toPublicUser(user) });
+});
+
+app.get("/api/auth/me", requireAuth, (req, res) => {
+  const user = getUserById(req.user.id);
+  if (!user) {
+    return res.status(404).json({ error: "User not found" });
+  }
+  return res.json(toPublicUser(user));
+});
+
+app.patch("/api/auth/profile", requireAuth, (req, res) => {
+  const allowedFields = ["learningStyle", "intendedUse", "major", "graduationDate"];
+  const profileFields = {};
+
+  for (const field of allowedFields) {
+    if (req.body?.[field] !== undefined) {
+      profileFields[field] = req.body[field];
+    }
+  }
+
+  if (Object.keys(profileFields).length === 0) {
+    return res.status(400).json({ error: "No profile fields provided" });
+  }
+
+  const user = updateUserProfile(req.user.id, profileFields);
+  if (!user) {
+    return res.status(404).json({ error: "User not found" });
+  }
+
+  return res.json({ profile: user.profile });
 });
 
 app.get("/api/kb/status", (_req, res) => {
@@ -553,6 +788,8 @@ async function handleChatRequest(req, res, { stream = false } = {}) {
     tutorActivity = null,
     lectureTopic = "",
     studioGeneration = false,
+    speechMode = null,
+    studioItemContext = null,
   } = req.body;
 
   if (!messages || !Array.isArray(messages)) {
@@ -571,7 +808,7 @@ async function handleChatRequest(req, res, { stream = false } = {}) {
 
   const latestUserMessage = [...messages].reverse().find((m) => m.role === "user");
   const userQuery = latestUserMessage?.content || "";
-  const conversational = KB_MODES.has(mode) && isConversationalQuery(userQuery);
+  const smallTalk = KB_MODES.has(mode) && isSmallTalk(userQuery);
 
   if (KB_MODES.has(mode) && isProfessorNuiQuery(userQuery)) {
     const reply = getProfessorNuiReply();
@@ -579,26 +816,45 @@ async function handleChatRequest(req, res, { stream = false } = {}) {
     return sendChatReply(res, reply, { stream, confidence: professorNuiConfidence });
   }
 
-  const { docs, confidence } = conversational
+  const recentMessages = messages.slice(-5);
+  const { docs, confidence } = smallTalk
     ? { docs: [], confidence: null }
-    : await retrieveForQuery(mode, userQuery);
+    : await retrieveForQuery(mode, userQuery, recentMessages);
+  const keyFacts = KB_MODES.has(mode) && !smallTalk ? checkKeyFacts(userQuery) : [];
+  const studentContext = buildStudentContext(req.user?.profile);
   const systemPrompt = buildSystemPrompt(mode, docs, {
-    conversational,
+    smallTalk,
     courseContext,
     tutorActivity,
     lectureTopic,
     studioGeneration,
+    speechMode,
+    studioItemContext,
+    studentContext,
+    keyFacts,
   });
   const aiOptions = getAiGenerationOptions(mode);
+  const courseContextBlock =
+    mode === "tutor" ? formatCourseContextBlock(courseContext) : "";
 
-  if (KB_MODES.has(mode) && !conversational && docs.length === 0) {
+  if (KB_MODES.has(mode) && !smallTalk && docs.length === 0) {
     const reply = NO_KB_MATCH_REPLY;
     const noMatchConfidence = computeConfidence([]);
     return sendChatReply(res, reply, { stream, confidence: noMatchConfidence });
   }
 
+  if (
+    KB_MODES.has(mode) &&
+    !smallTalk &&
+    confidence &&
+    confidence.score < LOW_CONFIDENCE_THRESHOLD &&
+    confidence.sourceCount > 0
+  ) {
+    return sendChatReply(res, LOW_CONFIDENCE_REPLY, { stream, confidence });
+  }
+
   if (!hasAiKey()) {
-    if (conversational) {
+    if (smallTalk) {
       const reply =
         "Hey! I'm Scotty, your CMU-Q assistant. Ask me anything about registration, campus life, policies, or student resources.";
       return sendChatReply(res, reply, { stream });
@@ -647,6 +903,9 @@ async function handleChatRequest(req, res, { stream = false } = {}) {
             lectureTopic,
             courseName: courseContext?.courseName,
             studioGeneration,
+            speechMode,
+            studioItemContext,
+            courseContextBlock,
           },
           aiOptions
         );
@@ -674,6 +933,9 @@ async function handleChatRequest(req, res, { stream = false } = {}) {
           lectureTopic,
           courseName: courseContext?.courseName,
           studioGeneration,
+          speechMode,
+          studioItemContext,
+          courseContextBlock,
         },
         aiOptions
       );
@@ -692,8 +954,52 @@ async function handleChatRequest(req, res, { stream = false } = {}) {
   }
 }
 
-app.post("/api/chat", (req, res) => handleChatRequest(req, res, { stream: false }));
-app.post("/api/chat/stream", (req, res) => handleChatRequest(req, res, { stream: true }));
+app.post("/api/chat", optionalAuth, (req, res) => handleChatRequest(req, res, { stream: false }));
+app.post("/api/chat/stream", optionalAuth, (req, res) =>
+  handleChatRequest(req, res, { stream: true })
+);
+
+async function handleQuizRecapRequest(req, res) {
+  const { quizResults, lectureTopic = "", courseContext = null } = req.body ?? {};
+
+  if (!quizResults || typeof quizResults !== "object") {
+    return res.status(400).json({ error: "quizResults is required" });
+  }
+  if (!Number.isFinite(quizResults.score) || !Number.isFinite(quizResults.total) || quizResults.total < 1) {
+    return res.status(400).json({ error: "quizResults must include score and total" });
+  }
+  if (!Array.isArray(quizResults.results)) {
+    return res.status(400).json({ error: "quizResults.results must be an array" });
+  }
+
+  if (courseContext && !hasValidCourseContext(courseContext)) {
+    return res.status(400).json({
+      error: "Tutor quiz recap requires courseContext with courseName and syllabusText.",
+    });
+  }
+
+  if (!hasAiKey()) {
+    return res.status(503).json({ error: "No AI provider configured" });
+  }
+
+  try {
+    const recap = await generateQuizRecap(
+      getChatReply,
+      {
+        quizResults,
+        lectureTopic,
+        courseName: courseContext?.courseName,
+      },
+      getAiGenerationOptions("tutor")
+    );
+    return res.json(recap);
+  } catch (err) {
+    const status = err.response?.status || 500;
+    return res.status(status).json({ error: formatApiError(err, "Failed to generate quiz recap") });
+  }
+}
+
+app.post("/api/tutor/quiz-recap", handleQuizRecapRequest);
 
 async function createLiveAvatarToken(_req, res) {
   const apiKey = process.env.LIVEAVATAR_API_KEY || process.env.HEYGEN_API_KEY;
@@ -788,3 +1094,8 @@ if (require.main === module) {
 
 module.exports = app;
 module.exports.buildSystemPrompt = buildSystemPrompt;
+module.exports.getChatReply = getChatReply;
+module.exports.hasAiKey = hasAiKey;
+module.exports.LOW_CONFIDENCE_THRESHOLD = LOW_CONFIDENCE_THRESHOLD;
+module.exports.LOW_CONFIDENCE_REPLY = LOW_CONFIDENCE_REPLY;
+module.exports.isSmallTalk = isSmallTalk;

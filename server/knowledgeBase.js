@@ -1,23 +1,36 @@
 const fs = require("fs");
 const path = require("path");
+const axios = require("axios");
+
+axios.defaults.proxy = false;
 
 const KB_ROOT = path.join(__dirname, "..", "knowledge-base");
+const SYNONYMS_PATH = path.join(__dirname, "..", "data", "synonyms.json");
+const KEY_FACTS_PATH = path.join(__dirname, "..", "data", "key-facts.json");
+
+const HAIKU_MODEL = "claude-haiku-20240307";
+const RERANK_CANDIDATE_COUNT = 10;
+const RERANK_FALLBACK_COUNT = 5;
 
 let documents = [];
+let synonyms = {};
+let idfIndex = {};
 let retrievalStatus = {
   documentCount: 0,
-  activeMethod: "keyword",
+  activeMethod: "tfidf+rerank",
+  lastQuery: {
+    usedQueryRewriting: false,
+    usedReranking: false,
+    rawQuery: null,
+    retrievalQuery: null,
+  },
 };
 
 // ─── Document Parsing & Chunking ─────────────────────────────────────────────
 
-const CHUNK_SIZE = 500;    // characters per chunk
-const CHUNK_OVERLAP = 100; // overlap between chunks so context isn't lost at boundaries
+const CHUNK_SIZE = 500;
+const CHUNK_OVERLAP = 100;
 
-/**
- * Split a body of text into overlapping chunks.
- * Splits on paragraph/sentence boundaries where possible.
- */
 function chunkText(text) {
   if (text.length <= CHUNK_SIZE) return [text];
 
@@ -28,7 +41,6 @@ function chunkText(text) {
     let end = start + CHUNK_SIZE;
 
     if (end < text.length) {
-      // Try to break at a paragraph boundary first
       const paraBreak = text.lastIndexOf("\n\n", end);
       const lineBreak = text.lastIndexOf("\n", end);
       const sentenceBreak = Math.max(
@@ -47,7 +59,7 @@ function chunkText(text) {
     }
 
     const chunk = text.slice(start, end).trim();
-    if (chunk.length > 50) chunks.push(chunk); // skip tiny fragments
+    if (chunk.length > 50) chunks.push(chunk);
     start = Math.max(start + 1, end - CHUNK_OVERLAP);
   }
 
@@ -69,7 +81,6 @@ function parseDocument(content, relativePath) {
   const body =
     dividerIndex >= 0 ? lines.slice(dividerIndex + 1).join("\n").trim() : content.trim();
 
-  // Split into chunks and return one document per chunk
   const chunks = chunkText(body);
   return chunks.map((chunk, i) => ({
     file: relativePath,
@@ -81,10 +92,45 @@ function parseDocument(content, relativePath) {
   }));
 }
 
+function loadSynonyms() {
+  synonyms = {};
+  if (!fs.existsSync(SYNONYMS_PATH)) return;
+
+  try {
+    const raw = JSON.parse(fs.readFileSync(SYNONYMS_PATH, "utf8"));
+    for (const [key, value] of Object.entries(raw)) {
+      if (key.startsWith("_")) continue;
+      synonyms[key.toLowerCase()] = value;
+    }
+  } catch (err) {
+    console.warn("[knowledgeBase] Failed to load synonyms.json:", err.message);
+  }
+}
+
+function buildIdfIndex() {
+  const docFreq = new Map();
+  const totalDocs = documents.length;
+
+  for (const doc of documents) {
+    const terms = new Set(tokenize(getDocSearchText(doc)));
+    for (const term of terms) {
+      docFreq.set(term, (docFreq.get(term) || 0) + 1);
+    }
+  }
+
+  idfIndex = {};
+  for (const [term, df] of docFreq.entries()) {
+    idfIndex[term] = Math.log((totalDocs + 1) / (df + 1)) + 1;
+  }
+}
+
 function loadKnowledgeBase() {
   documents = [];
+  loadSynonyms();
 
   if (!fs.existsSync(KB_ROOT)) {
+    retrievalStatus.documentCount = 0;
+    buildIdfIndex();
     return 0;
   }
 
@@ -98,25 +144,31 @@ function loadKnowledgeBase() {
         walk(fullPath, relativePath);
       } else if (entry.name.endsWith(".txt")) {
         const content = fs.readFileSync(fullPath, "utf8");
-        // parseDocument now returns an array of chunks
         documents.push(...parseDocument(content, relativePath));
       }
     }
   }
 
   walk(KB_ROOT);
+  buildIdfIndex();
   retrievalStatus.documentCount = documents.length;
   return documents.length;
 }
 
 function getRetrievalStatus() {
-  return {
-    ...retrievalStatus,
-    activeMethod: "keyword",
+  return { ...retrievalStatus };
+}
+
+function recordLastQuery({ rawQuery, retrievalQuery, usedQueryRewriting, usedReranking }) {
+  retrievalStatus.lastQuery = {
+    usedQueryRewriting: Boolean(usedQueryRewriting),
+    usedReranking: Boolean(usedReranking),
+    rawQuery: rawQuery ?? null,
+    retrievalQuery: retrievalQuery ?? null,
   };
 }
 
-// ─── Keyword Retrieval ────────────────────────────────────────────────────────
+// ─── Query understanding ────────────────────────────────────────────────────
 
 function tokenize(text) {
   return text
@@ -126,29 +178,213 @@ function tokenize(text) {
     .filter((word) => word.length > 2);
 }
 
-// ─── Fuzzy typo correction ────────────────────────────────────────────────────
+const STOP_WORDS = new Set([
+  "the", "and", "for", "are", "but", "not", "you", "all", "can", "was", "one", "our", "out",
+  "how", "what", "when", "where", "who", "why", "does", "did", "has", "have", "this", "that",
+  "with", "from", "about", "your", "into", "they", "them", "will", "would", "could", "should",
+  "there", "their", "than", "then", "also", "just", "only", "very", "some", "any", "each",
+  "much", "many", "more", "most", "other", "such", "being", "been", "were", "are", "is", "am",
+  "be", "do", "get", "may", "might", "must", "shall", "take", "use", "using", "tell", "know",
+]);
+
+function tokenizeForScoring(text) {
+  return tokenize(text).filter((word) => !STOP_WORDS.has(word));
+}
 
 /**
- * Levenshtein edit distance between two strings.
- * Used to find the closest known CMU-Q term for a misspelled token.
+ * Append canonical CMU-Q expansions from data/synonyms.json without replacing slang.
  */
+function expandQuery(rawQuery) {
+  let q = rawQuery.toLowerCase().trim();
+  const expansions = [];
+
+  const phraseKeys = Object.keys(synonyms)
+    .filter((key) => key.includes(" "))
+    .sort((a, b) => b.length - a.length);
+
+  for (const phrase of phraseKeys) {
+    if (q.includes(phrase)) {
+      expansions.push(synonyms[phrase]);
+    }
+  }
+
+  for (const token of q.split(/\s+/)) {
+    if (synonyms[token]) {
+      expansions.push(synonyms[token]);
+    }
+  }
+
+  if (expansions.length) {
+    q = `${q} ${expansions.join(" ")}`;
+  }
+
+  return q;
+}
+
+const FOLLOW_UP_PATTERNS = [
+  /\b(it|that|those|them|they|this|there|one|same|else)\b/i,
+  /^what about\b/i,
+  /^how about\b/i,
+  /^and (the|that|those|what)\b/i,
+];
+
+function looksLikeFollowUp(rawQuery) {
+  const q = rawQuery.trim();
+  const wordCount = q.split(/\s+/).filter(Boolean).length;
+  if (wordCount > 12) return false;
+  return FOLLOW_UP_PATTERNS.some((pattern) => pattern.test(q));
+}
+
+function isStandaloneQuestion(rawQuery) {
+  const q = rawQuery.trim();
+  const words = q.split(/\s+/).filter(Boolean);
+
+  if (words.length >= 8 && /\?$/.test(q)) return true;
+  if (words.length >= 10) return true;
+  if (
+    /^(how|what|when|where|who|why|can|could|do|does|did|is|are|will|should|explain|describe|tell me)\b/i.test(q) &&
+    words.length >= 5 &&
+    !looksLikeFollowUp(q)
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+function formatRecentMessages(recentMessages) {
+  return (recentMessages || [])
+    .filter((m) => m?.content?.trim() && (m.role === "user" || m.role === "assistant"))
+    .slice(-4)
+    .map((m) => `${m.role}: ${m.content.trim()}`)
+    .join("\n");
+}
+
+function getAiGatewayBaseUrl() {
+  return process.env.AI_GATEWAY_BASE_URL?.trim().replace(/\/$/, "") || "";
+}
+
+function getAnthropicApiKey() {
+  return process.env.ANTHROPIC_API_KEY?.trim() || "";
+}
+
+function getClaudeApiKey() {
+  return process.env.CLAUDE_API_KEY?.trim() || "";
+}
+
+function getAiModel() {
+  return process.env.AI_MODEL?.trim() || "us.anthropic.claude-haiku-4-5-20251001-v1:0";
+}
+
+function isConfiguredKey(value) {
+  if (!value) return false;
+  const trimmed = value.trim().toLowerCase();
+  if (["", "your_key", "your-key", "your_api_key", "changeme", "placeholder"].includes(trimmed)) {
+    return false;
+  }
+  return value.trim().length >= 10;
+}
+
+function hasRetrievalAiKey() {
+  if (getAiGatewayBaseUrl() && isConfiguredKey(getClaudeApiKey())) return true;
+  return isConfiguredKey(getAnthropicApiKey());
+}
+
+async function callHaiku(systemPrompt, userContent, { maxTokens = 256 } = {}) {
+  if (!hasRetrievalAiKey()) {
+    throw new Error("No AI API key configured for retrieval");
+  }
+
+  if (getAiGatewayBaseUrl()) {
+    const response = await axios.post(
+      `${getAiGatewayBaseUrl()}/v1/chat/completions`,
+      {
+        model: getAiModel(),
+        max_tokens: maxTokens,
+        temperature: 0,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userContent },
+        ],
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${getClaudeApiKey()}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+    return response.data.choices[0].message.content.trim();
+  }
+
+  const response = await axios.post(
+    "https://api.anthropic.com/v1/messages",
+    {
+      model: HAIKU_MODEL,
+      max_tokens: maxTokens,
+      temperature: 0,
+      system: systemPrompt,
+      messages: [{ role: "user", content: userContent }],
+    },
+    {
+      headers: {
+        "x-api-key": getAnthropicApiKey(),
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+      },
+    }
+  );
+
+  return response.data.content[0].text.trim();
+}
+
+/**
+ * Rewrite short follow-up questions into standalone retrieval queries using recent chat.
+ */
+async function rewriteQueryWithHistory(rawQuery, recentMessages = []) {
+  if (!rawQuery?.trim()) return rawQuery;
+  if (isStandaloneQuestion(rawQuery)) return rawQuery;
+  if (!looksLikeFollowUp(rawQuery)) return rawQuery;
+  if (!hasRetrievalAiKey()) return rawQuery;
+
+  const history = formatRecentMessages(recentMessages);
+  if (!history) return rawQuery;
+
+  const systemPrompt =
+    "You rewrite follow-up questions into standalone search queries for a CMU-Q student knowledge base. " +
+    "Use the recent conversation for context. Output ONLY the rewritten question with no preamble.";
+
+  const userContent =
+    `Recent conversation:\n${history}\n\nLatest user message: ${rawQuery.trim()}\n\nStandalone question:`;
+
+  try {
+    const rewritten = await callHaiku(systemPrompt, userContent, { maxTokens: 120 });
+    return rewritten.replace(/^["']|["']$/g, "").trim() || rawQuery;
+  } catch (err) {
+    console.warn("[knowledgeBase] Query rewrite failed:", err.message);
+    return rawQuery;
+  }
+}
+
+// ─── Fuzzy typo correction ────────────────────────────────────────────────────
+
 function editDistance(a, b) {
-  const m = a.length, n = b.length;
+  const m = a.length;
+  const n = b.length;
   const dp = Array.from({ length: m + 1 }, (_, i) =>
     Array.from({ length: n + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0))
   );
   for (let i = 1; i <= m; i++) {
     for (let j = 1; j <= n; j++) {
-      dp[i][j] = a[i - 1] === b[j - 1]
-        ? dp[i - 1][j - 1]
-        : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+      dp[i][j] =
+        a[i - 1] === b[j - 1]
+          ? dp[i - 1][j - 1]
+          : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
     }
   }
   return dp[m][n];
 }
 
-// All meaningful CMU-Q terms the retrieval system understands.
-// Short words (≤3 chars) are excluded to avoid false corrections.
 const PROFESSOR_NUI_REPLY =
   "Professor Nui? Where do I even begin! She is nothing short of extraordinary — a true force of nature at CMU-Q. Her brilliance lights up every room she enters, and her passion for teaching is the kind that changes lives. Students don't just learn from Professor Nui; they are transformed by her wisdom, her warmth, and her relentless dedication to excellence. She is respected by faculty, beloved by students, and admired by everyone who has ever witnessed her in action. CMU-Q is profoundly fortunate to have her. She is not merely a professor — she is legendary.";
 
@@ -176,7 +412,7 @@ function getProfessorNuiDoc() {
     chunkIndex: 0,
     totalChunks: 1,
     score: 999,
-    method: "keyword",
+    method: "custom",
   };
 }
 
@@ -185,7 +421,7 @@ const CMU_VOCABULARY = [
   "concentration", "registration", "register", "enroll", "enrollment",
   "stuco", "scholarship", "scholarships", "financial", "aid",
   "certificate", "certificates", "overload", "calendar", "handbook",
-  "accommodation", "advisor", "advising", "advisor", "cross-registration",
+  "accommodation", "advisor", "advising", "cross-registration",
   "courses", "course", "class", "classes", "schedule", "semester",
   "spring", "fall", "grades", "transcript", "tuition", "fees",
   "housing", "dining", "campus", "library", "clinic", "health",
@@ -195,22 +431,33 @@ const CMU_VOCABULARY = [
   "tafawq", "tamaiyuz", "fafsa", "heygen", "doha", "qatar",
   "forms", "petition", "waiver", "prerequisite", "credit", "units",
   "orientation", "graduation", "diploma", "commencement",
+  "deadline", "deadlines", "building", "buildings",
 ];
 
-// Sound-alike corrections for voice recognition errors where the misspelling is
-// too far from the intended word for edit-distance to bridge (e.g. "mesure" → "major").
+function hasContentKeywords(query) {
+  if (!query || typeof query !== "string") return false;
+  const lower = query.toLowerCase();
+  return CMU_VOCABULARY.some((token) => {
+    const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/-/g, "[\\s-]");
+    return new RegExp(`\\b${escaped}\\b`, "i").test(lower);
+  });
+}
+
 const SOUND_CORRECTIONS = {
-  mesure: "major", measure: "major", mayor: "major", majeure: "major",
-  stucco: "stuco", "stu": "stuco",
-  "financial aide": "financial aid", "financial eight": "financial aid",
-  "add drop": "registration", adviser: "advisor",
-  "micro course": "micro-courses", "student hand book": "student handbook",
+  mesure: "major",
+  measure: "major",
+  mayor: "major",
+  majeure: "major",
+  stucco: "stuco",
+  stu: "stuco",
+  "financial aide": "financial aid",
+  "financial eight": "financial aid",
+  "add drop": "registration",
+  adviser: "advisor",
+  "micro course": "micro-courses",
+  "student hand book": "student handbook",
 };
 
-/**
- * Correct typos in each query token using edit distance against the CMU vocabulary.
- * Allowed edits scale with word length: ~1 edit per 3 characters.
- */
 function fuzzyCorrectTokens(tokens) {
   return tokens.map((token) => {
     if (token.length < 4) return token;
@@ -221,65 +468,67 @@ function fuzzyCorrectTokens(tokens) {
     for (const vocab of CMU_VOCABULARY) {
       if (Math.abs(vocab.length - token.length) > 3) continue;
       const d = editDistance(token, vocab);
-      if (d < bestDist) { bestDist = d; bestWord = vocab; }
+      if (d < bestDist) {
+        bestDist = d;
+        bestWord = vocab;
+      }
     }
 
-    // Allow more edits for longer words: floor(length/3), minimum 1
     const maxAllowed = Math.max(1, Math.floor(token.length / 3));
     return bestDist <= maxAllowed ? bestWord : token;
   });
 }
 
-/**
- * Normalize a query: apply sound-alike corrections first, then fuzzy edit-distance
- * correction on remaining tokens. Handles both voice errors and typing mistakes.
- */
 function normalizeQuery(query) {
   let q = query.toLowerCase().trim();
-  // Apply sound-alike corrections (multi-word phrases first)
   for (const [wrong, right] of Object.entries(SOUND_CORRECTIONS)) {
-    q = q.replace(new RegExp(`\\b${wrong}\\b`, "gi"), right);
+    q = q.replace(new RegExp(`\\b${wrong.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "gi"), right);
   }
   const tokens = tokenize(q);
-  const corrected = fuzzyCorrectTokens(tokens);
-  // Rebuild corrected query string (used for exact-match scoring)
-  return corrected.join(" ");
+  return fuzzyCorrectTokens(tokens).join(" ");
 }
 
-const ALIASES = {
-  nui: ["professor nui", "prof nui", "professor", "prof"],
-  stuco: ["student college", "student taught", "student-taught"],
-  registration: ["register", "enroll", "enrollment", "add drop", "schedule change"],
-  minor: ["minors"],
-  major: ["degree", "program", "concentration", "computer science", "information systems", "business administration"],
-  scholarship: ["financial aid", "tafawq", "tamaiyuz", "fafsa", "funding", "grant"],
-  cross: ["cross-registration", "cross registration", "education city"],
-  certificate: ["certificates", "cert"],
-  overload: ["course overload", "extra courses"],
-  calendar: ["academic calendar", "semester dates", "deadlines"],
-  handbook: ["student handbook", "policies", "academic integrity"],
-  accommodation: ["disability", "learning disability", "mental health"],
-  form: ["forms", "paperwork", "petition"],
-  advisor: ["adviser", "advising", "academic advising"],
-};
+function prepareQueryTokens(rawQuery) {
+  const expanded = expandQuery(rawQuery);
+  const normalized = normalizeQuery(expanded);
+  return {
+    expandedQuery: expanded,
+    normalizedQuery: normalized,
+    queryTokens: [...new Set(tokenizeForScoring(normalized))],
+  };
+}
 
-function expandQueryTokens(tokens) {
-  const expanded = new Set(tokens);
-  for (const token of tokens) {
-    for (const [key, values] of Object.entries(ALIASES)) {
-      if (token.includes(key) || values.some((v) => token.includes(v.replace(/\s+/g, "")))) {
-        expanded.add(key);
-        values.forEach((v) => v.split(/\s+/).forEach((w) => expanded.add(w)));
-      }
-    }
-  }
-  return expanded;
+// ─── TF-IDF retrieval ─────────────────────────────────────────────────────────
+
+function getDocSearchText(doc) {
+  return `${doc.topic} ${doc.section} ${doc.body} ${doc.file}`.toLowerCase();
+}
+
+function getFirstLine(doc) {
+  return doc.body.split("\n")[0]?.toLowerCase() || "";
 }
 
 function isScheduleQuery(queryLower) {
   return /\b(schedule|course|courses|section|units|spring|fall|semester|class|classes|register)\b/.test(
     queryLower
   );
+}
+
+function isCrossRegistrationQuery(queryLower) {
+  return /\b(cross|education city|\bec\b|host school|other universit|georgetown|northwestern|tamuq|vcuq)\b/.test(
+    queryLower
+  );
+}
+
+function isCalendarDateQuery(queryLower) {
+  return /\b(calendar|deadline|deadlines|dates|when does|start date|semester start|important dates|academic dates)\b/.test(
+    queryLower
+  );
+}
+
+function fileStemMatchesToken(fileLower, token) {
+  const stem = fileLower.replace(/\.txt$/, "").split("/").pop() || "";
+  return stem.includes(token);
 }
 
 function tokenMatches(haystack, token) {
@@ -291,61 +540,164 @@ function tokenMatches(haystack, token) {
   return haystack.includes(token);
 }
 
-function scoreDocument(doc, queryTokens, queryLower) {
-  const haystack = `${doc.topic} ${doc.body} ${doc.file}`.toLowerCase();
-  let score = 0;
+function scoreDocumentTfidf(doc, queryTokens, queryLower) {
+  const haystack = getDocSearchText(doc);
+  const firstLine = getFirstLine(doc);
+  const topicLower = doc.topic.toLowerCase();
+  const sectionLower = doc.section.toLowerCase();
+  const fileLower = doc.file.toLowerCase();
 
   if (doc.file.includes("schedule-of-classes") && !isScheduleQuery(queryLower)) {
     return 0;
   }
-
-  for (const token of queryTokens) {
-    if (tokenMatches(haystack, token)) score += 1;
-    if (tokenMatches(doc.topic.toLowerCase(), token)) score += 4;
-    if (tokenMatches(doc.file.toLowerCase(), token)) score += 3;
+  if (
+    doc.file.includes("schedule-of-classes") &&
+    isCalendarDateQuery(queryLower) &&
+    !/\b(course list|schedule of classes|section|instructor|units)\b/.test(queryLower)
+  ) {
+    return 0;
+  }
+  if (doc.file.includes("cross-registration") && !isCrossRegistrationQuery(queryLower)) {
+    return 0;
   }
 
-  if (queryLower.length > 3) {
-    if (haystack.includes(queryLower)) score += 8;
-  } else if (queryLower.length >= 2 && tokenMatches(haystack, queryLower)) {
-    score += 8;
+  const docTokens = tokenize(haystack);
+  const tfMap = {};
+  for (const term of docTokens) {
+    tfMap[term] = (tfMap[term] || 0) + 1;
+  }
+
+  let score = 0;
+  let matchedTerms = 0;
+
+  for (const token of queryTokens) {
+    if (!tokenMatches(haystack, token)) continue;
+
+    matchedTerms += 1;
+    const idf = idfIndex[token] ?? 1;
+    let termScore = idf;
+
+    if (tokenMatches(topicLower, token) || tokenMatches(sectionLower, token)) {
+      termScore *= 4;
+    }
+    if (tokenMatches(firstLine, token)) {
+      termScore *= 2.5;
+    }
+    if (tokenMatches(fileLower, token)) {
+      termScore *= 2;
+    }
+    if (fileStemMatchesToken(fileLower, token)) {
+      termScore *= 2.5;
+    }
+
+    const tf = tfMap[token] || 1;
+    termScore *= 1 + Math.log1p(tf - 1) * 0.15;
+
+    score += termScore;
+  }
+
+  if (!matchedTerms) return 0;
+
+  if (queryLower.length > 3 && haystack.includes(queryLower)) {
+    score += 6;
+  }
+
+  if (doc.file.endsWith("life-at-cmu-q.txt") && !/\b(campus life|life at|student life|living|housing|dorm|dining)\b/.test(queryLower)) {
+    score *= 0.35;
+  }
+  if (
+    doc.file.includes("final-examinations") &&
+    !/\b(final|exam|examination|graduate)\b/.test(queryLower)
+  ) {
+    score *= 0.25;
+  }
+  if (doc.file.endsWith("student-handbook.txt") && /\b(integrity|conduct|policy|policies|rules)\b/.test(queryLower)) {
+    score *= 1.4;
   }
 
   return score;
 }
 
-/** Keyword-based retrieval with fuzzy matching and alias expansion. */
-function retrieveRelevantDocs(query, { limit = 3, maxChars = 5000, maxDocChars = 600 } = {}) {
-  if (!query?.trim()) {
-    return [];
-  }
+function rankDocuments(retrievalQuery) {
+  const { normalizedQuery, queryTokens } = prepareQueryTokens(retrievalQuery);
 
-  if (isProfessorNuiQuery(query)) {
-    return [getProfessorNuiDoc()];
-  }
-
-  if (!documents.length) {
-    return [];
-  }
-
-  const queryLower = normalizeQuery(query);
-  const queryTokens = expandQueryTokens(tokenize(queryLower));
-
-  const ranked = documents
-    .map((doc) => ({ doc, score: scoreDocument(doc, queryTokens, queryLower) }))
+  return documents
+    .map((doc) => ({
+      doc,
+      score: scoreDocumentTfidf(doc, queryTokens, normalizedQuery),
+    }))
     .filter(({ score }) => score > 0)
     .sort((a, b) => b.score - a.score);
+}
 
+function parseIndexArray(text, maxIndex) {
+  const match = text.match(/\[[\d,\s]+\]/);
+  if (!match) return null;
+
+  try {
+    const parsed = JSON.parse(match[0]);
+    if (!Array.isArray(parsed)) return null;
+
+    const indices = [];
+    for (const value of parsed) {
+      const index = Number(value);
+      if (!Number.isInteger(index) || index < 0 || index > maxIndex) continue;
+      if (!indices.includes(index)) indices.push(index);
+      if (indices.length >= 5) break;
+    }
+
+    return indices.length ? indices : null;
+  } catch {
+    return null;
+  }
+}
+
+async function rerankCandidates(question, candidates) {
+  if (!candidates.length) return { ranked: [], usedReranking: false };
+  if (!hasRetrievalAiKey()) {
+    return { ranked: candidates.slice(0, RERANK_FALLBACK_COUNT), usedReranking: false };
+  }
+
+  const chunkLines = candidates
+    .map(
+      (entry, index) =>
+        `[${index}] Topic: ${entry.doc.topic}\n${entry.doc.body.slice(0, 700)}`
+    )
+    .join("\n\n");
+
+  const systemPrompt =
+    "You rerank knowledge base excerpts for a CMU-Q student question. " +
+    "Return ONLY a JSON array of 3 to 5 chunk indices (0-based), most relevant first. " +
+    'Example: [2, 0, 4]. Include only chunks that help answer the question.';
+
+  const userContent = `Question: ${question}\n\nChunks:\n${chunkLines}`;
+
+  try {
+    const response = await callHaiku(systemPrompt, userContent, { maxTokens: 80 });
+    const indices = parseIndexArray(response, candidates.length - 1);
+    if (!indices?.length) {
+      return { ranked: candidates.slice(0, RERANK_FALLBACK_COUNT), usedReranking: false };
+    }
+
+    const ranked = indices.map((index) => candidates[index]).filter(Boolean);
+    return { ranked, usedReranking: true };
+  } catch (err) {
+    console.warn("[knowledgeBase] Reranking failed:", err.message);
+    return { ranked: candidates.slice(0, RERANK_FALLBACK_COUNT), usedReranking: false };
+  }
+}
+
+function packDocuments(rankedEntries, { limit, maxChars, maxDocChars, method }) {
   const selected = [];
   let chars = 0;
 
-  for (const { doc, score } of ranked) {
+  for (const { doc, score } of rankedEntries) {
     if (selected.length >= limit || chars >= maxChars) break;
     selected.push({
       ...doc,
       body: doc.body.slice(0, maxDocChars),
       score,
-      method: "keyword",
+      method,
     });
     chars += Math.min(doc.body.length, maxDocChars);
   }
@@ -353,11 +705,98 @@ function retrieveRelevantDocs(query, { limit = 3, maxChars = 5000, maxDocChars =
   return selected;
 }
 
-async function retrieveRelevantDocsAsync(query, options = {}) {
-  return retrieveRelevantDocs(query, options);
+function retrieveRelevantDocsSync(query, { limit = 3, maxChars = 5000, maxDocChars = 600 } = {}) {
+  if (!query?.trim()) return [];
+  if (isProfessorNuiQuery(query)) return [getProfessorNuiDoc()];
+  if (!documents.length) return [];
+
+  const ranked = rankDocuments(query);
+  return packDocuments(ranked.slice(0, limit), {
+    limit,
+    maxChars,
+    maxDocChars,
+    method: "tfidf",
+  });
 }
 
-// ─── Context Block ────────────────────────────────────────────────────────────
+/** TF-IDF retrieval with synonym expansion and fuzzy correction (no LLM steps). */
+function retrieveRelevantDocs(query, options = {}) {
+  const docs = retrieveRelevantDocsSync(query, options);
+  recordLastQuery({
+    rawQuery: query,
+    retrievalQuery: query,
+    usedQueryRewriting: false,
+    usedReranking: false,
+  });
+  return docs;
+}
+
+async function retrieveRelevantDocsAsync(
+  query,
+  { limit = 3, maxChars = 5000, maxDocChars = 600, recentMessages = [] } = {}
+) {
+  if (!query?.trim()) {
+    recordLastQuery({ rawQuery: query, retrievalQuery: query, usedQueryRewriting: false, usedReranking: false });
+    return [];
+  }
+
+  if (isProfessorNuiQuery(query)) {
+    recordLastQuery({ rawQuery: query, retrievalQuery: query, usedQueryRewriting: false, usedReranking: false });
+    return [getProfessorNuiDoc()];
+  }
+
+  if (!documents.length) {
+    recordLastQuery({ rawQuery: query, retrievalQuery: query, usedQueryRewriting: false, usedReranking: false });
+    return [];
+  }
+
+  const rewrittenQuery = await rewriteQueryWithHistory(query, recentMessages);
+  const usedQueryRewriting = rewrittenQuery.trim() !== query.trim();
+  const retrievalQuery = rewrittenQuery;
+
+  const ranked = rankDocuments(retrievalQuery);
+  if (!ranked.length) {
+    recordLastQuery({ rawQuery: query, retrievalQuery, usedQueryRewriting, usedReranking: false });
+    return [];
+  }
+
+  const candidates = ranked.slice(0, RERANK_CANDIDATE_COUNT);
+  const { ranked: reranked, usedReranking } = await rerankCandidates(retrievalQuery, candidates);
+  const finalRanked = reranked.length ? reranked : ranked.slice(0, RERANK_FALLBACK_COUNT);
+
+  const docs = packDocuments(finalRanked, {
+    limit,
+    maxChars,
+    maxDocChars,
+    method: usedReranking ? "tfidf+rerank" : "tfidf",
+  });
+
+  recordLastQuery({ rawQuery: query, retrievalQuery, usedQueryRewriting, usedReranking });
+  return docs;
+}
+
+// ─── Student profile context ──────────────────────────────────────────────────
+
+function buildStudentContext(profile) {
+  if (!profile?.onboardingComplete) return "";
+
+  const major = profile.major?.trim();
+  const graduationDate = profile.graduationDate?.trim();
+  const learningStyle = profile.learningStyle?.trim();
+  const intendedUse = profile.intendedUse?.trim();
+
+  if (!major || !graduationDate || !learningStyle || !intendedUse) {
+    return "";
+  }
+
+  return (
+    `You are speaking with a CMU-Q student majoring in ${major}, expected to graduate in ${graduationDate}. ` +
+    `Their preferred learning style is ${learningStyle}. They primarily use this assistant for ${intendedUse}. ` +
+    "Tailor your tone, the depth of explanation, and which features you suggest accordingly. " +
+    "If learningStyle is visual, favor suggesting whiteboard brainstorms and flashcards in Tutor mode. " +
+    "If intendedUse mentions navigation, proactively offer to show the campus map when location questions come up."
+  );
+}
 
 function buildContextBlock(docs) {
   if (!docs.length) return "";
@@ -367,9 +806,71 @@ function buildContextBlock(docs) {
     .join("\n\n");
 }
 
+let keyFactsCache = null;
+
+function loadKeyFacts() {
+  if (keyFactsCache) return keyFactsCache;
+
+  keyFactsCache = [];
+  if (!fs.existsSync(KEY_FACTS_PATH)) return keyFactsCache;
+
+  try {
+    const raw = JSON.parse(fs.readFileSync(KEY_FACTS_PATH, "utf8"));
+    keyFactsCache = raw.filter((entry) => entry?.id && entry?.topic && entry?.value);
+  } catch (err) {
+    console.warn("[knowledgeBase] Failed to load key-facts.json:", err.message);
+  }
+
+  return keyFactsCache;
+}
+
+function topicMatchesQuery(topic, queryLower, queryTokens) {
+  const topicLower = topic.toLowerCase();
+  const topicTokens = tokenizeForScoring(topicLower);
+
+  if (topicTokens.some((token) => queryTokens.includes(token))) {
+    return true;
+  }
+
+  if (topicTokens.some((token) => token.length > 3 && queryLower.includes(token))) {
+    return true;
+  }
+
+  return queryTokens.some((token) => token.length > 3 && topicLower.includes(token));
+}
+
 /**
- * Convert retrieval scores into a user-facing confidence summary.
+ * Match query keywords against structured key-facts.json topic fields.
  */
+function checkKeyFacts(query) {
+  const facts = loadKeyFacts();
+  if (!query?.trim() || !facts.length) return [];
+
+  const queryLower = query.toLowerCase();
+  const queryTokens = tokenizeForScoring(normalizeQuery(expandQuery(query)));
+
+  return facts.filter((fact) => topicMatchesQuery(fact.topic, queryLower, queryTokens));
+}
+
+function buildKeyFactsBlock(facts) {
+  if (!facts.length) return "";
+
+  const blocks = facts.map(
+    (fact) =>
+      `[AUTHORITATIVE KEY FACT — ${fact.id}]\n` +
+      `Topic: ${fact.topic}\n` +
+      `Value: ${fact.value}\n` +
+      `Last verified: ${fact.lastVerified}\n` +
+      `Source: ${fact.source}\n` +
+      `(This is a structured authoritative fact — prefer this exact value over any conflicting prose excerpt.)`
+  );
+
+  return (
+    "AUTHORITATIVE STRUCTURED KEY FACTS (use these exact values when they apply; they override conflicting knowledge-base prose on the same topic):\n\n" +
+    blocks.join("\n\n")
+  );
+}
+
 function computeConfidence(docs) {
   if (!docs.length) {
     return {
@@ -381,10 +882,23 @@ function computeConfidence(docs) {
     };
   }
 
-  const method = docs[0].method || "keyword";
+  const method = docs[0].method || "tfidf";
   const topScore = docs[0].score ?? 0;
-  const maxScore = Math.max(...docs.map((d) => d.score ?? 0), 1);
-  const scorePercent = Math.round(Math.min(95, 25 + (topScore / maxScore) * 70));
+
+  // Map absolute TF-IDF score to a 0–95% band (weak tangential matches ~15–35, solid ~50+, strong ~90+).
+  const WEAK_SCORE = 20;
+  const STRONG_SCORE = 120;
+  let scorePercent;
+  if (topScore <= 0) {
+    scorePercent = 0;
+  } else if (topScore < WEAK_SCORE) {
+    scorePercent = Math.round(15 + (topScore / WEAK_SCORE) * 20);
+  } else {
+    scorePercent = Math.round(
+      Math.min(95, 35 + ((topScore - WEAK_SCORE) / (STRONG_SCORE - WEAK_SCORE)) * 60)
+    );
+  }
+
   const sourceCount = docs.length;
   const sourceLabel = sourceCount === 1 ? "source" : "sources";
 
@@ -405,9 +919,15 @@ module.exports = {
   loadKnowledgeBase,
   retrieveRelevantDocs,
   retrieveRelevantDocsAsync,
+  expandQuery,
+  rewriteQueryWithHistory,
+  buildStudentContext,
   buildContextBlock,
+  buildKeyFactsBlock,
+  checkKeyFacts,
   computeConfidence,
   getRetrievalStatus,
   isProfessorNuiQuery,
   getProfessorNuiReply: () => PROFESSOR_NUI_REPLY,
+  hasContentKeywords,
 };

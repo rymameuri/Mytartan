@@ -12,6 +12,11 @@ process.env.CLAUDE_API_KEY = "placeholder";
 process.env.AI_GATEWAY_BASE_URL = "";
 
 const app = require("./server");
+const {
+  LOW_CONFIDENCE_THRESHOLD,
+  LOW_CONFIDENCE_REPLY,
+  isSmallTalk,
+} = require("./server");
 
 // ─── GET / ────────────────────────────────────────────────────────────────────
 
@@ -29,8 +34,11 @@ describe("GET /api/kb/status", () => {
   test("returns retrieval status metadata", async () => {
     const res = await request(app).get("/api/kb/status");
     expect(res.status).toBe(200);
-    expect(res.body).toHaveProperty("activeMethod", "keyword");
+    expect(res.body).toHaveProperty("activeMethod", "tfidf+rerank");
     expect(res.body).toHaveProperty("documentCount");
+    expect(res.body).toHaveProperty("lastQuery");
+    expect(res.body.lastQuery).toHaveProperty("usedQueryRewriting");
+    expect(res.body.lastQuery).toHaveProperty("usedReranking");
   });
 });
 
@@ -95,6 +103,31 @@ describe("POST /api/chat — input validation", () => {
     expect(res.body.reply).toMatch(/Scotty/i);
   });
 
+  test("small talk skips KB pipeline and avoids low-confidence fallback", async () => {
+    for (const content of ["hello how are you", "thanks", "good morning"]) {
+      const res = await request(app)
+        .post("/api/chat")
+        .send({ messages: [{ role: "user", content }], mode: "chat" });
+
+      expect(res.status).toBe(200);
+      expect(res.body.reply).not.toBe(LOW_CONFIDENCE_REPLY);
+      expect(res.body.reply).not.toMatch(/don't have that information/i);
+      expect(res.body.reply).not.toMatch(/not confident I have accurate information/i);
+    }
+  });
+
+  test("short campus questions are not classified as small talk", async () => {
+    expect(isSmallTalk("deadlines?")).toBe(false);
+    expect(isSmallTalk("financial aid?")).toBe(false);
+
+    const res = await request(app)
+      .post("/api/chat")
+      .send({ messages: [{ role: "user", content: "deadlines?" }], mode: "qa" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.reply).not.toMatch(/^Hey! I'm Scotty/);
+  });
+
   test("returns confidence metadata for KB-grounded replies", async () => {
     const res = await request(app)
       .post("/api/chat")
@@ -120,6 +153,19 @@ describe("POST /api/chat — input validation", () => {
     expect(res.body.reply).toMatch(/don't have that information/i);
     expect(res.body.reply).toMatch(/scotty\.qatar\.cmu\.edu/i);
     expect(res.body.confidence).toMatchObject({ sourceCount: 0, score: 0 });
+  });
+
+  test("returns low-confidence reply when retrieval score is weak", async () => {
+    const res = await request(app)
+      .post("/api/chat")
+      .send({
+        messages: [{ role: "user", content: "How much is tuition per semester?" }],
+        mode: "qa",
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.reply).toBe(LOW_CONFIDENCE_REPLY);
+    expect(res.body.confidence.score).toBeLessThan(LOW_CONFIDENCE_THRESHOLD);
   });
 
   test("returns 400 for tutor mode with invalid courseContext", async () => {
@@ -148,6 +194,28 @@ describe("POST /api/chat — input validation", () => {
       });
 
     expect(res.status).not.toBe(400);
+  });
+});
+
+describe("isSmallTalk", () => {
+  test("classifies greetings and pleasantries as small talk", () => {
+    expect(isSmallTalk("hello how are you")).toBe(true);
+    expect(isSmallTalk("thanks")).toBe(true);
+    expect(isSmallTalk("good morning")).toBe(true);
+    expect(isSmallTalk("hey what's up")).toBe(true);
+    expect(isSmallTalk("ok cool")).toBe(true);
+    expect(isSmallTalk("bye see you")).toBe(true);
+  });
+
+  test("does not classify short campus questions as small talk", () => {
+    expect(isSmallTalk("deadlines?")).toBe(false);
+    expect(isSmallTalk("financial aid?")).toBe(false);
+    expect(isSmallTalk("where is the library")).toBe(false);
+    expect(isSmallTalk("registration help")).toBe(false);
+  });
+
+  test("does not classify longer messages as small talk", () => {
+    expect(isSmallTalk("hi there I wanted to ask about registration deadlines")).toBe(false);
   });
 });
 

@@ -138,5 +138,53 @@
     "id": "neg-001",
     "query": "xyzzy frobble quuxington",
     "expectedFiles": []
+  },
+  {
+    "id": "halluc-001",
+    "query": "What is the exact tuition cost for spring 2026?",
+    "expectedFiles": [],
+    "notes": "No tuition dollar amount in KB — should not retrieve confidently"
+  },
+  {
+    "id": "halluc-002",
+    "query": "How much is the student parking fee per semester?",
+    "expectedFiles": [],
+    "notes": "Bait for a specific dollar figure not in the knowledge base"
+  },
+  {
+    "id": "halluc-003",
+    "query": "How do I declare a minor and renew my Qatari visa at the same time?",
+    "expectedFiles": ["studies/minors.txt"],
+    "notes": "Mixed topics — minor info exists but visa guidance does not"
+  },
+  {
+    "id": "halluc-004",
+    "query": "What is fa?",
+    "expectedFiles": ["help/financial-aid-and-scholarship.txt"],
+    "notes": "Slang abbreviation for financial aid"
+  },
+  {
+    "id": "halluc-005",
+    "query": "What GPA do I need for tafawq?",
+    "expectedFiles": ["help/financial-aid-and-scholarship.txt"],
+    "notes": "Slang scholarship name — should hit financial aid page"
+  },
+  {
+    "id": "halluc-006",
+    "query": "Who is the president of France?",
+    "expectedFiles": [],
+    "notes": "Completely off-topic — no KB match expected"
+  },
+  {
+    "id": "halluc-007",
+    "query": "How do I cross-register and apply for tamaiyuz in one step?",
+    "expectedFiles": ["studies/cross-registration.txt", "help/financial-aid-and-scholarship.txt"],
+    "notes": "Mixed unrelated processes — should retrieve at least one relevant file"
+  },
+  {
+    "id": "halluc-008",
+    "query": "What's the overload unit cap?",
+    "expectedFiles": ["studies/course-overload.txt"],
+    "notes": "Abbreviation-style question for a numeric policy fact"
   }
 ]

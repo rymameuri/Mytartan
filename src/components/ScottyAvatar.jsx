@@ -20,6 +20,14 @@ function toErrorMessage(value, fallback) {
   return fallback;
 }
 
+function toDisplayError(message) {
+  if (!message) return "Avatar unavailable";
+  if (/ECONNREFUSED|ETIMEDOUT|ENOTFOUND|Failed to fetch/i.test(message)) {
+    return "Avatar unavailable — using voice fallback";
+  }
+  return message;
+}
+
 async function fetchSessionToken() {
   const response = await fetch(`${API_BASE}/api/liveavatar-token`, {
     method: "POST",
@@ -120,7 +128,7 @@ const ScottyAvatar = forwardRef(function ScottyAvatar(
         isReadyRef.current = false;
         console.error("[ScottyAvatar] session failed:", err);
         setStatus("error");
-        setError(err.message || "Failed to start avatar");
+        setError(toDisplayError(err.message || "Failed to start avatar"));
       }
     }
 

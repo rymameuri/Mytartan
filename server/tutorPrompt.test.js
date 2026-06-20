@@ -67,4 +67,21 @@ describe("tutorPrompt", () => {
     expect(chatPrompt).toMatch(/CONVERSATION MODE/i);
     expect(chatPrompt).not.toMatch(/Term:/);
   });
+
+  test("buildTutorSystemPrompt adds lecture help rules for studio item context", () => {
+    const prompt = buildTutorSystemPrompt(sampleContext, {
+      tutorActivity: "flashcards",
+      lectureTopic: "Recursion",
+      speechMode: "lecture",
+      studioItemContext: {
+        activity: "flashcards",
+        concept: "base case in recursion",
+        term: "What is a base case?",
+      },
+    });
+    expect(prompt).toMatch(/Never read content verbatim/i);
+    expect(prompt).toMatch(/STUDIO ITEM HELP/i);
+    expect(prompt).toMatch(/do not repeat/i);
+    expect(prompt).toMatch(/Socratic question/i);
+  });
 });

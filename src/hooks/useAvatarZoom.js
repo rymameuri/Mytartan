@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useAuth } from "../context/AuthContext";
+import { getUserStorageKey } from "../utils/userStorage";
 
 const STORAGE_KEY = "tartan-avatar-zoom";
 const DEFAULT_ZOOM = 148;
 const MIN_ZOOM = 115;
 const MAX_ZOOM = 220;
 
-function readStoredZoom() {
+function readStoredZoom(userId) {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(getUserStorageKey(STORAGE_KEY, userId));
     if (raw == null) return DEFAULT_ZOOM;
     const value = Number(raw);
     if (Number.isNaN(value)) return DEFAULT_ZOOM;
@@ -18,15 +20,27 @@ function readStoredZoom() {
 }
 
 export function useAvatarZoom() {
-  const [zoom, setZoom] = useState(readStoredZoom);
+  const { user } = useAuth();
+  const userId = user?.id;
+  const [zoom, setZoom] = useState(() => readStoredZoom(userId));
+  const skipNextPersist = useRef(false);
 
   useEffect(() => {
+    skipNextPersist.current = true;
+    setZoom(readStoredZoom(userId));
+  }, [userId]);
+
+  useEffect(() => {
+    if (skipNextPersist.current) {
+      skipNextPersist.current = false;
+      return;
+    }
     try {
-      localStorage.setItem(STORAGE_KEY, String(zoom));
+      localStorage.setItem(getUserStorageKey(STORAGE_KEY, userId), String(zoom));
     } catch {
       /* ignore */
     }
-  }, [zoom]);
+  }, [zoom, userId]);
 
   const resetZoom = useCallback(() => {
     setZoom(DEFAULT_ZOOM);

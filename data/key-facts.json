@@ -1,0 +1,96 @@
+[
+  {
+    "_comment": "Structured store for highest-stakes CMU-Q facts (deadlines, amounts, GPA cutoffs, credit limits). To add an entry: copy the object shape below (omit _comment), pick a stable camelCase id, write a short searchable topic phrase (used by checkKeyFacts keyword matching), set value to the exact approved wording, lastVerified to ISO date when you confirmed it, and source to a human-readable label (not a file path). Restart the server after editing."
+  },
+  {
+    "id": "tafawqGpaRequirement",
+    "topic": "tafawq merit scholarship gpa requirement",
+    "value": "TAFAWQ merit scholarship requires a cumulative GPA of 4.0.",
+    "lastVerified": "2026-05-07",
+    "source": "Financial Aid and Scholarship page (Scotty)"
+  },
+  {
+    "id": "tamaiyuzGpaRequirement",
+    "topic": "tamaiyuz scholarship gpa requirement",
+    "value": "TAMAIYUZ scholarship requires a cumulative GPA of 3.8 or higher.",
+    "lastVerified": "2026-05-07",
+    "source": "Financial Aid and Scholarship page (Scotty)"
+  },
+  {
+    "id": "tafawqApplicationFee",
+    "topic": "tafawq scholarship application fee",
+    "value": "TAFAWQ scholarship application fee is QAR 183 (50 USD), paid upon application submission.",
+    "lastVerified": "2026-05-07",
+    "source": "Financial Aid and Scholarship page (Scotty)"
+  },
+  {
+    "id": "tamaiyuzApplicationWindow",
+    "topic": "tamaiyuz scholarship application deadline dates",
+    "value": "TAMAIYUZ scholarship application cycle is open from 15 May 2026 until 5 June 2026.",
+    "lastVerified": "2026-05-07",
+    "source": "Financial Aid and Scholarship page (Scotty)"
+  },
+  {
+    "id": "courseOverloadUnitLimit",
+    "topic": "course overload unit limit credits",
+    "value": "Students may register for a course overload of up to 12 units with academic advisor approval. Overloads above 12 units require advisor approval and an S3 maximum-units adjustment (available no earlier than the Saturday after Registration Week).",
+    "lastVerified": "2026-03-24",
+    "source": "Course Overload page (Scotty / The HUB)"
+  },
+  {
+    "id": "crossRegFall2026Deadline",
+    "topic": "cross registration fall 2026 deadline",
+    "value": "Fall 2026 Education City cross-registration forms are accepted starting July 1, 2026. The submission deadline is August 1, 2026.",
+    "lastVerified": "2026-05-31",
+    "source": "Cross Registration page (Scotty)"
+  },
+  {
+    "id": "crossRegOneCoursePerSemester",
+    "topic": "cross registration course limit",
+    "value": "CMU-Q students may cross-register for one course per semester at another Education City university.",
+    "lastVerified": "2026-05-31",
+    "source": "Cross Registration page (Scotty)"
+  },
+  {
+    "id": "addPeriodEndDay",
+    "topic": "add drop period deadline end of add period",
+    "value": "For hosted students cross-registering at CMU-Q, the add period ends on the 10th day of class.",
+    "lastVerified": "2026-05-31",
+    "source": "Cross Registration page (Scotty)"
+  },
+  {
+    "id": "idCardReplacementFee",
+    "topic": "id card replacement fee lost card",
+    "value": "A $30 replacement fee applies for all lost CMU ID cards.",
+    "lastVerified": "2026-03-24",
+    "source": "Community Policies (The Word)"
+  },
+  {
+    "id": "fireSafetyPenaltyFee",
+    "topic": "fire safety penalty fee housing",
+    "value": "Residents incur a penalty fee of $200 for violating fire-safety guidelines.",
+    "lastVerified": "2026-03-24",
+    "source": "Community Policies (The Word)"
+  },
+  {
+    "id": "plaidCashMaxDeposit",
+    "topic": "plaid cash maximum deposit amount",
+    "value": "Plaid Cash has a maximum deposit amount of $2,000.",
+    "lastVerified": "2026-03-24",
+    "source": "Community Policies (The Word)"
+  },
+  {
+    "id": "plaidCashRefundProcessingFee",
+    "topic": "plaid cash refund processing fee",
+    "value": "A processing fee of $25 is assessed for Plaid Cash refunds.",
+    "lastVerified": "2026-03-24",
+    "source": "Community Policies (The Word)"
+  },
+  {
+    "id": "minorDeclarationLeadTime",
+    "topic": "minor declaration deadline registration week",
+    "value": "Minor declaration forms should be submitted at least two weeks prior to registration week to be considered for available spaces in non-major courses. Students are encouraged to declare no later than the end of sophomore year.",
+    "lastVerified": "2026-04-14",
+    "source": "Minors page (Scotty)"
+  }
+]

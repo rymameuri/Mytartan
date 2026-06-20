@@ -640,6 +640,57 @@ body.ws-resize-active .ws-resize-handle::after {
   color: var(--ws-text-secondary);
 }
 
+.ws-studio__help-btn {
+  display: block;
+  width: 100%;
+  margin-top: var(--ws-space-2);
+  padding: 0.5rem 0.75rem;
+  border: 1px solid rgba(156, 39, 51, 0.25);
+  border-radius: var(--ws-radius-md);
+  background: rgba(156, 39, 51, 0.06);
+  color: var(--tartan-maroon);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ws-studio__help-btn:hover:not(:disabled) {
+  background: rgba(156, 39, 51, 0.1);
+}
+
+.ws-studio__help-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ws-studio__help-btn--inline {
+  display: inline-block;
+  width: auto;
+  margin-top: 0;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.6875rem;
+}
+
+.ws-whiteboard__cluster-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ws-space-1);
+  margin-bottom: var(--ws-space-1);
+}
+
+.ws-whiteboard__cluster-header h4 {
+  margin: 0;
+}
+
+.ws-whiteboard__cluster ul {
+  margin: 0;
+  padding-left: 16px;
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  color: var(--ws-text-secondary);
+}
+
 /* Whiteboard */
 .ws-whiteboard {
   display: grid;
@@ -659,14 +710,6 @@ body.ws-resize-active .ws-resize-handle::after {
   font-size: 0.875rem;
   font-weight: 600;
   color: var(--tartan-maroon);
-}
-
-.ws-whiteboard__cluster ul {
-  margin: 0;
-  padding-left: 16px;
-  font-size: 0.8125rem;
-  line-height: 1.55;
-  color: var(--ws-text-secondary);
 }
 
 .ws-error {

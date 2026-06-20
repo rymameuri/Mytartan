@@ -1,6 +1,45 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-const STORAGE_KEY = "tartan-scotty-conversations";
+/** Legacy anonymous key used before per-account storage. */
+export const LEGACY_CONVERSATIONS_KEY = "tartan-scotty-conversations";
+export const MIGRATION_DONE_KEY = "mytartan_migration_done";
+
+export function getConversationsStorageKey(userId) {
+  if (userId == null) return LEGACY_CONVERSATIONS_KEY;
+  return `mytartan_conversations_${userId}`;
+}
+
+export function isConversationsStoreEmpty(raw) {
+  if (!raw) return true;
+  try {
+    const parsed = JSON.parse(raw);
+    const hasConversations =
+      Array.isArray(parsed.conversations) && parsed.conversations.length > 0;
+    const hasProjects = Array.isArray(parsed.projects) && parsed.projects.length > 0;
+    return !hasConversations && !hasProjects;
+  } catch {
+    return true;
+  }
+}
+
+export function migrateAnonymousConversations(userId) {
+  if (userId == null) return;
+  try {
+    if (localStorage.getItem(MIGRATION_DONE_KEY) === "true") return;
+
+    const legacyRaw = localStorage.getItem(LEGACY_CONVERSATIONS_KEY);
+    if (!legacyRaw || isConversationsStoreEmpty(legacyRaw)) return;
+
+    const userKey = getConversationsStorageKey(userId);
+    const userRaw = localStorage.getItem(userKey);
+    if (!isConversationsStoreEmpty(userRaw)) return;
+
+    localStorage.setItem(userKey, legacyRaw);
+    localStorage.setItem(MIGRATION_DONE_KEY, "true");
+  } catch {
+    /* ignore quota / parse errors */
+  }
+}
 
 function generateId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -13,9 +52,9 @@ function deriveTitle(messages) {
   return text.length > 42 ? `${text.slice(0, 42)}…` : text;
 }
 
-function loadFromStorage() {
+function loadFromStorage(userId) {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(getConversationsStorageKey(userId));
     if (!raw) return { conversations: [], projects: [], activeConversationId: null };
     const parsed = JSON.parse(raw);
     return {
@@ -28,12 +67,22 @@ function loadFromStorage() {
   }
 }
 
-export function useConversations() {
-  const [store, setStore] = useState(loadFromStorage);
+export function useConversations(userId) {
+  const [store, setStore] = useState(() => loadFromStorage(userId));
+  const skipNextPersist = useRef(false);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
-  }, [store]);
+    skipNextPersist.current = true;
+    setStore(loadFromStorage(userId));
+  }, [userId]);
+
+  useEffect(() => {
+    if (skipNextPersist.current) {
+      skipNextPersist.current = false;
+      return;
+    }
+    localStorage.setItem(getConversationsStorageKey(userId), JSON.stringify(store));
+  }, [store, userId]);
 
   const activeConversation = store.conversations.find(
     (c) => c.id === store.activeConversationId

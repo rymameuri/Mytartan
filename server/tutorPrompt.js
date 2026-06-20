@@ -58,7 +58,7 @@ function formatCourseContextBlock(courseContext) {
     .join("\n\n");
 }
 
-const TUTOR_BASE_PROMPT = `You are Tartan Scotty, CMU-Q's student assistant acting as a personal course tutor.
+const TUTOR_BASE_PROMPT = `You are acting as the student's personal course tutor for this session.
 
 Your job is to help the student understand their course material — not to do their work for them.
 
@@ -69,9 +69,12 @@ TUTORING RULES:
 - Do NOT give full homework, quiz, or exam answers. Help them reach the answer themselves.
 - When relevant, point to syllabus sections (weeks, units, readings) so the student knows where to study.
 - If a question is outside the course scope, say so clearly.
-- Speak in clear, natural English. No Scottish dialect or mascot slang.
 - Never open with filler like "Great question!" Be warm but get to the point fast.
-- Do NOT use markdown formatting — no asterisks, bold, italics, or backticks. Write plain text only.`;
+
+VISIBLE CONTENT RULES (Studio panel — flashcards, quiz, whiteboard):
+- Never read content verbatim that the student can already see on screen — not flashcard fronts/backs, quiz questions and choices, or whiteboard node text.
+- When the student asks for help on a specific item, explain the concept behind it the way a professor lecturing would: context, a brief example, and a different framing than what is already shown — not a restatement of the visible text.
+- Default to brief responses when simply acknowledging that content was generated; only go into lecture depth when the student actually asks for help.`;
 
 const CONVERSATIONAL_TUTORING = `
 
@@ -79,6 +82,7 @@ CONVERSATION MODE (student is talking with you — NOT generating Studio content
 - You know their course materials deeply. Teach by synthesizing ideas, not by reciting notes, lists, flashcards, or whiteboard bullets verbatim.
 - Guide with questions, short explanations, and connections between concepts. Help them think, not memorize lines.
 - If they are studying flashcards or a whiteboard in the Studio panel, coach them through it — ask what they think, give hints, clarify misconceptions. Never read card text or cluster bullets aloud word-for-word.
+- When helping with a specific Studio item, teach the underlying learning objective with a fresh example grounded in their syllabus. End with a Socratic check-in question.
 - Keep replies focused: usually 2–5 sentences unless they ask for more detail.`;
 
 const STUDIO_OUTPUT_RULES = `
@@ -148,12 +152,60 @@ Rules:
 - No introduction before the first Cluster:`,
 };
 
+function formatStudioItemContextBlock(studioItemContext) {
+  if (!studioItemContext || typeof studioItemContext !== "object") return "";
+
+  const lines = ["STUDIO ITEM HELP (student can see this item on screen — teach the concept, do not quote it):"];
+  if (studioItemContext.activity) lines.push(`Activity: ${studioItemContext.activity}`);
+  if (studioItemContext.itemLabel) lines.push(`Item: ${studioItemContext.itemLabel}`);
+  if (studioItemContext.concept) {
+    lines.push(`Learning objective: ${studioItemContext.concept}`);
+  }
+  if (studioItemContext.clusterTitle) {
+    lines.push(`Cluster theme: ${studioItemContext.clusterTitle}`);
+  }
+
+  const detailLines = [];
+  if (studioItemContext.term) detailLines.push(`Visible prompt (do not repeat): ${studioItemContext.term}`);
+  if (studioItemContext.answer) detailLines.push(`Visible answer (do not repeat): ${studioItemContext.answer}`);
+  if (studioItemContext.questionText) {
+    detailLines.push(`Visible question (do not repeat): ${studioItemContext.questionText}`);
+  }
+  if (studioItemContext.explanation) {
+    detailLines.push(`Reference explanation (paraphrase only): ${studioItemContext.explanation}`);
+  }
+  if (Array.isArray(studioItemContext.bullets) && studioItemContext.bullets.length) {
+    detailLines.push(
+      `Cluster bullets (do not read aloud): ${studioItemContext.bullets.slice(0, 5).join("; ")}`
+    );
+  }
+
+  if (detailLines.length) {
+    lines.push("", "Item details for your grounding only:", ...detailLines);
+  }
+
+  lines.push(
+    "",
+    "Explain the underlying concept with a different example or framing. End with a Socratic question."
+  );
+
+  return lines.join("\n");
+}
+
 function buildTutorSystemPrompt(
   courseContext,
-  { tutorActivity = null, lectureTopic = "", studioGeneration = false } = {}
+  {
+    tutorActivity = null,
+    lectureTopic = "",
+    studioGeneration = false,
+    speechMode = null,
+    studioItemContext = null,
+  } = {}
 ) {
   const contextBlock = formatCourseContextBlock(courseContext);
   const topic = lectureTopic?.trim() || "the selected topic";
+  const isLectureHelp =
+    speechMode === "lecture" || Boolean(studioItemContext && !studioGeneration);
 
   let prompt = TUTOR_BASE_PROMPT;
 
@@ -161,6 +213,16 @@ function buildTutorSystemPrompt(
     prompt += ACTIVITY_PROMPTS[tutorActivity](topic);
   } else {
     prompt += CONVERSATIONAL_TUTORING;
+  }
+
+  if (isLectureHelp) {
+    const itemBlock = formatStudioItemContextBlock(studioItemContext);
+    if (itemBlock) {
+      prompt += `\n\n${itemBlock}`;
+    } else {
+      prompt +=
+        "\n\nThe student is asking for help with something visible in the Studio panel. Teach the underlying concept without repeating the on-screen text. End with a Socratic check-in question.";
+    }
   }
 
   if (!contextBlock) {
@@ -199,5 +261,6 @@ module.exports = {
   buildTutorWelcome,
   hasValidCourseContext,
   formatCourseContextBlock,
+  formatStudioItemContextBlock,
   MAX_SYLLABUS_CHARS,
 };

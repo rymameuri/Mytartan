@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import LandingPage from "./components/LandingPage";
+import { AuthProvider, useAuth } from "./context/AuthContext";
+import LoginSignup from "./components/Auth/LoginSignup";
+import OnboardingFlow from "./components/Onboarding/OnboardingFlow";
 import PersonaView from "./components/PersonaView";
 import SideMenu from "./components/SideMenu";
 import ScottyPattern from "./components/ScottyPattern";
@@ -46,7 +48,24 @@ function useIsDesktop() {
   return isDesktop;
 }
 
-function App() {
+function AppRoutes() {
+  const { token, user } = useAuth();
+
+  if (!token) {
+    return <LoginSignup />;
+  }
+
+  if (!user?.profile?.onboardingComplete) {
+    return <OnboardingFlow />;
+  }
+
+  return <AppShell />;
+}
+
+function AppShell() {
+  const { user } = useAuth();
+  const userId = user?.id;
+
   const {
     activeConversationId,
     ungroupedConversations,
@@ -60,7 +79,7 @@ function App() {
     renameProject,
     deleteProject,
     moveConversationToProject,
-  } = useConversations();
+  } = useConversations(userId);
 
   const [messages, setMessages] = useState([]);
   const [mode, setMode] = useState("qa");
@@ -71,17 +90,20 @@ function App() {
   const [lectureTopic, setLectureTopic] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarCollapsed);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => readSidebarCollapsed(userId));
   const [tutorListening, setTutorListening] = useState(false);
-  const [view, setView] = useState("landing");
   const [chatSessionKey, setChatSessionKey] = useState(0);
   const [tutorSpeechText, setTutorSpeechText] = useState("");
   const voiceModeRef = useRef(false);
   const avatarRef = useRef(null);
   const abortControllerRef = useRef(null);
   const isDesktop = useIsDesktop();
-  const { isSpeaking, speak, stop } = usePersonaSpeech(avatarRef);
-  const { isMuted, toggleMute } = useMutedPreference(stop);
+  const { isSpeaking, speak, stop, caption } = usePersonaSpeech(avatarRef);
+  const { isMuted, toggleMute } = useMutedPreference(stop, userId);
+
+  useEffect(() => {
+    setSidebarCollapsed(readSidebarCollapsed(userId));
+  }, [userId]);
 
   const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
   const lastReply =
@@ -118,6 +140,7 @@ function App() {
     voiceModeRef,
     speak: speakFormatted,
     chatSessionKey,
+    userId,
   });
 
   function closeMenu() {
@@ -127,7 +150,7 @@ function App() {
   function toggleSidebarCollapsed() {
     setSidebarCollapsed((prev) => {
       const next = !prev;
-      writeSidebarCollapsed(next);
+      writeSidebarCollapsed(next, userId);
       return next;
     });
   }
@@ -149,19 +172,6 @@ function App() {
     setCourseContext(null);
     setSavedCourseId(null);
     setLectureTopic("");
-  }
-
-  function handleEnterApp() {
-    resetChatSession();
-    newChat();
-    setMessages([]);
-    setMode("qa");
-    setTutorScreen(null);
-    setCourseContext(null);
-    setSavedCourseId(null);
-    setLectureTopic("");
-    setTutorSpeechText("");
-    setView("app");
   }
 
   function handleNewChat() {
@@ -304,6 +314,7 @@ function App() {
     armSpeechSynthesis();
     const activeMode = overrideMode ?? mode;
     const isStudioGeneration = Boolean(options.studioGeneration);
+    const speechMode = options.speechMode ?? (isStudioGeneration ? "introduction" : null);
     const userMessage = {
       role: "user",
       content: text,
@@ -336,6 +347,15 @@ function App() {
       if (options.studioGeneration) {
         requestBody.studioGeneration = true;
         requestBody.tutorActivity = options.tutorActivity ?? tutorActivity;
+      }
+      if (speechMode) {
+        requestBody.speechMode = speechMode;
+      }
+      if (options.tutorActivity ?? tutorActivity) {
+        requestBody.tutorActivity = options.tutorActivity ?? tutorActivity;
+      }
+      if (options.studioItemContext) {
+        requestBody.studioItemContext = options.studioItemContext;
       }
     }
 
@@ -403,11 +423,12 @@ function App() {
         ]);
       }
 
-      if (activeMode === "tutor" && gotTokens && reply.trim() && !readMutedPreference()) {
+      if (activeMode === "tutor" && gotTokens && reply.trim() && !readMutedPreference(userId)) {
         const speech = resolveTutorSpeech({
           pendingSpeech,
           reply,
           isStudioGeneration,
+          speechMode,
           tutorActivity: options.tutorActivity ?? tutorActivity,
           lectureTopic: options.lectureTopic ?? lectureTopic,
           courseName: (options.courseContext ?? courseContext)?.courseName,
@@ -452,8 +473,71 @@ function App() {
     }
   }
 
-  if (view === "landing") {
-    return <LandingPage onStart={handleEnterApp} />;
+  async function handleQuizComplete(quizResults) {
+    if (mode !== "tutor" || tutorScreen !== "workspace" || !courseContext) return;
+
+    armSpeechSynthesis();
+    setTutorSpeechText("");
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    const userNote = {
+      role: "user",
+      content: `I finished the quiz (${quizResults.score}/${quizResults.total}).`,
+    };
+    setMessages((prev) => [...prev, userNote]);
+    setIsLoading(true);
+
+    try {
+      const response = await fetch(`${API_BASE}/api/tutor/quiz-recap`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          quizResults,
+          lectureTopic,
+          courseContext,
+        }),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to analyze quiz results");
+      }
+
+      const { analysis, speech } = await response.json();
+      const recapText = analysis?.trim() || speech?.trim() || "Nice work finishing the quiz.";
+
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: stripMarkdownFormatting(recapText) },
+      ]);
+
+      if (!readMutedPreference(userId)) {
+        voiceModeRef.current = false;
+        setTutorSpeechText(speech?.trim() || recapText);
+      }
+    } catch (err) {
+      if (err.name === "AbortError") return;
+
+      const isNetworkError =
+        err.message === "Failed to fetch" || err.name === "TypeError";
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: isNetworkError
+            ? "Can't reach the AI server to recap your quiz. Make sure the server is running."
+            : err.message || "Sorry, I could not analyze your quiz right now.",
+        },
+      ]);
+    } finally {
+      if (abortControllerRef.current === controller) {
+        abortControllerRef.current = null;
+      }
+      setIsLoading(false);
+    }
   }
 
   const tutorAvatarState =
@@ -534,8 +618,10 @@ function App() {
               onTutorActivityChange={setTutorActivity}
               lectureTopic={lectureTopic}
               onLectureTopicChange={setLectureTopic}
+              onQuizComplete={handleQuizComplete}
               avatarRef={avatarRef}
               avatarState={tutorAvatarState}
+              speechCaption={caption}
             />
           )}
 
@@ -558,6 +644,7 @@ function App() {
               onToggleMute={toggleMute}
               voiceModeRef={voiceModeRef}
               avatarRef={avatarRef}
+              speechCaption={caption}
             />
           )}
         </div>
@@ -576,6 +663,14 @@ function App() {
 
       </div>
     </div>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppRoutes />
+    </AuthProvider>
   );
 }
 

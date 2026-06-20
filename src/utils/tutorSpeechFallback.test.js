@@ -31,7 +31,7 @@ Back: A digital environment`,
     tutorActivity: "flashcards",
     lectureTopic: "Security",
   });
-  expect(speech).toMatch(/Studio/i);
+  expect(speech).toMatch(/flashcard/i);
   expect(speech).not.toMatch(/Front/i);
   expect(speech).not.toMatch(/Back/i);
 });

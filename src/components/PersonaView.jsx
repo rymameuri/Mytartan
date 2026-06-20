@@ -3,6 +3,7 @@ import ScottyAvatar from "./ScottyAvatar";
 import ScottyHeadbandFrame from "./ScottyHeadbandFrame";
 import MessageContent from "./MessageContent";
 import PersonaMicControls from "./PersonaMicControls";
+import PersonaCaption from "./PersonaCaption";
 import AvatarScaleHandle from "./AvatarScaleHandle";
 import { useMicInput } from "../hooks/useMicInput";
 import { useAvatarZoom } from "../hooks/useAvatarZoom";
@@ -28,12 +29,17 @@ function PersonaView({
   onToggleMute,
   voiceModeRef,
   avatarRef,
+  speechCaption = "",
 }) {
   const messagesContainerRef = useRef(null);
   const isNearBottomRef = useRef(true);
   const [showScrollDown, setShowScrollDown] = useState(false);
+  const [interactionMode, setInteractionMode] = useState("persona");
   const { zoom, setZoom, resetZoom, avatarStyle, minZoom, maxZoom } = useAvatarZoom();
   const hasMessages = messages.length > 0;
+  const hasUserMessages = messages.some((message) => message.role === "user");
+  const showChatHistory = interactionMode === "chat" && hasUserMessages;
+  const showPersonaStage = interactionMode === "persona" || !hasUserMessages;
 
   const SCROLL_THRESHOLD = 72;
 
@@ -59,6 +65,7 @@ function PersonaView({
     voiceModeRef.current = false;
     isNearBottomRef.current = true;
     setShowScrollDown(false);
+    setInteractionMode("persona");
   }, [chatSessionKey, stopSpeech, voiceModeRef]);
 
   const handleVoiceResult = useCallback((transcript) => {
@@ -79,7 +86,7 @@ function PersonaView({
   }, [isLoading, isSpeaking, stopSpeech, toggleMic]);
 
   useEffect(() => {
-    if (!hasMessages) return undefined;
+    if (!showChatHistory) return undefined;
 
     const el = messagesContainerRef.current;
     if (!el) return undefined;
@@ -88,17 +95,17 @@ function PersonaView({
     checkScrollPosition();
 
     return () => el.removeEventListener("scroll", checkScrollPosition);
-  }, [hasMessages, checkScrollPosition]);
+  }, [showChatHistory, checkScrollPosition]);
 
   useEffect(() => {
-    if (!hasMessages) return;
+    if (!showChatHistory) return;
     if (isNearBottomRef.current) {
       const isStreaming = messages.some((message) => message.streaming);
       requestAnimationFrame(() => scrollToBottom(isStreaming ? "auto" : "smooth"));
     } else {
       checkScrollPosition();
     }
-  }, [messages, isLoading, hasMessages, scrollToBottom, checkScrollPosition]);
+  }, [messages, isLoading, showChatHistory, scrollToBottom, checkScrollPosition]);
 
   const micLabel = isLoading
     ? "Processing…"
@@ -109,11 +116,11 @@ function PersonaView({
         : "Tap to speak";
 
   const avatarState = isSpeaking ? "speaking" : listening ? "listening" : "idle";
-  const showIdleHint = !isSpeaking && !isLoading && !hasMessages;
+  const showIdleHint = showPersonaStage && !isSpeaking && !isLoading && !hasUserMessages;
   const isTutor = mode === "tutor";
 
   return (
-    <div className="pv">
+    <div className={`pv${interactionMode === "persona" ? " pv--persona-mode" : ""}`}>
       <div className="pv__overlay" aria-hidden="true" />
 
       <header className="pv-header">
@@ -151,6 +158,30 @@ function PersonaView({
           </button>
         </div>
         <div className="pv-header__actions">
+          <div className="pv-interaction-tabs" role="tablist" aria-label="Input mode">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={interactionMode === "persona"}
+              className={`pv-interaction-tab${
+                interactionMode === "persona" ? " pv-interaction-tab--active" : ""
+              }`}
+              onClick={() => setInteractionMode("persona")}
+            >
+              Persona
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={interactionMode === "chat"}
+              className={`pv-interaction-tab${
+                interactionMode === "chat" ? " pv-interaction-tab--active" : ""
+              }`}
+              onClick={() => setInteractionMode("chat")}
+            >
+              Chat
+            </button>
+          </div>
           <button
             type="button"
             className={`pv-icon-btn${isMuted ? " pv-icon-btn--active" : ""}`}
@@ -182,8 +213,8 @@ function PersonaView({
         </div>
       </header>
 
-      <main className={`pv-body${hasMessages ? " pv-body--chat" : " pv-body--idle"}`}>
-        {hasMessages && (
+      <main className={`pv-body${showChatHistory ? " pv-body--chat" : " pv-body--idle"}`}>
+        {showChatHistory && (
           <div className="pv-messages-wrap">
             <div
               className="pv-messages message-history"
@@ -236,7 +267,7 @@ function PersonaView({
           </div>
         )}
 
-        <div className="pv-stage">
+        <div className={`pv-stage${interactionMode === "persona" ? " pv-stage--persona-main" : ""}`}>
           <div
             className={`pv-avatar-frame pv-avatar-frame--${avatarState}`}
             style={avatarStyle}
@@ -246,15 +277,17 @@ function PersonaView({
             </ScottyHeadbandFrame>
           </div>
 
-          <AvatarScaleHandle
-            zoom={zoom}
-            setZoom={setZoom}
-            minZoom={minZoom}
-            maxZoom={maxZoom}
-            onReset={resetZoom}
-          />
+          {interactionMode === "persona" && (
+            <AvatarScaleHandle
+              zoom={zoom}
+              setZoom={setZoom}
+              minZoom={minZoom}
+              maxZoom={maxZoom}
+              onReset={resetZoom}
+            />
+          )}
 
-          {!hasMessages && (
+          {showPersonaStage && (
             <div className="pv-identity">
               <p className="pv-identity__name brand-display">My Tartan</p>
               <p className="pv-identity__role">
@@ -264,12 +297,22 @@ function PersonaView({
             </div>
           )}
 
+          {isSpeaking && speechCaption && (
+            <PersonaCaption text={speechCaption} />
+          )}
+
           {showIdleHint && (
             <p className="pv-idle-hint">
               {isTutor
                 ? "Open your class dashboard to add materials and study"
-                : "Ask me anything about CMU-Q"}
+                : interactionMode === "chat"
+                  ? "Type a question about CMU-Q registration, campus life, or policies"
+                  : "Tap the mic and ask me anything about CMU-Q"}
             </p>
+          )}
+
+          {interactionMode === "persona" && isLoading && (
+            <p className="pv-idle-hint pv-idle-hint--live">Scotty is thinking…</p>
           )}
         </div>
       </main>
@@ -283,6 +326,12 @@ function PersonaView({
           onMicClick={handleMicClick}
           onSend={onSend}
           voiceModeRef={voiceModeRef}
+          micOnly={interactionMode === "persona"}
+          placeholder={
+            isTutor
+              ? "Ask Scotty about your course…"
+              : "Ask about CMU-Q registration, campus life, policies…"
+          }
         />
       </footer>
     </div>

@@ -7,7 +7,10 @@
 const {
   loadKnowledgeBase,
   retrieveRelevantDocs,
+  buildStudentContext,
   buildContextBlock,
+  buildKeyFactsBlock,
+  checkKeyFacts,
   computeConfidence,
 } = require("./knowledgeBase");
 
@@ -88,7 +91,7 @@ describe("retrieveRelevantDocs", () => {
       expect(doc).toHaveProperty("body");
       expect(doc).toHaveProperty("file");
       expect(doc).toHaveProperty("score");
-      expect(doc).toHaveProperty("method", "keyword");
+      expect(doc).toHaveProperty("method", "tfidf");
       expect(doc.score).toBeGreaterThan(0);
     }
   });
@@ -114,6 +117,38 @@ describe("buildContextBlock", () => {
   });
 });
 
+// ─── checkKeyFacts ────────────────────────────────────────────────────────────
+
+describe("checkKeyFacts", () => {
+  test("returns empty array for empty query", () => {
+    expect(checkKeyFacts("")).toEqual([]);
+    expect(checkKeyFacts(null)).toEqual([]);
+  });
+
+  test("matches TAFAWQ GPA question to structured fact", () => {
+    const facts = checkKeyFacts("What GPA do I need for TAFAWQ?");
+    expect(facts.length).toBeGreaterThan(0);
+    expect(facts.some((f) => f.id === "tafawqGpaRequirement")).toBe(true);
+  });
+
+  test("matches course overload question to unit limit fact", () => {
+    const facts = checkKeyFacts("What's the course overload unit limit?");
+    expect(facts.some((f) => f.id === "courseOverloadUnitLimit")).toBe(true);
+  });
+
+  test("returns no facts for unrelated queries", () => {
+    expect(checkKeyFacts("xyzzy frobble quuxington")).toEqual([]);
+  });
+
+  test("buildKeyFactsBlock marks facts as authoritative", () => {
+    const facts = checkKeyFacts("TAMAIYUZ application deadline");
+    const block = buildKeyFactsBlock(facts);
+    expect(block).toMatch(/AUTHORITATIVE STRUCTURED KEY FACTS/);
+    expect(block).toMatch(/Last verified:/);
+    expect(block).toMatch(/tamaiyuzApplicationWindow|tamaiyuz scholarship/i);
+  });
+});
+
 // ─── computeConfidence ────────────────────────────────────────────────────────
 
 describe("computeConfidence", () => {
@@ -129,8 +164,56 @@ describe("computeConfidence", () => {
     const conf = computeConfidence(results);
     expect(conf.score).toBeGreaterThan(0);
     expect(conf.sourceCount).toBe(results.length);
-    expect(conf.method).toBe("keyword");
+    expect(conf.method).toBe("tfidf");
     expect(conf.message).toMatch(/Scotty is \d+% confident/);
     expect(conf.message).toMatch(/based on \d+ sources?/);
+  });
+
+  test("assigns low confidence to weak tangential matches", () => {
+    const results = retrieveRelevantDocs("How much is tuition per semester?", { limit: 2 });
+    if (results.length) {
+      const conf = computeConfidence(results);
+      expect(conf.score).toBeLessThan(45);
+    }
+  });
+
+  test("assigns high confidence to strong matches", () => {
+    const results = retrieveRelevantDocs("What is StuCo?", { limit: 2 });
+    const conf = computeConfidence(results);
+    expect(conf.score).toBeGreaterThanOrEqual(80);
+  });
+});
+
+// ─── buildStudentContext ──────────────────────────────────────────────────────
+
+describe("buildStudentContext", () => {
+  const completeProfile = {
+    major: "Computer Science",
+    graduationDate: "May 2027",
+    learningStyle: "visual",
+    intendedUse: "course tutoring and campus navigation",
+    onboardingComplete: true,
+  };
+
+  test("returns personalized paragraph for complete onboarding", () => {
+    const context = buildStudentContext(completeProfile);
+    expect(context).toMatch(/Computer Science/);
+    expect(context).toMatch(/May 2027/);
+    expect(context).toMatch(/visual/);
+    expect(context).toMatch(/campus navigation/);
+    expect(context).toMatch(/whiteboard brainstorms and flashcards/i);
+  });
+
+  test("returns empty string when onboarding is incomplete", () => {
+    expect(buildStudentContext({ ...completeProfile, onboardingComplete: false })).toBe("");
+    expect(buildStudentContext(null)).toBe("");
+    expect(buildStudentContext(undefined)).toBe("");
+  });
+
+  test("returns empty string when any profile field is missing", () => {
+    expect(buildStudentContext({ ...completeProfile, major: null })).toBe("");
+    expect(buildStudentContext({ ...completeProfile, graduationDate: "" })).toBe("");
+    expect(buildStudentContext({ ...completeProfile, learningStyle: "  " })).toBe("");
+    expect(buildStudentContext({ ...completeProfile, intendedUse: null })).toBe("");
   });
 });

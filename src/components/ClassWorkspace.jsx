@@ -14,9 +14,15 @@ import {
   parseWhiteboardClusters,
   parseWhiteboardGuidingQuestion,
 } from "../utils/parseStudyOutput";
+import {
+  buildLectureHelpMessage,
+  looksLikeStudioLectureRequest,
+  resolveStudioItemContext,
+} from "../utils/studioLecture";
 import MessageContent from "./MessageContent";
 import QuizPlayer from "./QuizPlayer";
 import PersonaMicControls from "./PersonaMicControls";
+import PersonaCaption from "./PersonaCaption";
 import ScottyHeadbandFrame from "./ScottyHeadbandFrame";
 import ScottyAvatar from "./ScottyAvatar";
 import AvatarScaleHandle from "./AvatarScaleHandle";
@@ -113,8 +119,10 @@ function ClassWorkspace({
   onTutorActivityChange,
   lectureTopic,
   onLectureTopicChange,
+  onQuizComplete,
   avatarRef,
   avatarState = "idle",
+  speechCaption = "",
 }) {
   const [selectedMaterialIds, setSelectedMaterialIds] = useState(() => new Set());
   const [showAddSource, setShowAddSource] = useState(false);
@@ -125,6 +133,7 @@ function ClassWorkspace({
   const [parsingFile, setParsingFile] = useState(false);
   const [flashcardIndex, setFlashcardIndex] = useState(0);
   const [flashcardFlipped, setFlashcardFlipped] = useState(false);
+  const [quizIndex, setQuizIndex] = useState(0);
   const [sourcesCollapsed, setSourcesCollapsed] = useState(false);
   const [studioCollapsed, setStudioCollapsed] = useState(false);
   const [mobilePane, setMobilePane] = useState("chat");
@@ -164,13 +173,106 @@ function ClassWorkspace({
     [courseContext, selectedMaterialIds, allMaterials]
   );
 
+  const handleQuizComplete = useCallback(
+    (results) => {
+      setInteractionMode("chat");
+      onQuizComplete?.(results);
+    },
+    [onQuizComplete]
+  );
+
+  const studyExchange = useMemo(() => {
+    let userIndex = -1;
+    for (let i = messages.length - 1; i >= 0; i -= 1) {
+      if (messages[i].studio && messages[i].role === "user") {
+        userIndex = i;
+        break;
+      }
+    }
+    if (userIndex === -1) {
+      return { user: null, assistant: null };
+    }
+    const assistant =
+      messages.slice(userIndex + 1).find((message) => message.role === "assistant" && message.studio) ??
+      messages.slice(userIndex + 1).find((message) => message.role === "assistant") ??
+      null;
+    return { user: messages[userIndex], assistant };
+  }, [messages]);
+
+  const studyMessage = studyExchange.assistant;
+  const studyUserMessage = studyExchange.user;
+
+  const studyContent = studyMessage?.content ?? "";
+  const flashcards = parseFlashcards(studyContent);
+  const quizQuestions = parseQuizQuestions(studyContent);
+  const whiteboardClusters = parseWhiteboardClusters(studyContent);
+  const whiteboardGuidingQuestion = parseWhiteboardGuidingQuestion(studyContent);
+
+  const hasStudyOutput =
+    flashcards.length > 0 || quizQuestions.length > 0 || whiteboardClusters.length > 0;
+
   const sendTutorMessage = useCallback(
-    (text) =>
-      onSend(text, "tutor", {
-        lectureTopic: lectureTopic.trim(),
+    (text) => {
+      const topic = lectureTopic.trim();
+      const baseOptions = {
+        lectureTopic: topic,
         courseContext: scopedContext,
-      }),
-    [onSend, lectureTopic, scopedContext]
+        tutorActivity,
+      };
+
+      if (hasStudyOutput && looksLikeStudioLectureRequest(text)) {
+        const studioItemContext = resolveStudioItemContext({
+          text,
+          tutorActivity,
+          flashcards,
+          quizQuestions,
+          whiteboardClusters,
+          flashcardIndex,
+          quizIndex,
+          topic,
+        });
+        return onSend(text, "tutor", {
+          ...baseOptions,
+          speechMode: "lecture",
+          studioItemContext,
+        });
+      }
+
+      return onSend(text, "tutor", baseOptions);
+    },
+    [
+      onSend,
+      lectureTopic,
+      scopedContext,
+      tutorActivity,
+      hasStudyOutput,
+      flashcards,
+      quizQuestions,
+      whiteboardClusters,
+      flashcardIndex,
+      quizIndex,
+    ]
+  );
+
+  const requestStudioLecture = useCallback(
+    (studioItemContext) => {
+      if (!studioItemContext) return;
+      const topic =
+        lectureTopic.trim() ||
+        (courseContext?.courseName?.trim()
+          ? `${courseContext.courseName.trim()} review`
+          : "key course topics");
+      setInteractionMode("persona");
+      if (!isDesktop) setMobilePane("chat");
+      onSend(buildLectureHelpMessage(studioItemContext), "tutor", {
+        lectureTopic: topic,
+        courseContext: scopedContext,
+        tutorActivity,
+        speechMode: "lecture",
+        studioItemContext,
+      });
+    },
+    [onSend, lectureTopic, scopedContext, tutorActivity, isDesktop, courseContext?.courseName]
   );
 
   const handleVoiceResult = useCallback(
@@ -203,36 +305,6 @@ function ClassWorkspace({
     }
     toggleMic();
   }, [isLoading, isSpeaking, stopSpeech, toggleMic]);
-
-  const studyExchange = useMemo(() => {
-    let userIndex = -1;
-    for (let i = messages.length - 1; i >= 0; i -= 1) {
-      if (messages[i].studio && messages[i].role === "user") {
-        userIndex = i;
-        break;
-      }
-    }
-    if (userIndex === -1) {
-      return { user: null, assistant: null };
-    }
-    const assistant =
-      messages.slice(userIndex + 1).find((message) => message.role === "assistant" && message.studio) ??
-      messages.slice(userIndex + 1).find((message) => message.role === "assistant") ??
-      null;
-    return { user: messages[userIndex], assistant };
-  }, [messages]);
-
-  const studyMessage = studyExchange.assistant;
-  const studyUserMessage = studyExchange.user;
-
-  const studyContent = studyMessage?.content ?? "";
-  const flashcards = parseFlashcards(studyContent);
-  const quizQuestions = parseQuizQuestions(studyContent);
-  const whiteboardClusters = parseWhiteboardClusters(studyContent);
-  const whiteboardGuidingQuestion = parseWhiteboardGuidingQuestion(studyContent);
-
-  const hasStudyOutput =
-    flashcards.length > 0 || quizQuestions.length > 0 || whiteboardClusters.length > 0;
 
   const hasUserMessages = messages.some(
     (message) => message.role === "user" && !message.studio
@@ -413,6 +485,7 @@ function ClassWorkspace({
       lectureTopic: topic,
       courseContext: scopedContext,
       studioGeneration: true,
+      speechMode: "introduction",
     });
   }
 
@@ -517,6 +590,23 @@ function ClassWorkspace({
                 Next
               </button>
             </div>
+            <button
+              type="button"
+              className="ws-studio__help-btn"
+              disabled={isLoading}
+              onClick={() =>
+                requestStudioLecture(
+                  resolveStudioItemContext({
+                    tutorActivity: "flashcards",
+                    flashcards,
+                    flashcardIndex,
+                    topic: lectureTopic.trim() || resolveStudioTopic(),
+                  })
+                )
+              }
+            >
+              Help with this card
+            </button>
           </div>
         </div>
       );
@@ -528,6 +618,19 @@ function ClassWorkspace({
           <QuizPlayer
             questions={quizQuestions}
             title={`Quiz · ${lectureTopic || "Study session"}`}
+            onComplete={handleQuizComplete}
+            onQuestionChange={setQuizIndex}
+            onHelp={(index) =>
+              requestStudioLecture(
+                resolveStudioItemContext({
+                  tutorActivity: "quiz",
+                  quizQuestions,
+                  quizIndex: index,
+                  topic: lectureTopic.trim() || resolveStudioTopic(),
+                })
+              )
+            }
+            helpDisabled={isLoading}
           />
         </div>
       );
@@ -540,9 +643,28 @@ function ClassWorkspace({
             Whiteboard · {lectureTopic || "Brainstorm"}
           </h3>
           <div className="ws-whiteboard">
-            {whiteboardClusters.map((cluster) => (
+            {whiteboardClusters.map((cluster, clusterIndex) => (
               <div key={cluster.title} className="ws-whiteboard__cluster">
-                <h4>{cluster.title}</h4>
+                <div className="ws-whiteboard__cluster-header">
+                  <h4>{cluster.title}</h4>
+                  <button
+                    type="button"
+                    className="ws-studio__help-btn ws-studio__help-btn--inline"
+                    disabled={isLoading}
+                    onClick={() =>
+                      requestStudioLecture(
+                        resolveStudioItemContext({
+                          tutorActivity: "whiteboard",
+                          whiteboardClusters,
+                          clusterIndex,
+                          topic: lectureTopic.trim() || resolveStudioTopic(),
+                        })
+                      )
+                    }
+                  >
+                    Help with this
+                  </button>
+                </div>
                 <ul>
                   {cluster.bullets.map((bullet) => (
                     <li key={bullet}>{bullet}</li>
@@ -882,6 +1004,10 @@ function ClassWorkspace({
                   Course Tutor
                 </p>
               </div>
+            )}
+
+            {isSpeaking && speechCaption && (
+              <PersonaCaption text={speechCaption} />
             )}
 
             {showPersonaStage && !isLoading && !isSpeaking && (

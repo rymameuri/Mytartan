@@ -2,13 +2,13 @@ export function tutorSpeechFallback({ tutorActivity, lectureTopic, courseName } 
   const topic = lectureTopic?.trim() || "this topic";
 
   if (tutorActivity === "flashcards") {
-    return `Your flashcards on ${topic} are ready in Studio. Try each one from memory, and ask me when you want help with an idea.`;
+    return `I put together some flashcards on ${topic} — take a look and tell me if any of them trip you up.`;
   }
   if (tutorActivity === "quiz") {
     return `I've built a quiz on ${topic} in Studio. Work through it at your own pace, and ask me when you want a hint.`;
   }
   if (tutorActivity === "whiteboard") {
-    return `I've mapped the big ideas for ${topic} in Studio. Explore the clusters and tell me what you'd like to dig into first.`;
+    return `I've mapped the big ideas for ${topic} on the whiteboard. Scan the clusters and tell me what you'd explore first.`;
   }
   return `Let's dig into ${topic} together. Tell me what you'd like to understand better and we'll work through it step by step.`;
 }
@@ -60,6 +60,7 @@ export function resolveTutorSpeech({
   pendingSpeech = "",
   reply = "",
   isStudioGeneration = false,
+  speechMode = null,
   tutorActivity = null,
   lectureTopic = "",
   courseName = "",
@@ -67,9 +68,19 @@ export function resolveTutorSpeech({
   const fallback = () =>
     tutorSpeechFallback({ tutorActivity, lectureTopic, courseName });
 
-  if (isStudioGeneration) {
+  const mode = speechMode || (isStudioGeneration ? "introduction" : null);
+
+  if (mode === "introduction") {
     const candidate = pendingSpeech.trim();
     if (candidate && !isStructuredStudioContent(candidate)) return candidate;
+    return fallback();
+  }
+
+  if (mode === "lecture") {
+    const candidate = pendingSpeech.trim();
+    if (candidate && !isStructuredStudioContent(candidate)) return candidate;
+    const fromReply = briefSpeechFromReply(reply);
+    if (fromReply) return fromReply;
     return fallback();
   }
 

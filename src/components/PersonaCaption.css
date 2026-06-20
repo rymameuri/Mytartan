@@ -1,0 +1,32 @@
+.persona-caption {
+  margin: 0;
+  width: min(540px, 92vw);
+  min-height: 1.45em;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.45;
+  letter-spacing: 0.01em;
+  text-align: center;
+  color: var(--tartan-text-on-dark);
+  white-space: nowrap;
+  overflow: hidden;
+  animation: persona-caption-swap 0.22s ease;
+}
+
+@keyframes persona-caption-swap {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 480px) {
+  .persona-caption {
+    width: min(100%, 92vw);
+    font-size: 0.875rem;
+  }
+}
