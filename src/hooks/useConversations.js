@@ -39,12 +39,15 @@ export function useConversations() {
     (c) => c.id === store.activeConversationId
   );
 
-  const persistCurrent = useCallback((messages, mode) => {
+  const persistCurrent = useCallback((messages, mode, courseContext = null, savedCourseId = null) => {
     setStore((prev) => {
       if (messages.length === 0 && !prev.activeConversationId) return prev;
 
       const now = Date.now();
-      const title = deriveTitle(messages);
+      const title =
+        mode === "tutor" && courseContext?.courseName
+          ? `Tutor: ${courseContext.courseName}`
+          : deriveTitle(messages);
 
       if (!prev.activeConversationId) {
         const id = generateId();
@@ -53,6 +56,8 @@ export function useConversations() {
           title,
           mode,
           messages,
+          courseContext,
+          savedCourseId,
           projectId: null,
           createdAt: now,
           updatedAt: now,
@@ -68,7 +73,7 @@ export function useConversations() {
         ...prev,
         conversations: prev.conversations.map((c) =>
           c.id === prev.activeConversationId
-            ? { ...c, title, mode, messages, updatedAt: now }
+            ? { ...c, title, mode, messages, courseContext, savedCourseId, updatedAt: now }
             : c
         ),
       };
@@ -84,8 +89,13 @@ export function useConversations() {
     setStore((prev) => ({ ...prev, activeConversationId: id }));
     const conv = store.conversations.find((c) => c.id === id);
     return conv
-      ? { messages: conv.messages, mode: conv.mode }
-      : { messages: [], mode: "qa" };
+      ? {
+          messages: conv.messages,
+          mode: conv.mode,
+          courseContext: conv.courseContext ?? null,
+          savedCourseId: conv.savedCourseId ?? null,
+        }
+      : { messages: [], mode: "qa", courseContext: null, savedCourseId: null };
   }, [store.conversations]);
 
   const deleteConversation = useCallback((id) => {

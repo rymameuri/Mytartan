@@ -13,6 +13,23 @@ const {
   isProfessorNuiQuery,
   getProfessorNuiReply,
 } = require("./knowledgeBase");
+const {
+  buildTutorSystemPrompt,
+  hasValidCourseContext,
+} = require("./tutorPrompt");
+const { generateTutorSpeechScript } = require("./tutorSpeech");
+const {
+  listCourses,
+  getCourse,
+  createCourse,
+  approveCourse,
+  addContribution,
+  deleteCourse,
+  toPublicSummary,
+  toCourseContext,
+  addMaterial,
+  deleteMaterial,
+} = require("./courseStore");
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -116,6 +133,7 @@ CRITICAL RULES:
 - At CMU-Q, "StuCo" means the Student College (student-taught courses), NOT a generic student council or student government. Do not make up StuCo officer titles or members.
 - Speak in clear, natural, everyday English. Be warm and helpful, but do not use Scottish dialect, accent, or slang (no "laddie", "wee", "aye", "bonny", etc.). Write like a friendly student services assistant, not a cartoon character.
 - Do NOT include [Source:] labels, file names, or file paths anywhere in your response. Use the knowledge base to answer, but never echo back source citations.
+- Do NOT use markdown formatting in responses — no asterisks, bold, italics, or backticks. Write plain text only.
 - If a question is ambiguous (e.g. "measure" likely means "major/degree", "stucco" means "StuCo"), interpret it charitably in the CMU-Q academic context before answering.
 
 RESPONSE STYLE:
@@ -132,7 +150,6 @@ const SYSTEM_PROMPTS = {
   qa: `${KB_GROUNDING_RULES} Be accurate, concise, and helpful about academics, registration, student life, policies, and CMU-Q resources.`,
   campus: `${KB_GROUNDING_RULES} Help students navigate CMU-Q campus life, resources, and student services.`,
   chat: `${KB_GROUNDING_RULES} Be a warm, approachable companion while staying factual about CMU-Q.`,
-  tutor: `You are Tartan Scotty, CMU-Q's student assistant and academic tutor. Answer like a knowledgeable friend — naturally and conversationally, not like a formal document. Help students understand concepts, work through problems step by step, and develop study strategies. Guide them toward answers rather than giving them outright. Speak in clear, natural English — no Scottish dialect or mascot slang. Never open with stiff phrases or filler affirmations like "Great question!" Be warm but get to the point fast.`,
 };
 
 const KB_MODES = new Set(["qa", "campus", "chat"]);
@@ -168,7 +185,11 @@ async function retrieveForQuery(mode, userQuery) {
   return { docs, confidence };
 }
 
-function buildSystemPrompt(mode, docs, { conversational = false } = {}) {
+function buildSystemPrompt(mode, docs, { conversational = false, courseContext = null, tutorActivity = null, lectureTopic = "" } = {}) {
+  if (mode === "tutor") {
+    return buildTutorSystemPrompt(courseContext, { tutorActivity, lectureTopic });
+  }
+
   let prompt = SYSTEM_PROMPTS[mode];
   if (!KB_MODES.has(mode)) return prompt;
 
@@ -347,6 +368,12 @@ app.get("/", (_req, res) => {
     frontend: "http://localhost:3000",
     routes: [
       "GET /api/kb/status",
+      "GET /api/courses",
+      "POST /api/courses",
+      "GET /api/courses/:id",
+      "POST /api/courses/:id/approve",
+      "POST /api/courses/:id/contribute",
+      "DELETE /api/courses/:id",
       "POST /api/chat",
       "POST /api/chat/stream",
       "POST /api/liveavatar-token",
@@ -356,6 +383,77 @@ app.get("/", (_req, res) => {
 
 app.get("/api/kb/status", (_req, res) => {
   res.json(getRetrievalStatus());
+});
+
+app.get("/api/courses", (_req, res) => {
+  const courses = listCourses().map(toPublicSummary);
+  res.json({ courses });
+});
+
+app.post("/api/courses", (req, res) => {
+  try {
+    const course = createCourse(req.body, { status: "active" });
+    res.status(201).json({ course: toCourseContext(course) });
+  } catch (err) {
+    res.status(400).json({ error: err.message || "Failed to create course" });
+  }
+});
+
+app.get("/api/courses/:id", (req, res) => {
+  const course = getCourse(req.params.id);
+  if (!course) {
+    return res.status(404).json({ error: "Course not found" });
+  }
+  return res.json({ course: toCourseContext(course) });
+});
+
+app.post("/api/courses/:id/approve", (req, res) => {
+  const course = approveCourse(req.params.id);
+  if (!course) {
+    return res.status(404).json({ error: "Course not found" });
+  }
+  return res.json({ course: toCourseContext(course) });
+});
+
+app.post("/api/courses/:id/contribute", (req, res) => {
+  const { content, role } = req.body ?? {};
+  try {
+    const course = addContribution(req.params.id, content, { role });
+    if (!course) {
+      return res.status(404).json({ error: "Course not found" });
+    }
+    return res.json({ course: toCourseContext(course) });
+  } catch (err) {
+    return res.status(400).json({ error: err.message || "Failed to save contribution" });
+  }
+});
+
+app.delete("/api/courses/:id", (req, res) => {
+  const deleted = deleteCourse(req.params.id);
+  if (!deleted) {
+    return res.status(404).json({ error: "Course not found" });
+  }
+  return res.json({ ok: true });
+});
+
+app.post("/api/courses/:id/materials", (req, res) => {
+  try {
+    const course = addMaterial(req.params.id, req.body ?? {});
+    if (!course) {
+      return res.status(404).json({ error: "Course not found" });
+    }
+    return res.json({ course: toCourseContext(course) });
+  } catch (err) {
+    return res.status(400).json({ error: err.message || "Failed to add material" });
+  }
+});
+
+app.delete("/api/courses/:id/materials/:materialId", (req, res) => {
+  const course = deleteMaterial(req.params.id, req.params.materialId);
+  if (!course) {
+    return res.status(404).json({ error: "Course or material not found" });
+  }
+  return res.json({ course: toCourseContext(course) });
 });
 
 async function chatWithAnthropic(systemPrompt, messages, { maxTokens, temperature }) {
@@ -431,15 +529,29 @@ async function sendChatReply(res, reply, { stream = false, confidence = null } =
   return res.json(payload);
 }
 
+const VALID_MODES = new Set(["qa", "campus", "chat", "tutor"]);
+
 async function handleChatRequest(req, res, { stream = false } = {}) {
-  const { messages, mode } = req.body;
+  const {
+    messages,
+    mode,
+    courseContext = null,
+    tutorActivity = null,
+    lectureTopic = "",
+  } = req.body;
 
   if (!messages || !Array.isArray(messages)) {
     return res.status(400).json({ error: "messages must be an array" });
   }
 
-  if (!SYSTEM_PROMPTS[mode]) {
+  if (!VALID_MODES.has(mode)) {
     return res.status(400).json({ error: "Invalid mode. Use: qa, campus, chat, or tutor" });
+  }
+
+  if (mode === "tutor" && courseContext && !hasValidCourseContext(courseContext)) {
+    return res.status(400).json({
+      error: "Tutor mode requires courseContext with courseName and syllabusText.",
+    });
   }
 
   const latestUserMessage = [...messages].reverse().find((m) => m.role === "user");
@@ -455,7 +567,12 @@ async function handleChatRequest(req, res, { stream = false } = {}) {
   const { docs, confidence } = conversational
     ? { docs: [], confidence: null }
     : await retrieveForQuery(mode, userQuery);
-  const systemPrompt = buildSystemPrompt(mode, docs, { conversational });
+  const systemPrompt = buildSystemPrompt(mode, docs, {
+    conversational,
+    courseContext,
+    tutorActivity,
+    lectureTopic,
+  });
   const aiOptions = getAiGenerationOptions(mode);
 
   if (KB_MODES.has(mode) && !conversational && docs.length === 0) {
@@ -475,6 +592,12 @@ async function handleChatRequest(req, res, { stream = false } = {}) {
       const { reply, confidence: kbConfidence } = answerFromKnowledgeBase(userQuery);
       return sendChatReply(res, reply, { stream, confidence: kbConfidence });
     }
+    if (mode === "tutor") {
+      return res.status(500).json({
+        error:
+          "Tutor mode requires an AI API key. Add AI_GATEWAY_BASE_URL + CLAUDE_API_KEY, or ANTHROPIC_API_KEY, in server/.env.",
+      });
+    }
     return res.status(500).json({
       error:
         "No AI API key configured. Add AI_GATEWAY_BASE_URL + CLAUDE_API_KEY for Claude via CMU AI Gateway, or ANTHROPIC_API_KEY for direct Claude access, in server/.env.",
@@ -492,9 +615,28 @@ async function handleChatRequest(req, res, { stream = false } = {}) {
         sendSseEvent(res, { type: "confidence", confidence });
       }
 
+      let reply = "";
       await streamChatReply(systemPrompt, messages, (text) => {
+        reply += text;
         sendSseEvent(res, { type: "token", text });
       }, aiOptions);
+
+      if (mode === "tutor" && reply.trim()) {
+        const speechText = await generateTutorSpeechScript(
+          getChatReply,
+          {
+            reply,
+            userQuery,
+            tutorActivity,
+            lectureTopic,
+            courseName: courseContext?.courseName,
+          },
+          aiOptions
+        );
+        if (speechText) {
+          sendSseEvent(res, { type: "speech", text: speechText });
+        }
+      }
 
       sendSseEvent(res, { type: "done" });
       return res.end();
@@ -504,6 +646,19 @@ async function handleChatRequest(req, res, { stream = false } = {}) {
     const payload = { reply };
     if (confidence?.sourceCount > 0) {
       payload.confidence = confidence;
+    }
+    if (mode === "tutor" && reply.trim()) {
+      payload.speech = await generateTutorSpeechScript(
+        getChatReply,
+        {
+          reply,
+          userQuery,
+          tutorActivity,
+          lectureTopic,
+          courseName: courseContext?.courseName,
+        },
+        aiOptions
+      );
     }
     return res.json(payload);
   } catch (err) {
@@ -614,3 +769,4 @@ if (require.main === module) {
 }
 
 module.exports = app;
+module.exports.buildSystemPrompt = buildSystemPrompt;

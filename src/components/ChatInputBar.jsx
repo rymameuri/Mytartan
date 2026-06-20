@@ -1,8 +1,17 @@
 import { useState } from "react";
-import { SendIcon } from "./Icons";
+import { SendIcon, MicIcon } from "./Icons";
 import "./ChatInputBar.css";
 
-function ChatInputBar({ onSend, isLoading, voiceModeRef, compact }) {
+function ChatInputBar({
+  onSend,
+  isLoading,
+  voiceModeRef,
+  compact,
+  placeholder = "Ask MyTartan anything...",
+  onMicClick,
+  micActive = false,
+  showMic = false,
+}) {
   const [input, setInput] = useState("");
 
   function handleSubmit(event) {
@@ -27,10 +36,21 @@ function ChatInputBar({ onSend, isLoading, voiceModeRef, compact }) {
       onSubmit={handleSubmit}
     >
       <div className="chat-input-wrap">
+        {showMic && (
+          <button
+            type="button"
+            className={`chat-mic-btn${micActive ? " chat-mic-btn--active" : ""}`}
+            onClick={onMicClick}
+            disabled={isLoading}
+            aria-label={micActive ? "Stop listening" : "Speak to Scotty"}
+          >
+            <MicIcon active={micActive} />
+          </button>
+        )}
         <input
           type="text"
           className="chat-input"
-          placeholder="Ask MyTartan anything..."
+          placeholder={placeholder}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}

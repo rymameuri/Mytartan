@@ -1,10 +1,28 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import LandingPage from "./components/LandingPage";
-import MapNavigator from "./components/MapNavigator";
 import PersonaView from "./components/PersonaView";
 import SideMenu from "./components/SideMenu";
 import ScottyPattern from "./components/ScottyPattern";
+import ScottyPersonaStage from "./components/ScottyPersonaStage";
+import ScottyAvatar from "./components/ScottyAvatar";
+import CourseTutorDashboard from "./components/CourseTutorDashboard";
+import ClassWorkspace from "./components/ClassWorkspace";
 import { useConversations } from "./hooks/useConversations";
+import {
+  usePersonaSpeech,
+  useAutoSpeakReply,
+  readMutedPreference,
+  armSpeechSynthesis,
+} from "./hooks/usePersonaSpeech";
+import {
+  tutorSpeechFallback,
+  briefSpeechFromReply,
+} from "./utils/tutorSpeechFallback";
+import { useMutedPreference } from "./hooks/useMutedPreference";
+import { buildTutorWelcomeMessage } from "./utils/tutorWelcome";
+import { refreshCourse } from "./utils/courseApi";
+import { stripMarkdownFormatting } from "./utils/stripMarkdown";
+import { readSidebarCollapsed, writeSidebarCollapsed } from "./utils/sidebarPreference";
 import "./App.css";
 
 const API_BASE = process.env.REACT_APP_API_URL || "";
@@ -48,44 +66,92 @@ function App() {
 
   const [messages, setMessages] = useState(() => activeConversation?.messages ?? []);
   const [mode, setMode] = useState(() => activeConversation?.mode ?? "qa");
+  const [courseContext, setCourseContext] = useState(
+    () => activeConversation?.courseContext ?? null
+  );
+  const [savedCourseId, setSavedCourseId] = useState(
+    () => activeConversation?.savedCourseId ?? null
+  );
+  const [tutorScreen, setTutorScreen] = useState(null);
+  const [tutorActivity, setTutorActivity] = useState("quiz");
+  const [lectureTopic, setLectureTopic] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarCollapsed);
+  const [tutorListening, setTutorListening] = useState(false);
   const [view, setView] = useState("landing");
   const [chatSessionKey, setChatSessionKey] = useState(0);
+  const [tutorSpeechText, setTutorSpeechText] = useState("");
   const voiceModeRef = useRef(false);
   const avatarRef = useRef(null);
   const abortControllerRef = useRef(null);
   const isDesktop = useIsDesktop();
+  const { isSpeaking, speak, stop } = usePersonaSpeech(avatarRef);
+  const { isMuted, toggleMute } = useMutedPreference(stop);
 
   const lastReply =
     [...messages].reverse().find((m) => m.role === "assistant")?.content ?? "";
 
   useEffect(() => {
     if (!menuOpen || isDesktop) return;
-
     function handleKeyDown(event) {
       if (event.key === "Escape") setMenuOpen(false);
     }
-
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [menuOpen, isDesktop]);
 
   useEffect(() => {
-    persistCurrent(messages, mode);
-  }, [messages, mode, persistCurrent]);
+    persistCurrent(messages, mode, courseContext, savedCourseId);
+  }, [messages, mode, courseContext, savedCourseId, persistCurrent]);
+
+  const speakFormatted = useCallback(
+    (text) => speak(stripMarkdownFormatting(text)),
+    [speak]
+  );
+
+  const showPersona = mode === "qa" || (mode === "tutor" && !tutorScreen);
+  const showTutorPersonaRail = isDesktop && mode === "tutor" && Boolean(tutorScreen);
+
+  useAutoSpeakReply({
+    enabled: mode === "qa" || (mode === "tutor" && tutorScreen === "workspace"),
+    isLoading,
+    lastReply,
+    speechText: mode === "tutor" ? tutorSpeechText : "",
+    voiceModeRef,
+    speak: speakFormatted,
+    chatSessionKey,
+  });
 
   function closeMenu() {
     setMenuOpen(false);
   }
 
+  function toggleSidebarCollapsed() {
+    setSidebarCollapsed((prev) => {
+      const next = !prev;
+      writeSidebarCollapsed(next);
+      return next;
+    });
+  }
+
   function resetChatSession() {
     abortControllerRef.current?.abort();
     abortControllerRef.current = null;
-    avatarRef.current?.stop?.();
-    window.speechSynthesis?.cancel();
+    stop();
+    setTutorListening(false);
     setIsLoading(false);
     setChatSessionKey((key) => key + 1);
+  }
+
+  function enterTutorDashboard() {
+    resetChatSession();
+    setMode("tutor");
+    setTutorScreen("dashboard");
+    setMessages([]);
+    setCourseContext(null);
+    setSavedCourseId(null);
+    setLectureTopic("");
   }
 
   function handleNewChat() {
@@ -93,7 +159,54 @@ function App() {
     const draft = newChat();
     setMessages(draft.messages);
     setMode(draft.mode);
+    setTutorScreen(null);
+    setCourseContext(null);
+    setSavedCourseId(null);
     closeMenu();
+  }
+
+  function handleStartTutor() {
+    newChat();
+    enterTutorDashboard();
+    closeMenu();
+  }
+
+  async function handleOpenClass(courseRef) {
+    resetChatSession();
+    setMode("tutor");
+    setTutorScreen("workspace");
+    setMessages([]);
+    setLectureTopic("");
+
+    try {
+      const course = courseRef.syllabusText
+        ? courseRef
+        : await refreshCourse(courseRef.id);
+      setCourseContext(course);
+      setSavedCourseId(course.id);
+      setMessages([
+        {
+          role: "assistant",
+          content: buildTutorWelcomeMessage(course),
+        },
+      ]);
+    } catch (err) {
+      setMessages([
+        {
+          role: "assistant",
+          content: `Could not load class: ${err.message}`,
+        },
+      ]);
+    }
+    closeMenu();
+  }
+
+  function handleBackToDashboard() {
+    resetChatSession();
+    setTutorScreen("dashboard");
+    setMessages([]);
+    setCourseContext(null);
+    setSavedCourseId(null);
   }
 
   function handleSelectConversation(id) {
@@ -101,6 +214,9 @@ function App() {
     const selected = selectConversation(id);
     setMessages(selected.messages);
     setMode(selected.mode);
+    setCourseContext(selected.courseContext ?? null);
+    setSavedCourseId(selected.savedCourseId ?? null);
+    setTutorScreen(selected.mode === "tutor" && selected.savedCourseId ? "workspace" : selected.mode === "tutor" ? "dashboard" : null);
     closeMenu();
   }
 
@@ -110,6 +226,9 @@ function App() {
       resetChatSession();
       setMessages([]);
       setMode("qa");
+      setTutorScreen(null);
+      setCourseContext(null);
+      setSavedCourseId(null);
     }
   }
 
@@ -120,7 +239,31 @@ function App() {
   function handleSelectPrompt(prompt) {
     closeMenu();
     setMode("qa");
+    setTutorScreen(null);
     handleSend(prompt, "qa");
+  }
+
+  function handleSwitchMode(nextMode) {
+    if (nextMode === mode) return;
+    resetChatSession();
+    setMode(nextMode);
+    if (nextMode === "tutor") {
+      enterTutorDashboard();
+    } else {
+      setTutorScreen(null);
+      setMessages([]);
+      setCourseContext(null);
+      setSavedCourseId(null);
+    }
+  }
+
+  function handleBackToQa() {
+    resetChatSession();
+    setMode("qa");
+    setTutorScreen(null);
+    setMessages([]);
+    setCourseContext(null);
+    setSavedCourseId(null);
   }
 
   function handleShare() {
@@ -147,11 +290,13 @@ function App() {
     URL.revokeObjectURL(url);
   }
 
-  async function handleSend(text, overrideMode) {
+  async function handleSend(text, overrideMode, options = {}) {
+    armSpeechSynthesis();
     const activeMode = overrideMode ?? mode;
     const userMessage = { role: "user", content: text };
     const updatedMessages = [...messages, userMessage];
 
+    setTutorSpeechText("");
     abortControllerRef.current?.abort();
     const controller = new AbortController();
     abortControllerRef.current = controller;
@@ -162,12 +307,24 @@ function App() {
     let reply = "";
     let confidence = null;
     let gotTokens = false;
+    let pendingSpeech = "";
+
+    const requestBody = {
+      messages: updatedMessages,
+      mode: activeMode,
+    };
+
+    if (activeMode === "tutor" && courseContext) {
+      requestBody.courseContext = courseContext;
+      requestBody.tutorActivity = options.tutorActivity ?? tutorActivity;
+      requestBody.lectureTopic = options.lectureTopic ?? lectureTopic;
+    }
 
     try {
       const response = await fetch(`${API_BASE}/api/chat/stream`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: updatedMessages, mode: activeMode }),
+        body: JSON.stringify(requestBody),
         signal: controller.signal,
       });
 
@@ -202,11 +359,12 @@ function App() {
           } else if (event.type === "token") {
             gotTokens = true;
             reply += event.text;
-            setIsLoading(false);
             setMessages([
               ...updatedMessages,
               { role: "assistant", content: reply, confidence, streaming: true },
             ]);
+          } else if (event.type === "speech") {
+            pendingSpeech = event.text;
           } else if (event.type === "error") {
             throw new Error(event.error || "Failed to get a response");
           }
@@ -216,8 +374,23 @@ function App() {
       if (gotTokens) {
         setMessages([
           ...updatedMessages,
-          { role: "assistant", content: reply, confidence, streaming: false },
+          { role: "assistant", content: stripMarkdownFormatting(reply), confidence, streaming: false },
         ]);
+      }
+
+      if (activeMode === "tutor" && gotTokens && reply.trim() && !readMutedPreference()) {
+        const speech =
+          pendingSpeech.trim() ||
+          tutorSpeechFallback({
+            tutorActivity: options.tutorActivity ?? tutorActivity,
+            lectureTopic: options.lectureTopic ?? lectureTopic,
+            courseName: courseContext?.courseName,
+          }) ||
+          briefSpeechFromReply(reply);
+        if (speech) {
+          voiceModeRef.current = false;
+          setTutorSpeechText(speech);
+        }
       }
     } catch (err) {
       if (err.name === "AbortError") {
@@ -253,14 +426,39 @@ function App() {
     return <LandingPage onStart={() => setView("app")} />;
   }
 
+  const tutorAvatarState =
+    showTutorPersonaRail && tutorScreen === "workspace"
+      ? isSpeaking
+        ? "speaking"
+        : tutorListening
+          ? "listening"
+          : "idle"
+      : "idle";
+
+  let personaSubtitle = "Course Tutor";
+  let personaHint = "";
+  if (tutorScreen === "dashboard") {
+    personaHint = "Create a class or open one to start studying";
+  } else if (tutorScreen === "workspace" && courseContext) {
+    personaSubtitle = courseContext.courseName || "Course Tutor";
+    personaHint = "Add materials and study with quiz, flashcards, or whiteboard";
+  }
+
   return (
-    <div className={`app-shell${isDesktop ? " app-shell--with-sidebar" : ""}`}>
+    <div
+      className={`app-shell${isDesktop ? " app-shell--with-sidebar" : ""}${
+        sidebarCollapsed ? " app-shell--sidebar-collapsed" : ""
+      }`}
+    >
       <ScottyPattern />
       <SideMenu
         isOpen={menuOpen || isDesktop}
         isPersistent={isDesktop}
+        collapsed={isDesktop && sidebarCollapsed}
+        onToggleCollapsed={toggleSidebarCollapsed}
         onClose={closeMenu}
         onNewChat={handleNewChat}
+        onStartTutor={handleStartTutor}
         onSelectPrompt={handleSelectPrompt}
         onSelectConversation={handleSelectConversation}
         onDeleteConversation={handleDeleteConversation}
@@ -274,23 +472,78 @@ function App() {
         getProjectConversations={getProjectConversations}
       />
 
-      <div className="app-main app-main--unified">
-        {mode === "campus" ? (
-          <MapNavigator />
-        ) : (
-          <PersonaView
-            chatSessionKey={chatSessionKey}
-            messages={messages}
-            isLoading={isLoading}
-            onSend={handleSend}
-            onShare={handleShare}
-            onDownload={handleDownload}
-            onOpenMenu={() => setMenuOpen(true)}
-            isDesktop={isDesktop}
-            lastReply={lastReply}
-            voiceModeRef={voiceModeRef}
+      <div
+        className={`app-main app-main--unified${
+          showTutorPersonaRail ? " app-main--with-persona" : ""
+        }`}
+      >
+        <div className="app-main__content">
+          {mode === "tutor" && tutorScreen === "dashboard" && (
+            <CourseTutorDashboard onOpenClass={handleOpenClass} onBackToQa={handleBackToQa} />
+          )}
+
+          {mode === "tutor" && tutorScreen === "workspace" && savedCourseId && courseContext && (
+            <ClassWorkspace
+              courseId={savedCourseId}
+              courseContext={courseContext}
+              onCourseUpdate={setCourseContext}
+              onBack={handleBackToDashboard}
+              messages={messages}
+              isLoading={isLoading}
+              onSend={handleSend}
+              onOpenMenu={() => setMenuOpen(true)}
+              isDesktop={isDesktop}
+              voiceModeRef={voiceModeRef}
+              isSpeaking={isSpeaking}
+              stopSpeech={stop}
+              isMuted={isMuted}
+              onToggleMute={toggleMute}
+              chatSessionKey={chatSessionKey}
+              onListeningChange={setTutorListening}
+              tutorActivity={tutorActivity}
+              onTutorActivityChange={setTutorActivity}
+              lectureTopic={lectureTopic}
+              onLectureTopicChange={setLectureTopic}
+            />
+          )}
+
+          {showPersona && (
+            <PersonaView
+              chatSessionKey={chatSessionKey}
+              messages={messages}
+              isLoading={isLoading}
+              mode={mode}
+              courseContext={courseContext}
+              onSend={handleSend}
+              onShare={handleShare}
+              onDownload={handleDownload}
+              onOpenMenu={() => setMenuOpen(true)}
+              onSwitchMode={handleSwitchMode}
+              isDesktop={isDesktop}
+              isSpeaking={isSpeaking}
+              stopSpeech={stop}
+              isMuted={isMuted}
+              onToggleMute={toggleMute}
+              voiceModeRef={voiceModeRef}
+              avatarRef={avatarRef}
+            />
+          )}
+        </div>
+
+        {showTutorPersonaRail && (
+          <ScottyPersonaStage
+            rail
             avatarRef={avatarRef}
+            avatarState={tutorAvatarState}
+            subtitle={personaSubtitle}
+            hint={personaHint}
+            isMuted={isMuted}
+            onToggleMute={toggleMute}
           />
+        )}
+
+        {mode === "tutor" && tutorScreen === "workspace" && !isDesktop && (
+          <ScottyAvatar ref={avatarRef} persona hidden />
         )}
       </div>
     </div>

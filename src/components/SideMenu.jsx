@@ -241,8 +241,11 @@ function ProjectSection({
 function SideMenu({
   isOpen,
   isPersistent,
+  collapsed = false,
+  onToggleCollapsed,
   onClose,
   onNewChat,
+  onStartTutor,
   onSelectPrompt,
   onSelectConversation,
   onDeleteConversation,
@@ -299,22 +302,51 @@ function SideMenu({
 
   const sidebar = (
     <aside
-      className={`side-menu${isPersistent ? " side-menu--persistent" : ""}`}
+      className={`side-menu${isPersistent ? " side-menu--persistent" : ""}${
+        collapsed ? " side-menu--collapsed" : ""
+      }`}
       role={isPersistent ? "navigation" : "dialog"}
       aria-label="Chat history"
     >
       <div className="side-menu__header">
-        <h2 className="side-menu__title brand-display">MY TARTAN</h2>
-        {!isPersistent && (
-          <button type="button" className="icon-btn" aria-label="Close menu" onClick={onClose}>
-            <CloseIcon />
-          </button>
-        )}
+        {!collapsed && <h2 className="side-menu__title brand-display">MY TARTAN</h2>}
+        <div className="side-menu__header-actions">
+          {isPersistent && onToggleCollapsed && (
+            <button
+              type="button"
+              className="icon-btn side-menu__collapse-btn"
+              aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+              onClick={onToggleCollapsed}
+            >
+              <ChevronIcon direction={collapsed ? "right" : "left"} />
+            </button>
+          )}
+          {!isPersistent && (
+            <button type="button" className="icon-btn" aria-label="Close menu" onClick={onClose}>
+              <CloseIcon />
+            </button>
+          )}
+        </div>
       </div>
 
-      <button type="button" className="side-menu__new-chat" onClick={onNewChat}>
+      <button
+        type="button"
+        className="side-menu__new-chat"
+        onClick={onNewChat}
+        title="New chat"
+      >
         <PlusIcon />
-        New chat
+        <span className="side-menu__btn-label">New chat</span>
+      </button>
+
+      <button
+        type="button"
+        className="side-menu__tutor-btn"
+        onClick={onStartTutor}
+        title="Course Tutor"
+      >
+        <span className="side-menu__tutor-icon" aria-hidden="true">📚</span>
+        <span className="side-menu__btn-label">Course Tutor</span>
       </button>
 
       <div className="side-menu__scroll">
@@ -410,14 +442,16 @@ function SideMenu({
         </div>
       </div>
 
-      <p className="side-menu__footer">
-        Info sourced from{" "}
-        <a href="https://scotty.qatar.cmu.edu" target="_blank" rel="noopener noreferrer">
-          scotty.qatar.cmu.edu
-        </a>
-        <br />
-        Made by Rym A. Ameuri · rameuri
-      </p>
+      {!collapsed && (
+        <p className="side-menu__footer">
+          Info sourced from{" "}
+          <a href="https://scotty.qatar.cmu.edu" target="_blank" rel="noopener noreferrer">
+            scotty.qatar.cmu.edu
+          </a>
+          <br />
+          Made by Rym A. Ameuri · rameuri
+        </p>
+      )}
     </aside>
   );
 

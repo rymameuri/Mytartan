@@ -1,101 +1,31 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import ChatInputBar from "./ChatInputBar";
 import ScottyAvatar from "./ScottyAvatar";
-import { MicIcon, MenuIcon, ShareIcon, DownloadIcon, VolumeIcon, ChevronIcon } from "./Icons";
+import MessageContent from "./MessageContent";
+import PersonaMicControls from "./PersonaMicControls";
+import { useMicInput } from "../hooks/useMicInput";
+import { MenuIcon, ShareIcon, DownloadIcon, VolumeIcon, ChevronIcon } from "./Icons";
 import "./PersonaView.css";
 import "./ChatInterface.css";
-
-const MUTE_STORAGE_KEY = "mytartan-persona-muted";
-
-function readMutedPreference() {
-  try {
-    return localStorage.getItem(MUTE_STORAGE_KEY) === "true";
-  } catch {
-    return false;
-  }
-}
-
-function usePersonaSpeech(avatarRef) {
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const speakTimerRef = useRef(null);
-
-  const speakBrowser = useCallback((text) => {
-    if (!window.speechSynthesis) return;
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 0.92;
-    utterance.pitch = 1;
-    utterance.onstart = () => setIsSpeaking(true);
-    utterance.onend = () => setIsSpeaking(false);
-    utterance.onerror = () => setIsSpeaking(false);
-    window.speechSynthesis.speak(utterance);
-  }, []);
-
-  const speak = useCallback(async (text) => {
-    clearTimeout(speakTimerRef.current);
-    if (avatarRef?.current) {
-      try {
-        await avatarRef.current.speak(text);
-        setIsSpeaking(true);
-        const ms = Math.max(2500, text.split(" ").length * 450);
-        speakTimerRef.current = setTimeout(() => setIsSpeaking(false), ms);
-        return;
-      } catch (err) {
-        console.warn("[PersonaView] LiveAvatar unavailable, using browser TTS:", err.message);
-      }
-    }
-    speakBrowser(text);
-  }, [avatarRef, speakBrowser]);
-
-  const stop = useCallback(() => {
-    clearTimeout(speakTimerRef.current);
-    window.speechSynthesis?.cancel();
-    avatarRef?.current?.stop?.();
-    setIsSpeaking(false);
-  }, [avatarRef]);
-
-  useEffect(() => () => { clearTimeout(speakTimerRef.current); window.speechSynthesis?.cancel(); }, []);
-
-  return { isSpeaking, speak, stop };
-}
-
-function useMicInput({ onResult }) {
-  const [listening, setListening] = useState(false);
-  const recognitionRef = useRef(null);
-
-  const toggle = useCallback(() => {
-    if (listening) { recognitionRef.current?.stop(); return; }
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) { alert("Voice input isn't supported here. Try Chrome."); return; }
-    const r = new SR();
-    r.lang = "en-US"; r.interimResults = false; r.maxAlternatives = 1;
-    r.onstart = () => setListening(true);
-    r.onresult = (e) => { const t = e.results[0][0].transcript; if (t.trim()) onResult(t.trim()); };
-    r.onend = () => setListening(false);
-    r.onerror = () => setListening(false);
-    recognitionRef.current = r;
-    r.start();
-  }, [listening, onResult]);
-
-  return { listening, toggle };
-}
 
 function PersonaView({
   chatSessionKey = 0,
   messages = [],
   isLoading,
+  mode = "qa",
+  courseContext = null,
   onSend,
   onShare,
   onDownload,
   onOpenMenu,
+  onSwitchMode,
   isDesktop,
-  lastReply,
+  isSpeaking = false,
+  stopSpeech,
+  isMuted = false,
+  onToggleMute,
   voiceModeRef,
   avatarRef,
 }) {
-  const { isSpeaking, speak, stop } = usePersonaSpeech(avatarRef);
-  const [isMuted, setIsMuted] = useState(readMutedPreference);
-  const prevLoadingRef = useRef(false);
   const messagesContainerRef = useRef(null);
   const isNearBottomRef = useRef(true);
   const [showScrollDown, setShowScrollDown] = useState(false);
@@ -121,51 +51,28 @@ function PersonaView({
   }, []);
 
   useEffect(() => {
-    stop();
-    prevLoadingRef.current = false;
+    stopSpeech?.();
     voiceModeRef.current = false;
     isNearBottomRef.current = true;
     setShowScrollDown(false);
-  }, [chatSessionKey, stop, voiceModeRef]);
+  }, [chatSessionKey, stopSpeech, voiceModeRef]);
 
   const handleVoiceResult = useCallback((transcript) => {
-    stop();
+    stopSpeech?.();
     voiceModeRef.current = true;
     onSend(transcript);
-  }, [onSend, voiceModeRef, stop]);
+  }, [onSend, voiceModeRef, stopSpeech]);
 
   const { listening, toggle: toggleMic } = useMicInput({ onResult: handleVoiceResult });
 
   const handleMicClick = useCallback(() => {
     if (isLoading) return;
     if (isSpeaking) {
-      stop();
+      stopSpeech?.();
       return;
     }
     toggleMic();
-  }, [isLoading, isSpeaking, stop, toggleMic]);
-
-  const toggleMute = useCallback(() => {
-    setIsMuted((prev) => {
-      const next = !prev;
-      try {
-        localStorage.setItem(MUTE_STORAGE_KEY, String(next));
-      } catch {
-        /* ignore */
-      }
-      if (next) stop();
-      return next;
-    });
-  }, [stop]);
-
-  useEffect(() => {
-    const wasLoading = prevLoadingRef.current;
-    prevLoadingRef.current = isLoading;
-    if (wasLoading && !isLoading && lastReply && !isMuted) {
-      voiceModeRef.current = false;
-      speak(lastReply);
-    }
-  }, [isLoading, lastReply, isMuted, voiceModeRef, speak]);
+  }, [isLoading, isSpeaking, stopSpeech, toggleMic]);
 
   useEffect(() => {
     if (!hasMessages) return undefined;
@@ -199,6 +106,7 @@ function PersonaView({
 
   const avatarState = isSpeaking ? "speaking" : listening ? "listening" : "idle";
   const showIdleHint = !isSpeaking && !isLoading && !hasMessages;
+  const isTutor = mode === "tutor";
 
   return (
     <div className="pv">
@@ -218,6 +126,26 @@ function PersonaView({
         {!isDesktop && (
           <span className="pv-brand__name brand-display">MY TARTAN</span>
         )}
+        <div className="pv-mode-tabs" role="tablist" aria-label="Assistant mode">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mode === "qa"}
+            className={`pv-mode-tab${mode === "qa" ? " pv-mode-tab--active" : ""}`}
+            onClick={() => onSwitchMode?.("qa")}
+          >
+            Q&amp;A
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mode === "tutor"}
+            className={`pv-mode-tab${mode === "tutor" ? " pv-mode-tab--active" : ""}`}
+            onClick={() => onSwitchMode?.("tutor")}
+          >
+            Course Tutor
+          </button>
+        </div>
         <div className="pv-header__actions">
           <button
             type="button"
@@ -225,7 +153,7 @@ function PersonaView({
             aria-label={isMuted ? "Unmute persona" : "Mute persona"}
             aria-pressed={isMuted}
             title={isMuted ? "Unmute persona" : "Mute persona"}
-            onClick={toggleMute}
+            onClick={onToggleMute}
           >
             <VolumeIcon muted={isMuted} />
           </button>
@@ -269,7 +197,7 @@ function PersonaView({
                     className={`msg-row${isUser ? " msg-row--user" : " msg-row--assistant"}`}
                   >
                     <div className={`msg-bubble msg-bubble--on-pattern${isUser ? " msg-bubble--user" : " msg-bubble--assistant"}`}>
-                      {message.content}
+                      <MessageContent content={message.content} />
                       {!isUser && message.confidence?.message && (
                         <p className="msg-confidence" title={message.confidence.message}>
                           {message.confidence.message}
@@ -335,47 +263,31 @@ function PersonaView({
               <p className="pv-identity__name brand-display">My Tartan</p>
               <p className="pv-identity__role">
                 <span className="pv-identity__dot" />
-                CMU-Q Student Assistant
+                {isTutor ? "Course Tutor" : "CMU-Q Student Assistant"}
               </p>
             </div>
           )}
 
           {showIdleHint && (
-            <p className="pv-idle-hint">Ask me anything about CMU-Q</p>
+            <p className="pv-idle-hint">
+              {isTutor
+                ? "Open your class dashboard to add materials and study"
+                : "Ask me anything about CMU-Q"}
+            </p>
           )}
         </div>
       </main>
 
       <footer className="pv-footer">
-        <div className={`pv-mic-wrap${listening ? " pv-mic-wrap--active" : ""}`}>
-          {listening && (
-            <>
-              <span className="pv-sonar pv-sonar--1" aria-hidden="true" />
-              <span className="pv-sonar pv-sonar--2" aria-hidden="true" />
-              <span className="pv-sonar pv-sonar--3" aria-hidden="true" />
-            </>
-          )}
-          <button
-            type="button"
-            className={`pv-mic-btn${listening ? " pv-mic-btn--active" : ""}`}
-            onClick={handleMicClick}
-            disabled={isLoading}
-            aria-label={isSpeaking ? "Stop speaking" : listening ? "Stop listening" : "Speak to MyTartan"}
-          >
-            <MicIcon active={listening} />
-          </button>
-        </div>
-        <p className={`pv-mic-label${isLoading ? " pv-mic-label--muted" : ""}${listening ? " pv-mic-label--live" : ""}`}>
-          {micLabel}
-        </p>
-        <div className="pv-input-area">
-          <ChatInputBar
-            onSend={onSend}
-            isLoading={isLoading}
-            voiceModeRef={voiceModeRef}
-            compact
-          />
-        </div>
+        <PersonaMicControls
+          listening={listening}
+          isLoading={isLoading}
+          isSpeaking={isSpeaking}
+          micLabel={micLabel}
+          onMicClick={handleMicClick}
+          onSend={onSend}
+          voiceModeRef={voiceModeRef}
+        />
       </footer>
     </div>
   );

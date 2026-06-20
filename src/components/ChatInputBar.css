@@ -67,3 +67,38 @@
   opacity: 0.45;
   cursor: not-allowed;
 }
+
+.chat-mic-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(156, 39, 51, 0.08);
+  color: var(--tartan-maroon);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+.chat-mic-btn:hover:not(:disabled) {
+  background: rgba(156, 39, 51, 0.14);
+  transform: scale(1.04);
+}
+
+.chat-mic-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.chat-mic-btn--active {
+  background: var(--tartan-maroon);
+  color: var(--tartan-white);
+}
+
+.chat-mic-btn svg {
+  width: 18px;
+  height: 18px;
+}

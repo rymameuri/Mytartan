@@ -1,5 +1,7 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import ChatInputBar from "./ChatInputBar";
+import MessageContent from "./MessageContent";
+import { stripMarkdownFormatting } from "../utils/stripMarkdown";
 import { SpeakerIcon } from "./Icons";
 import "./ChatInterface.css";
 
@@ -44,11 +46,12 @@ function ChatInterface({ messages, isLoading, showHero, mascot, avatarRef, voice
   const { speakingId, speak, stop } = useSpeech(avatarRef);
 
   const speakReply = useCallback(async (text, msgId) => {
+    const plain = stripMarkdownFormatting(text);
     if (avatarRef?.current) {
-      try { await avatarRef.current.speak(text); return; }
+      try { await avatarRef.current.speak(plain); return; }
       catch (err) { console.warn("[Chat] LiveAvatar speak failed:", err.message); }
     }
-    speak(text, msgId);
+    speak(plain, msgId);
   }, [avatarRef, speak]);
 
   // Auto-speak after voice query
@@ -105,7 +108,7 @@ function ChatInterface({ messages, isLoading, showHero, mascot, avatarRef, voice
                     </div>
                   )}
                   <div className={`msg-bubble${isUser ? " msg-bubble--user" : " msg-bubble--assistant"}`}>
-                    {message.content}
+                    <MessageContent content={message.content} />
                     {!isUser && message.confidence?.message && (
                       <p className="msg-confidence" title={message.confidence.message}>
                         {message.confidence.message}

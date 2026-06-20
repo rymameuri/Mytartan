@@ -94,6 +94,7 @@ function loadKnowledgeBase() {
       const relativePath = prefix ? `${prefix}/${entry.name}` : entry.name;
 
       if (entry.isDirectory()) {
+        if (entry.name === "user-courses") continue;
         walk(fullPath, relativePath);
       } else if (entry.name.endsWith(".txt")) {
         const content = fs.readFileSync(fullPath, "utf8");
