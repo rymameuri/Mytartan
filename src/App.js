@@ -4,7 +4,6 @@ import PersonaView from "./components/PersonaView";
 import SideMenu from "./components/SideMenu";
 import ScottyPattern from "./components/ScottyPattern";
 import ScottyPersonaStage from "./components/ScottyPersonaStage";
-import ScottyAvatar from "./components/ScottyAvatar";
 import CourseTutorDashboard from "./components/CourseTutorDashboard";
 import ClassWorkspace from "./components/ClassWorkspace";
 import { useConversations } from "./hooks/useConversations";
@@ -15,8 +14,8 @@ import {
   armSpeechSynthesis,
 } from "./hooks/usePersonaSpeech";
 import {
-  tutorSpeechFallback,
-  briefSpeechFromReply,
+  resolveTutorSpeech,
+  isStructuredStudioContent,
 } from "./utils/tutorSpeechFallback";
 import { useMutedPreference } from "./hooks/useMutedPreference";
 import { buildTutorWelcomeMessage } from "./utils/tutorWelcome";
@@ -49,7 +48,6 @@ function useIsDesktop() {
 
 function App() {
   const {
-    activeConversation,
     activeConversationId,
     ungroupedConversations,
     projects,
@@ -64,14 +62,10 @@ function App() {
     moveConversationToProject,
   } = useConversations();
 
-  const [messages, setMessages] = useState(() => activeConversation?.messages ?? []);
-  const [mode, setMode] = useState(() => activeConversation?.mode ?? "qa");
-  const [courseContext, setCourseContext] = useState(
-    () => activeConversation?.courseContext ?? null
-  );
-  const [savedCourseId, setSavedCourseId] = useState(
-    () => activeConversation?.savedCourseId ?? null
-  );
+  const [messages, setMessages] = useState([]);
+  const [mode, setMode] = useState("qa");
+  const [courseContext, setCourseContext] = useState(null);
+  const [savedCourseId, setSavedCourseId] = useState(null);
   const [tutorScreen, setTutorScreen] = useState(null);
   const [tutorActivity, setTutorActivity] = useState("quiz");
   const [lectureTopic, setLectureTopic] = useState("");
@@ -89,8 +83,11 @@ function App() {
   const { isSpeaking, speak, stop } = usePersonaSpeech(avatarRef);
   const { isMuted, toggleMute } = useMutedPreference(stop);
 
+  const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
   const lastReply =
-    [...messages].reverse().find((m) => m.role === "assistant")?.content ?? "";
+    lastAssistant?.studio || isStructuredStudioContent(lastAssistant?.content)
+      ? ""
+      : lastAssistant?.content ?? "";
 
   useEffect(() => {
     if (!menuOpen || isDesktop) return;
@@ -111,7 +108,7 @@ function App() {
   );
 
   const showPersona = mode === "qa" || (mode === "tutor" && !tutorScreen);
-  const showTutorPersonaRail = isDesktop && mode === "tutor" && Boolean(tutorScreen);
+  const showTutorPersonaRail = isDesktop && mode === "tutor" && tutorScreen === "dashboard";
 
   useAutoSpeakReply({
     enabled: mode === "qa" || (mode === "tutor" && tutorScreen === "workspace"),
@@ -152,6 +149,19 @@ function App() {
     setCourseContext(null);
     setSavedCourseId(null);
     setLectureTopic("");
+  }
+
+  function handleEnterApp() {
+    resetChatSession();
+    newChat();
+    setMessages([]);
+    setMode("qa");
+    setTutorScreen(null);
+    setCourseContext(null);
+    setSavedCourseId(null);
+    setLectureTopic("");
+    setTutorSpeechText("");
+    setView("app");
   }
 
   function handleNewChat() {
@@ -293,8 +303,14 @@ function App() {
   async function handleSend(text, overrideMode, options = {}) {
     armSpeechSynthesis();
     const activeMode = overrideMode ?? mode;
-    const userMessage = { role: "user", content: text };
+    const isStudioGeneration = Boolean(options.studioGeneration);
+    const userMessage = {
+      role: "user",
+      content: text,
+      ...(isStudioGeneration ? { studio: true } : {}),
+    };
     const updatedMessages = [...messages, userMessage];
+    const assistantExtras = isStudioGeneration ? { studio: true } : {};
 
     setTutorSpeechText("");
     abortControllerRef.current?.abort();
@@ -314,10 +330,13 @@ function App() {
       mode: activeMode,
     };
 
-    if (activeMode === "tutor" && courseContext) {
-      requestBody.courseContext = courseContext;
-      requestBody.tutorActivity = options.tutorActivity ?? tutorActivity;
+    if (activeMode === "tutor" && (options.courseContext ?? courseContext)) {
+      requestBody.courseContext = options.courseContext ?? courseContext;
       requestBody.lectureTopic = options.lectureTopic ?? lectureTopic;
+      if (options.studioGeneration) {
+        requestBody.studioGeneration = true;
+        requestBody.tutorActivity = options.tutorActivity ?? tutorActivity;
+      }
     }
 
     try {
@@ -361,7 +380,7 @@ function App() {
             reply += event.text;
             setMessages([
               ...updatedMessages,
-              { role: "assistant", content: reply, confidence, streaming: true },
+              { role: "assistant", content: reply, confidence, streaming: true, ...assistantExtras },
             ]);
           } else if (event.type === "speech") {
             pendingSpeech = event.text;
@@ -374,30 +393,40 @@ function App() {
       if (gotTokens) {
         setMessages([
           ...updatedMessages,
-          { role: "assistant", content: stripMarkdownFormatting(reply), confidence, streaming: false },
+          {
+            role: "assistant",
+            content: stripMarkdownFormatting(reply),
+            confidence,
+            streaming: false,
+            ...assistantExtras,
+          },
         ]);
       }
 
       if (activeMode === "tutor" && gotTokens && reply.trim() && !readMutedPreference()) {
-        const speech =
-          pendingSpeech.trim() ||
-          tutorSpeechFallback({
-            tutorActivity: options.tutorActivity ?? tutorActivity,
-            lectureTopic: options.lectureTopic ?? lectureTopic,
-            courseName: courseContext?.courseName,
-          }) ||
-          briefSpeechFromReply(reply);
-        if (speech) {
-          voiceModeRef.current = false;
-          setTutorSpeechText(speech);
-        }
+        const speech = resolveTutorSpeech({
+          pendingSpeech,
+          reply,
+          isStudioGeneration,
+          tutorActivity: options.tutorActivity ?? tutorActivity,
+          lectureTopic: options.lectureTopic ?? lectureTopic,
+          courseName: (options.courseContext ?? courseContext)?.courseName,
+        });
+        voiceModeRef.current = false;
+        setTutorSpeechText(speech);
       }
     } catch (err) {
       if (err.name === "AbortError") {
         if (gotTokens) {
           setMessages([
             ...updatedMessages,
-            { role: "assistant", content: reply, confidence, streaming: false },
+            {
+              role: "assistant",
+              content: reply,
+              confidence,
+              streaming: false,
+              ...assistantExtras,
+            },
           ]);
         }
         return;
@@ -412,6 +441,7 @@ function App() {
           content: isNetworkError
             ? "Can't reach the AI server. Open a terminal in the project folder and run: npm run server"
             : err.message || "Sorry, something went wrong. Please try again.",
+          ...assistantExtras,
         },
       ]);
     } finally {
@@ -423,11 +453,11 @@ function App() {
   }
 
   if (view === "landing") {
-    return <LandingPage onStart={() => setView("app")} />;
+    return <LandingPage onStart={handleEnterApp} />;
   }
 
   const tutorAvatarState =
-    showTutorPersonaRail && tutorScreen === "workspace"
+    tutorScreen === "workspace"
       ? isSpeaking
         ? "speaking"
         : tutorListening
@@ -448,9 +478,9 @@ function App() {
     <div
       className={`app-shell${isDesktop ? " app-shell--with-sidebar" : ""}${
         sidebarCollapsed ? " app-shell--sidebar-collapsed" : ""
-      }`}
+      }${mode === "tutor" ? " app-shell--tutor" : ""}`}
     >
-      <ScottyPattern />
+      {mode !== "tutor" && <ScottyPattern />}
       <SideMenu
         isOpen={menuOpen || isDesktop}
         isPersistent={isDesktop}
@@ -475,7 +505,7 @@ function App() {
       <div
         className={`app-main app-main--unified${
           showTutorPersonaRail ? " app-main--with-persona" : ""
-        }`}
+        }${mode === "tutor" && tutorScreen === "workspace" ? " app-main--tutor-workspace" : ""}`}
       >
         <div className="app-main__content">
           {mode === "tutor" && tutorScreen === "dashboard" && (
@@ -504,6 +534,8 @@ function App() {
               onTutorActivityChange={setTutorActivity}
               lectureTopic={lectureTopic}
               onLectureTopicChange={setLectureTopic}
+              avatarRef={avatarRef}
+              avatarState={tutorAvatarState}
             />
           )}
 
@@ -542,9 +574,6 @@ function App() {
           />
         )}
 
-        {mode === "tutor" && tutorScreen === "workspace" && !isDesktop && (
-          <ScottyAvatar ref={avatarRef} persona hidden />
-        )}
       </div>
     </div>
   );

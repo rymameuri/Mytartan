@@ -2,6 +2,7 @@ import {
   parseFlashcards,
   parseQuizQuestions,
   parseWhiteboardClusters,
+  parseWhiteboardGuidingQuestion,
   normalizeQuizText,
 } from "./parseStudyOutput";
 
@@ -15,6 +16,18 @@ Back: The stopping condition`;
     const cards = parseFlashcards(text);
     expect(cards).toHaveLength(2);
     expect(cards[0].front).toMatch(/recursion/i);
+  });
+
+  test("parseFlashcards supports Term/Answer format", () => {
+    const text = `Term: Cyberspace
+Answer: The notional environment of computer networks
+
+Term: Anonymity
+Answer: Acting without disclosing identity`;
+    const cards = parseFlashcards(text);
+    expect(cards).toHaveLength(2);
+    expect(cards[0].front).toMatch(/Cyberspace/i);
+    expect(cards[1].back).toMatch(/identity/i);
   });
 
   test("parseQuizQuestions extracts multiple-choice questions", () => {
@@ -61,5 +74,15 @@ Cluster: Examples
     const clusters = parseWhiteboardClusters(text);
     expect(clusters).toHaveLength(2);
     expect(clusters[0].bullets).toContain("recursion");
+  });
+
+  test("parseWhiteboardGuidingQuestion extracts guiding question line", () => {
+    const text = `Cluster: Security
+- privacy
+- trust
+
+Guiding question: How does human behavior change security design?`;
+    expect(parseWhiteboardGuidingQuestion(text)).toMatch(/human behavior/i);
+    expect(parseWhiteboardClusters(text)).toHaveLength(1);
   });
 });

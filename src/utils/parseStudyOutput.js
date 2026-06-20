@@ -3,7 +3,8 @@ import { stripMarkdownFormatting } from "./stripMarkdown";
 export function parseFlashcards(text) {
   if (!text) return [];
   const cards = [];
-  const pattern = /Front:\s*(.+?)\s*Back:\s*(.+?)(?=Front:|$)/gis;
+  const pattern =
+    /(?:Front|Term):\s*(.+?)\s*(?:Back|Answer):\s*(.+?)(?=(?:Front|Term):|$)/gis;
   let match;
   while ((match = pattern.exec(text)) !== null) {
     cards.push({ front: match[1].trim(), back: match[2].trim() });
@@ -13,8 +14,9 @@ export function parseFlashcards(text) {
 
 export function parseWhiteboardClusters(text) {
   if (!text) return [];
+  const withoutGuiding = text.replace(/^Guiding question:\s*.+$/im, "").trim();
   const clusters = [];
-  const sections = text.split(/Cluster:\s*/i).slice(1);
+  const sections = withoutGuiding.split(/Cluster:\s*/i).slice(1);
   for (const section of sections) {
     const [titleLine, ...rest] = section.split("\n");
     const title = titleLine.trim();
@@ -26,6 +28,12 @@ export function parseWhiteboardClusters(text) {
     if (title) clusters.push({ title, bullets });
   }
   return clusters;
+}
+
+export function parseWhiteboardGuidingQuestion(text) {
+  if (!text) return "";
+  const match = text.match(/^Guiding question:\s*(.+)$/im);
+  return match?.[1]?.trim() ?? "";
 }
 
 /** Normalize messy LLM quiz text into line-oriented blocks. */

@@ -1,4 +1,5 @@
 import ScottyAvatar from "./ScottyAvatar";
+import ScottyHeadbandFrame from "./ScottyHeadbandFrame";
 import { VolumeIcon } from "./Icons";
 import "./ScottyPersonaStage.css";
 
@@ -22,28 +23,9 @@ function ScottyPersonaStage({
     >
       <div className={`sp-stage sp-stage--${avatarState}`}>
         <div className={`sp-avatar-frame sp-avatar-frame--${avatarState}`}>
-          <div className="sp-scotty-ears" aria-hidden="true">
-            <span className="sp-dog-ear sp-dog-ear--left">
-              <span className="sp-dog-ear__inner" />
-              <span className="sp-dog-ear__fur" />
-            </span>
-            <span className="sp-dog-ear sp-dog-ear--right">
-              <span className="sp-dog-ear__inner" />
-              <span className="sp-dog-ear__fur" />
-            </span>
-          </div>
-          <div className="sp-avatar-inner">
+          <ScottyHeadbandFrame avatarState={avatarState} className="shb--sm">
             <ScottyAvatar ref={avatarRef} persona />
-          </div>
-          <div className="sp-scotty-whiskers" aria-hidden="true">
-            <span className="sp-scotty-whisker sp-scotty-whisker--l1" />
-            <span className="sp-scotty-whisker sp-scotty-whisker--l2" />
-            <span className="sp-scotty-whisker sp-scotty-whisker--l3" />
-            <span className="sp-scotty-whisker sp-scotty-whisker--r1" />
-            <span className="sp-scotty-whisker sp-scotty-whisker--r2" />
-            <span className="sp-scotty-whisker sp-scotty-whisker--r3" />
-          </div>
-          <div className="sp-avatar-ring" aria-hidden="true" />
+          </ScottyHeadbandFrame>
         </div>
 
         <div className="sp-identity">

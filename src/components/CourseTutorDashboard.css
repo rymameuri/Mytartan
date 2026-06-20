@@ -4,73 +4,89 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 24px 20px 32px;
-  color: var(--tartan-white);
+  padding: var(--ws-space-3) var(--ws-space-2) var(--ws-space-3);
+  background: var(--ws-bg);
+  color: var(--ws-text);
 }
 
 .tutor-dash__header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 16px;
-  margin-bottom: 20px;
+  gap: var(--ws-space-2);
+  margin-bottom: var(--ws-space-2);
 }
 
 .tutor-dash__eyebrow {
   margin: 0 0 4px;
   font-size: 0.75rem;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  opacity: 0.75;
+  color: var(--ws-text-muted);
+  font-weight: 500;
 }
 
 .tutor-dash__title {
-  margin: 0 0 8px;
-  font-size: 1.75rem;
+  margin: 0 0 var(--ws-space-1);
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--ws-text);
+  font-family: var(--font-body);
 }
 
 .tutor-dash__subtitle {
   margin: 0;
   max-width: 640px;
   font-size: 0.9375rem;
-  line-height: 1.5;
-  opacity: 0.88;
+  line-height: 1.55;
+  color: var(--ws-text-secondary);
 }
 
 .tutor-dash__back-btn,
 .tutor-dash__ghost-btn,
 .tutor-dash__danger-btn {
-  border-radius: 999px;
+  border-radius: var(--ws-radius);
   font: inherit;
   cursor: pointer;
 }
 
 .tutor-dash__back-btn,
 .tutor-dash__ghost-btn {
-  padding: 8px 14px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--tartan-white);
+  padding: var(--ws-space-1) 14px;
+  border: 1px solid var(--ws-border);
+  background: var(--ws-surface);
+  color: var(--ws-text-secondary);
+}
+
+.tutor-dash__back-btn:hover,
+.tutor-dash__ghost-btn:hover {
+  background: var(--ws-surface-hover);
+  border-color: var(--ws-border-strong);
+  color: var(--ws-text);
 }
 
 .tutor-dash__danger-btn {
-  padding: 8px 12px;
-  border: 1px solid rgba(255, 180, 180, 0.5);
+  padding: var(--ws-space-1) 12px;
+  border: 1px solid rgba(196, 18, 48, 0.3);
   background: transparent;
-  color: #ffd4d4;
+  color: var(--tartan-crimson);
+}
+
+.tutor-dash__danger-btn:hover {
+  background: rgba(196, 18, 48, 0.06);
 }
 
 .tutor-dash__actions {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  margin-bottom: 16px;
+  margin-bottom: var(--ws-space-2);
 }
 
 .tutor-dash__primary-btn {
   padding: 10px 18px;
   border: none;
-  border-radius: 999px;
+  border-radius: var(--ws-radius);
   font: inherit;
   font-weight: 600;
   cursor: pointer;
@@ -78,26 +94,28 @@
 
 .tutor-dash__create-card,
 .tutor-dash__class-card {
-  padding: 16px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: var(--ws-space-2);
+  border-radius: var(--ws-radius-lg);
+  background: var(--ws-surface);
+  border: 1px solid var(--ws-border);
 }
 
 .tutor-dash__create-card {
-  margin-bottom: 20px;
+  margin-bottom: var(--ws-space-2);
 }
 
 .tutor-dash__card-title {
-  margin: 0 0 12px;
-  font-size: 1.125rem;
+  margin: 0 0 var(--ws-space-1);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--ws-text);
 }
 
 .tutor-dash__row {
   display: flex;
-  gap: 12px;
+  gap: var(--ws-space-2);
   flex-wrap: wrap;
-  margin-bottom: 12px;
+  margin-bottom: var(--ws-space-1);
 }
 
 .tutor-dash__field {
@@ -107,6 +125,7 @@
   flex: 1;
   min-width: 140px;
   font-size: 0.8125rem;
+  color: var(--ws-text-secondary);
 }
 
 .tutor-dash__field--grow {
@@ -115,19 +134,26 @@
 
 .tutor-dash__field input,
 .tutor-dash__field textarea {
-  padding: 10px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 10px;
-  background: rgba(0, 0, 0, 0.18);
-  color: var(--tartan-white);
+  padding: var(--ws-space-1) 12px;
+  border: 1px solid var(--ws-border);
+  border-radius: var(--ws-radius);
+  background: var(--ws-surface);
+  color: var(--ws-text);
   font: inherit;
+}
+
+.tutor-dash__field input:focus,
+.tutor-dash__field textarea:focus {
+  outline: none;
+  border-color: var(--tartan-maroon);
+  box-shadow: 0 0 0 3px rgba(156, 39, 51, 0.1);
 }
 
 .tutor-dash__upload-row {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 12px;
+  margin-bottom: var(--ws-space-1);
   flex-wrap: wrap;
 }
 
@@ -137,45 +163,55 @@
 
 .tutor-dash__hint {
   font-size: 0.75rem;
-  opacity: 0.7;
+  color: var(--ws-text-muted);
 }
 
 .tutor-dash__grid {
   display: grid;
-  gap: 12px;
+  gap: var(--ws-space-1);
 }
 
 .tutor-dash__class-card {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
+  gap: var(--ws-space-2);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.tutor-dash__class-card:hover {
+  border-color: var(--ws-border-strong);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .tutor-dash__class-name {
   margin: 0 0 4px;
   font-size: 1rem;
+  font-weight: 600;
+  color: var(--ws-text);
 }
 
 .tutor-dash__class-meta {
   margin: 0;
   font-size: 0.8125rem;
-  opacity: 0.75;
+  color: var(--ws-text-muted);
 }
 
 .tutor-dash__class-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--ws-space-1);
   flex-shrink: 0;
 }
 
 .tutor-dash__error {
-  color: #ffb4b4;
-  margin: 0 0 12px;
+  color: var(--tartan-crimson);
+  margin: 0 0 var(--ws-space-1);
+  font-size: 0.875rem;
 }
 
 .tutor-dash__muted {
-  opacity: 0.75;
+  color: var(--ws-text-muted);
+  font-size: 0.875rem;
 }
 
 @media (max-width: 640px) {

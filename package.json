@@ -2,6 +2,7 @@
   "name": "tartan-scotty",
   "version": "0.1.0",
   "private": true,
+  "proxy": "http://localhost:3001",
   "dependencies": {
     "@heygen/liveavatar-web-sdk": "^0.0.18",
     "@simli/simli-react": "^1.0.0",
@@ -23,7 +24,6 @@
     "simli-client": "^3.0.1",
     "web-vitals": "^2.1.4"
   },
-  "proxy": "http://localhost:3001",
   "scripts": {
     "dev": "concurrently -n server,web -c blue,green \"npm run server\" \"npm start\"",
     "server": "node server/server.js",

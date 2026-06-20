@@ -1,8 +1,11 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import ScottyAvatar from "./ScottyAvatar";
+import ScottyHeadbandFrame from "./ScottyHeadbandFrame";
 import MessageContent from "./MessageContent";
 import PersonaMicControls from "./PersonaMicControls";
+import AvatarScaleHandle from "./AvatarScaleHandle";
 import { useMicInput } from "../hooks/useMicInput";
+import { useAvatarZoom } from "../hooks/useAvatarZoom";
 import { MenuIcon, ShareIcon, DownloadIcon, VolumeIcon, ChevronIcon } from "./Icons";
 import "./PersonaView.css";
 import "./ChatInterface.css";
@@ -29,6 +32,7 @@ function PersonaView({
   const messagesContainerRef = useRef(null);
   const isNearBottomRef = useRef(true);
   const [showScrollDown, setShowScrollDown] = useState(false);
+  const { zoom, setZoom, resetZoom, avatarStyle, minZoom, maxZoom } = useAvatarZoom();
   const hasMessages = messages.length > 0;
 
   const SCROLL_THRESHOLD = 72;
@@ -233,30 +237,22 @@ function PersonaView({
         )}
 
         <div className="pv-stage">
-          <div className={`pv-avatar-frame pv-avatar-frame--${avatarState}`}>
-            <div className="pv-scotty-ears" aria-hidden="true">
-              <span className="pv-dog-ear pv-dog-ear--left">
-                <span className="pv-dog-ear__inner" />
-                <span className="pv-dog-ear__fur" />
-              </span>
-              <span className="pv-dog-ear pv-dog-ear--right">
-                <span className="pv-dog-ear__inner" />
-                <span className="pv-dog-ear__fur" />
-              </span>
-            </div>
-            <div className="pv-avatar-inner">
+          <div
+            className={`pv-avatar-frame pv-avatar-frame--${avatarState}`}
+            style={avatarStyle}
+          >
+            <ScottyHeadbandFrame avatarState={avatarState}>
               <ScottyAvatar ref={avatarRef} persona />
-            </div>
-            <div className="pv-scotty-whiskers" aria-hidden="true">
-              <span className="pv-scotty-whisker pv-scotty-whisker--l1" />
-              <span className="pv-scotty-whisker pv-scotty-whisker--l2" />
-              <span className="pv-scotty-whisker pv-scotty-whisker--l3" />
-              <span className="pv-scotty-whisker pv-scotty-whisker--r1" />
-              <span className="pv-scotty-whisker pv-scotty-whisker--r2" />
-              <span className="pv-scotty-whisker pv-scotty-whisker--r3" />
-            </div>
-            <div className="pv-avatar-ring" aria-hidden="true" />
+            </ScottyHeadbandFrame>
           </div>
+
+          <AvatarScaleHandle
+            zoom={zoom}
+            setZoom={setZoom}
+            minZoom={minZoom}
+            maxZoom={maxZoom}
+            onReset={resetZoom}
+          />
 
           {!hasMessages && (
             <div className="pv-identity">

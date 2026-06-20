@@ -11,6 +11,10 @@
   z-index: 0;
 }
 
+.app-shell--tutor {
+  background: var(--ws-bg);
+}
+
 .app-shell--with-sidebar {
   align-items: stretch;
 }
@@ -30,9 +34,13 @@
 }
 
 .app-main--unified {
-  background: transparent;
+  background: var(--ws-bg);
   backdrop-filter: none;
   box-shadow: none;
+}
+
+.app-main--unified.app-main--tutor-workspace {
+  background: var(--ws-bg);
 }
 
 .app-main--with-persona {

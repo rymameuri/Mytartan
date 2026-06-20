@@ -18,11 +18,44 @@
   border: 1px solid #ececec;
 }
 
+/* Dock mode — circular avatar for integrated persona strip */
+.scotty-avatar--dock {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #f0eeeb 0%, #e8e4df 100%);
+  border: none;
+}
+
+.scotty-avatar--dock .scotty-avatar__video {
+  position: absolute;
+  width: var(--avatar-zoom-size, 148%);
+  height: var(--avatar-zoom-size, 148%);
+  left: 50%;
+  top: 50%;
+  max-width: none;
+  object-fit: cover;
+  object-position: center center;
+  transform: translate(-50%, var(--avatar-translate-y, -58%)) scale(var(--avatar-scale, 1));
+  border-radius: 50%;
+}
+
+.scotty-avatar--dock .scotty-avatar__overlay {
+  border-radius: 50%;
+  background: linear-gradient(145deg, #f0eeeb 0%, #e8e4df 100%);
+  color: var(--ws-text-muted, #8a847c);
+  font-size: 0.7rem;
+}
+
+.scotty-avatar--dock-lg {
+  /* sizing handled by parent .sp-dock__avatar-wrap */
+}
+
 .scotty-avatar--compact .scotty-avatar__video {
   object-fit: cover;
-  object-position: var(--avatar-object-position, 58% 32%);
-  transform: scale(var(--avatar-scale, 1.28));
-  transform-origin: var(--avatar-origin-x, 58%) var(--avatar-origin-y, 32%);
+  object-position: var(--avatar-object-position, 50% 72%);
+  transform: scale(var(--avatar-scale, 1.45));
+  transform-origin: var(--avatar-origin-x, 50%) var(--avatar-origin-y, 72%);
 }
 
 .scotty-avatar--hidden {
@@ -69,11 +102,22 @@
 }
 
 .scotty-avatar--persona .scotty-avatar__video {
+  position: absolute;
+  width: var(--avatar-zoom-size, 148%);
+  height: var(--avatar-zoom-size, 148%);
+  left: 50%;
+  top: 50%;
+  max-width: none;
   object-fit: cover;
-  object-position: var(--avatar-object-position, 58% 32%);
-  transform: scale(var(--avatar-scale, 1.28));
-  transform-origin: var(--avatar-origin-x, 58%) var(--avatar-origin-y, 32%);
+  object-position: center center;
+  transform: translate(-50%, -58%);
   border-radius: 50%;
+}
+
+/* Allow parent CSS vars to fine-tune when set */
+.shb__face .scotty-avatar--persona .scotty-avatar__video {
+  transform: translate(-50%, var(--avatar-translate-y, -58%)) scale(var(--avatar-scale, 1));
+  object-position: var(--avatar-object-position, center center);
 }
 
 .scotty-avatar--persona .scotty-avatar__overlay {
@@ -83,9 +127,25 @@
   font-size: 0.8rem;
 }
 
-.scotty-avatar__overlay--error {
-  color: #c41230;
-  font-size: 0.6875rem;
-  padding: 8px;
-  text-align: center;
+.scotty-avatar__overlay--loading {
+  background: linear-gradient(145deg, #f0eeeb 0%, #e8e4df 100%);
+}
+
+.scotty-avatar__spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(156, 39, 51, 0.15);
+  border-top-color: var(--tartan-maroon, #9c2733);
+  border-radius: 50%;
+  animation: scotty-avatar-spin 0.8s linear infinite;
+}
+
+@keyframes scotty-avatar-spin {
+  to { transform: rotate(360deg); }
+}
+
+.scotty-avatar--dock .scotty-avatar__overlay--error {
+  font-size: 0.65rem;
+  padding: 4px;
+  cursor: help;
 }

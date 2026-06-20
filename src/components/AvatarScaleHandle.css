@@ -1,0 +1,51 @@
+.avatar-scale-handle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.avatar-scale-handle__line {
+  width: 56px;
+  height: 6px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.28);
+  cursor: ns-resize;
+  touch-action: none;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.avatar-scale-handle__line:hover,
+.avatar-scale-handle__line:focus-visible {
+  background: rgba(255, 255, 255, 0.48);
+  transform: scaleX(1.08);
+  outline: none;
+}
+
+.avatar-scale-handle__hint {
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--tartan-text-faint-on-dark);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.avatar-scale-handle:hover .avatar-scale-handle__hint,
+.avatar-scale-handle:focus-within .avatar-scale-handle__hint,
+body.avatar-zoom-active .avatar-scale-handle__hint {
+  opacity: 1;
+}
+
+body.avatar-zoom-active {
+  cursor: ns-resize !important;
+  user-select: none;
+}
+
+body.avatar-zoom-active .avatar-scale-handle__line {
+  background: rgba(255, 255, 255, 0.55);
+}

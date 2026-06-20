@@ -1,10 +1,30 @@
 const MAX_REPLY_SNippet = 2500;
 
 const ACTIVITY_SPEECH_HINTS = {
-  quiz: "Invite them to work through the quiz questions and offer to explain any they find tricky.",
-  flashcards: "Encourage them to flip through the flashcards and test themselves out loud.",
-  whiteboard: "Walk them through the brainstorm clusters and ask what connection surprises them most.",
+  quiz: "Tell them the quiz is ready in Studio. Invite them to try each question first, then ask you for hints — do not read any question or answer aloud.",
+  flashcards:
+    "Tell them flashcards are ready in Studio. Encourage them to quiz themselves and ask you when stuck — never read card terms or answers aloud.",
+  whiteboard:
+    "Tell them the idea map is in Studio. Invite them to explore the clusters and share what connections they notice — do not read bullet lists aloud.",
 };
+
+function buildStudioOrientationPrompt({ tutorActivity, lectureTopic, courseName }) {
+  const topic = lectureTopic?.trim() || "this topic";
+  const course = courseName?.trim() || "your course";
+  const activityHint = ACTIVITY_SPEECH_HINTS[tutorActivity] || ACTIVITY_SPEECH_HINTS.whiteboard;
+
+  return `You write ONLY what Scotty says out loud after preparing a Studio learning tool for a student.
+The full content is visible in the Studio panel — your job is to ORIENT and COACH, not present or read the material.
+
+RULES:
+- 2–3 short sentences, max 50 words
+- Sound like a tutor who already knows the material — warm, confident, conversational
+- ${activityHint}
+- Plain English. No markdown. No lists. No "Great question!"
+- Never quote flashcard text, quiz questions, or whiteboard bullets
+
+Context: ${course}, topic "${topic}".`;
+}
 
 function truncate(text, max) {
   if (!text) return "";
@@ -46,24 +66,26 @@ function fallbackSpeechScript({ tutorActivity, lectureTopic, courseName }) {
   const course = courseName?.trim() || "your course";
 
   if (tutorActivity === "flashcards") {
-    return `I've put together flashcards on ${topic} from ${course}. Flip through them and say each answer out loud — that's how you'll remember it. Tell me which ones trip you up.`;
+    return `Your flashcards on ${topic} are ready in Studio. Try each one from memory first — when something's fuzzy, flip it and then ask me to walk you through the idea.`;
   }
   if (tutorActivity === "quiz") {
-    return `Here's a quiz on ${topic}. Try each question before peeking at your notes. When you're stuck, ask me and we'll work through it together.`;
+    return `I've built a quiz on ${topic} in Studio. Work through it at your own pace, and ask me when you want a hint or a deeper explanation.`;
   }
   if (tutorActivity === "whiteboard") {
-    return `Let's map out ${topic} on the whiteboard. Look at the clusters and see how the ideas connect. What stands out to you first?`;
+    return `I've mapped the big ideas for ${topic} on the whiteboard in Studio. Scan the clusters, pick one that interests you, and tell me what you'd explore first.`;
   }
-  return `Let's dig into ${topic} together. Read what I've prepared, then tell me what you'd like to go deeper on.`;
+  return `Let's dig into ${topic} together. Tell me what you'd like to understand better and we'll work through it step by step.`;
 }
 
 function cleanSpeechScript(text) {
   if (!text || typeof text !== "string") return "";
-  return text
+  const cleaned = text
     .replace(/\*\*/g, "")
     .replace(/[`#]/g, "")
     .replace(/\s+/g, " ")
     .trim();
+  if (/(?:Front|Back|Term|Answer|Cluster)\s*:/i.test(cleaned)) return "";
+  return cleaned;
 }
 
 async function generateTutorSpeechScript(
@@ -74,10 +96,38 @@ async function generateTutorSpeechScript(
     tutorActivity = null,
     lectureTopic = "",
     courseName = "",
+    studioGeneration = false,
   },
   aiOptions
 ) {
+  if (studioGeneration) {
+    try {
+      const systemPrompt = buildStudioOrientationPrompt({
+        tutorActivity,
+        lectureTopic,
+        courseName,
+      });
+      const script = await getChatReply(
+        systemPrompt,
+        [{ role: "user", content: "Write Scotty's spoken orientation for the student." }],
+        { ...aiOptions, maxTokens: 100, temperature: 0.65 }
+      );
+      const cleaned = cleanSpeechScript(script);
+      if (cleaned) return cleaned;
+    } catch (err) {
+      console.warn("[tutorSpeech] Could not generate studio orientation:", err.message);
+    }
+    return fallbackSpeechScript({ tutorActivity, lectureTopic, courseName });
+  }
+
   if (!reply?.trim()) return "";
+
+  if (
+    /(?:Front|Back|Term|Answer|Cluster)\s*:/i.test(reply) ||
+    (/\d+[.)]\s/.test(reply) && /Correct:/i.test(reply))
+  ) {
+    return fallbackSpeechScript({ tutorActivity, lectureTopic, courseName });
+  }
 
   try {
     const systemPrompt = buildSpeechSystemPrompt({ tutorActivity, lectureTopic, courseName });
@@ -104,6 +154,7 @@ async function generateTutorSpeechScript(
 module.exports = {
   buildSpeechSystemPrompt,
   buildSpeechUserPrompt,
+  buildStudioOrientationPrompt,
   fallbackSpeechScript,
   generateTutorSpeechScript,
   cleanSpeechScript,

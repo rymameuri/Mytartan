@@ -12,6 +12,7 @@ function PersonaMicControls({
   voiceModeRef,
   placeholder = "Ask MyTartan anything...",
   inputOnly = false,
+  micOnly = false,
 }) {
   const label =
     micLabel ??
@@ -56,15 +57,17 @@ function PersonaMicControls({
           </p>
         </>
       )}
-      <div className="pmc-input">
-        <ChatInputBar
-          onSend={onSend}
-          isLoading={isLoading}
-          voiceModeRef={voiceModeRef}
-          compact
-          placeholder={placeholder}
-        />
-      </div>
+      {!micOnly && (
+        <div className="pmc-input">
+          <ChatInputBar
+            onSend={onSend}
+            isLoading={isLoading}
+            voiceModeRef={voiceModeRef}
+            compact
+            placeholder={placeholder}
+          />
+        </div>
+      )}
     </div>
   );
 }

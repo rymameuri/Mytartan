@@ -36,7 +36,7 @@ async function fetchSessionToken() {
 }
 
 const ScottyAvatar = forwardRef(function ScottyAvatar(
-  { compact = false, hero = false, persona = false, hidden = false },
+  { compact = false, hero = false, persona = false, dock = false, dockLg = false, hidden = false },
   ref
 ) {
   const videoRef = useRef(null);
@@ -96,8 +96,12 @@ const ScottyAvatar = forwardRef(function ScottyAvatar(
 
         session.on(SessionEvent.SESSION_STREAM_READY, () => {
           if (cancelled) return;
-          if (videoRef.current) {
-            session.attach(videoRef.current);
+          const el = videoRef.current;
+          if (el) {
+            session.attach(el);
+            el.play().catch((playErr) => {
+              console.warn("[ScottyAvatar] autoplay blocked, tap to enable:", playErr.message);
+            });
           }
           isReadyRef.current = true;
           setStatus("ready");
@@ -143,6 +147,8 @@ const ScottyAvatar = forwardRef(function ScottyAvatar(
     compact && "scotty-avatar--compact",
     hero && "scotty-avatar--hero",
     persona && "scotty-avatar--persona",
+    dock && "scotty-avatar--dock",
+    dockLg && "scotty-avatar--dock-lg",
     hidden && "scotty-avatar--hidden",
   ]
     .filter(Boolean)
@@ -151,11 +157,16 @@ const ScottyAvatar = forwardRef(function ScottyAvatar(
   return (
     <div className={className}>
       {status === "loading" && (
-        <div className="scotty-avatar__overlay">…</div>
+        <div className="scotty-avatar__overlay scotty-avatar__overlay--loading">
+          <span className="scotty-avatar__spinner" aria-hidden="true" />
+        </div>
       )}
       {status === "error" && (
-        <div className="scotty-avatar__overlay scotty-avatar__overlay--error">
-          {compact ? "!" : error}
+        <div
+          className="scotty-avatar__overlay scotty-avatar__overlay--error"
+          title={dock || compact ? error : undefined}
+        >
+          {dock || compact ? "!" : error}
         </div>
       )}
       <video

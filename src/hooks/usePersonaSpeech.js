@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import { isStructuredStudioContent } from "../utils/tutorSpeechFallback";
 
 export const MUTE_STORAGE_KEY = "mytartan-persona-muted";
 
@@ -103,7 +104,13 @@ export function useAutoSpeakReply({
 
     if (wasLoading && !isLoading && !readMutedPreference()) {
       if (voiceModeRef) voiceModeRef.current = false;
-      const toSpeak = speechText?.trim() || lastReply;
+      const scripted = speechText?.trim();
+      const replyCandidate = lastReply?.trim();
+      const toSpeak =
+        scripted ||
+        (replyCandidate && !isStructuredStudioContent(replyCandidate)
+          ? replyCandidate
+          : "");
       if (toSpeak) speak(toSpeak);
     }
   }, [enabled, isLoading, lastReply, speechText, voiceModeRef, speak, chatSessionKey]);

@@ -185,9 +185,23 @@ async function retrieveForQuery(mode, userQuery) {
   return { docs, confidence };
 }
 
-function buildSystemPrompt(mode, docs, { conversational = false, courseContext = null, tutorActivity = null, lectureTopic = "" } = {}) {
+function buildSystemPrompt(
+  mode,
+  docs,
+  {
+    conversational = false,
+    courseContext = null,
+    tutorActivity = null,
+    lectureTopic = "",
+    studioGeneration = false,
+  } = {}
+) {
   if (mode === "tutor") {
-    return buildTutorSystemPrompt(courseContext, { tutorActivity, lectureTopic });
+    return buildTutorSystemPrompt(courseContext, {
+      tutorActivity,
+      lectureTopic,
+      studioGeneration,
+    });
   }
 
   let prompt = SYSTEM_PROMPTS[mode];
@@ -538,6 +552,7 @@ async function handleChatRequest(req, res, { stream = false } = {}) {
     courseContext = null,
     tutorActivity = null,
     lectureTopic = "",
+    studioGeneration = false,
   } = req.body;
 
   if (!messages || !Array.isArray(messages)) {
@@ -572,6 +587,7 @@ async function handleChatRequest(req, res, { stream = false } = {}) {
     courseContext,
     tutorActivity,
     lectureTopic,
+    studioGeneration,
   });
   const aiOptions = getAiGenerationOptions(mode);
 
@@ -630,6 +646,7 @@ async function handleChatRequest(req, res, { stream = false } = {}) {
             tutorActivity,
             lectureTopic,
             courseName: courseContext?.courseName,
+            studioGeneration,
           },
           aiOptions
         );
@@ -656,6 +673,7 @@ async function handleChatRequest(req, res, { stream = false } = {}) {
           tutorActivity,
           lectureTopic,
           courseName: courseContext?.courseName,
+          studioGeneration,
         },
         aiOptions
       );

@@ -49,4 +49,22 @@ describe("tutorPrompt", () => {
     expect(prompt).toMatch(/STUDENT QUESTIONS & NOTES/i);
     expect(prompt).toMatch(/trace recursive calls/i);
   });
+
+  test("buildTutorSystemPrompt uses studio format only when studioGeneration is true", () => {
+    const studioPrompt = buildTutorSystemPrompt(sampleContext, {
+      tutorActivity: "flashcards",
+      lectureTopic: "Recursion",
+      studioGeneration: true,
+    });
+    expect(studioPrompt).toMatch(/Term:/);
+    expect(studioPrompt).toMatch(/STUDIO OUTPUT RULES/i);
+
+    const chatPrompt = buildTutorSystemPrompt(sampleContext, {
+      tutorActivity: "flashcards",
+      lectureTopic: "Recursion",
+      studioGeneration: false,
+    });
+    expect(chatPrompt).toMatch(/CONVERSATION MODE/i);
+    expect(chatPrompt).not.toMatch(/Term:/);
+  });
 });

@@ -112,7 +112,7 @@ function CourseTutorDashboard({ onOpenClass, onBackToQa }) {
       <header className="tutor-dash__header">
         <div>
           <p className="tutor-dash__eyebrow">Course Tutor</p>
-          <h1 className="tutor-dash__title brand-display">Your classes</h1>
+          <h1 className="tutor-dash__title">Your classes</h1>
           <p className="tutor-dash__subtitle">
             Set up a class with your syllabus, add lecture materials over time, then study with
             quizzes, flashcards, or whiteboard brainstorms.
