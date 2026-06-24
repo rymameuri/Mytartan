@@ -28,6 +28,7 @@ import {
   buildSyllabusSource,
 } from "../utils/sourceStudy";
 import MessageContent from "./MessageContent";
+import MessageFeedback from "./MessageFeedback";
 import QuizPlayer from "./QuizPlayer";
 import PersonaMicControls from "./PersonaMicControls";
 import PersonaCaption from "./PersonaCaption";
@@ -1087,6 +1088,14 @@ function ClassWorkspace({
                         }`}
                       >
                         <MessageContent content={message.content} />
+                        {!isUser && !message.streaming && !message.studio && (
+                          <MessageFeedback
+                            messageId={message.id ?? `cw-${index}`}
+                            reply={message.content}
+                            feedbackContext={message.feedbackContext ?? { mode: "tutor" }}
+                            disabled={isLoading}
+                          />
+                        )}
                       </div>
                     </div>
                   );

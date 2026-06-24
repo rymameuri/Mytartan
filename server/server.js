@@ -47,6 +47,11 @@ const {
   updateUserProfile,
 } = require("./userStore");
 const {
+  appendFeedback,
+  validateFeedbackPayload,
+  createFeedbackRecord,
+} = require("./feedbackStore");
+const {
   hashPassword,
   comparePassword,
   signToken,
@@ -617,6 +622,7 @@ app.get("/", (_req, res) => {
       "DELETE /api/courses/:id",
       "POST /api/chat",
       "POST /api/chat/stream",
+      "POST /api/feedback",
       "POST /api/liveavatar-token",
       "POST /api/canvas/connect",
       "POST /api/canvas/disconnect",
@@ -938,23 +944,58 @@ async function getChatReply(systemPrompt, messages, aiOptions) {
   return chatWithAnthropic(systemPrompt, messages, aiOptions);
 }
 
-async function sendChatReply(res, reply, { stream = false, confidence = null } = {}) {
+function buildReplyMeta({ mode, userQuery, confidence = null, keyFacts = [] }) {
+  return {
+    mode,
+    userQuery,
+    confidence: confidence ?? null,
+    keyFacts: keyFacts.map((fact) => ({
+      id: fact.id,
+      topic: fact.topic,
+    })),
+  };
+}
+
+function sendReplyMetadata(res, replyMeta) {
+  if (!replyMeta) return;
+  sendSseEvent(res, { type: "metadata", ...replyMeta });
+  if (replyMeta.confidence) {
+    sendSseEvent(res, { type: "confidence", confidence: replyMeta.confidence });
+  }
+}
+
+async function sendChatReply(
+  res,
+  reply,
+  { stream = false, confidence = null, replyMeta = null } = {}
+) {
+  const metadata =
+    replyMeta ??
+    (confidence
+      ? { confidence, mode: null, userQuery: "", keyFacts: [] }
+      : null);
+
   if (stream) {
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
     res.flushHeaders?.();
-    if (confidence) {
-      sendSseEvent(res, { type: "confidence", confidence });
-    }
+    sendReplyMetadata(res, metadata);
     await streamTextChunks(reply, (text) => sendSseEvent(res, { type: "token", text }));
     sendSseEvent(res, { type: "done" });
     return res.end();
   }
 
   const payload = { reply };
-  if (confidence) {
-    payload.confidence = confidence;
+  if (metadata?.confidence) {
+    payload.confidence = metadata.confidence;
+  }
+  if (metadata) {
+    payload.metadata = {
+      mode: metadata.mode,
+      userQuery: metadata.userQuery,
+      keyFacts: metadata.keyFacts,
+    };
   }
   return res.json(payload);
 }
@@ -997,7 +1038,14 @@ async function handleChatRequest(req, res, { stream = false } = {}) {
   if (KB_MODES.has(mode) && isProfessorNuiQuery(userQuery)) {
     const reply = getProfessorNuiReply();
     const professorNuiConfidence = computeConfidence([{ score: 999, method: "keyword" }]);
-    return sendChatReply(res, reply, { stream, confidence: professorNuiConfidence });
+    return sendChatReply(res, reply, {
+      stream,
+      replyMeta: buildReplyMeta({
+        mode,
+        userQuery,
+        confidence: professorNuiConfidence,
+      }),
+    });
   }
 
   if (KB_MODES.has(mode) && isCanvasConnectionStatusQuery(userQuery)) {
@@ -1005,7 +1053,14 @@ async function handleChatRequest(req, res, { stream = false } = {}) {
       ? `Yes — I'm connected to your Canvas at ${canvasConnection.canvasUrl}. Ask me what's due today or this week and I'll pull it from your assignments.`
       : "Not yet. Click the gear icon in the top right, open Settings, and connect Canvas with your API token. Once linked, I can tell you about assignments and due dates.";
     const canvasStatusConfidence = computeConfidence([{ score: 999, method: "canvas" }]);
-    return sendChatReply(res, reply, { stream, confidence: canvasStatusConfidence });
+    return sendChatReply(res, reply, {
+      stream,
+      replyMeta: buildReplyMeta({
+        mode,
+        userQuery,
+        confidence: canvasStatusConfidence,
+      }),
+    });
   }
 
   const recentMessages = messages.slice(-5);
@@ -1032,10 +1087,15 @@ async function handleChatRequest(req, res, { stream = false } = {}) {
   const courseContextBlock =
     mode === "tutor" ? formatCourseContextBlock(courseContext) : "";
 
+  const replyMeta = buildReplyMeta({ mode, userQuery, confidence, keyFacts });
+
   if (KB_MODES.has(mode) && !smallTalk && docs.length === 0 && !canvasRelated && !canvasConnection) {
     const reply = NO_KB_MATCH_REPLY;
     const noMatchConfidence = computeConfidence([]);
-    return sendChatReply(res, reply, { stream, confidence: noMatchConfidence });
+    return sendChatReply(res, reply, {
+      stream,
+      replyMeta: buildReplyMeta({ mode, userQuery, confidence: noMatchConfidence, keyFacts }),
+    });
   }
 
   if (
@@ -1047,7 +1107,7 @@ async function handleChatRequest(req, res, { stream = false } = {}) {
     !canvasRelated &&
     !canvasConnection
   ) {
-    return sendChatReply(res, LOW_CONFIDENCE_REPLY, { stream, confidence });
+    return sendChatReply(res, LOW_CONFIDENCE_REPLY, { stream, replyMeta });
   }
 
   if (!hasAiKey()) {
@@ -1059,7 +1119,16 @@ async function handleChatRequest(req, res, { stream = false } = {}) {
 
     if (KB_MODES.has(mode)) {
       const { reply, confidence: kbConfidence } = answerFromKnowledgeBase(userQuery);
-      return sendChatReply(res, reply, { stream, confidence: kbConfidence });
+      const kbKeyFacts = checkKeyFacts(userQuery);
+      return sendChatReply(res, reply, {
+        stream,
+        replyMeta: buildReplyMeta({
+          mode,
+          userQuery,
+          confidence: kbConfidence,
+          keyFacts: kbKeyFacts,
+        }),
+      });
     }
     if (mode === "tutor") {
       return res.status(500).json({
@@ -1080,9 +1149,7 @@ async function handleChatRequest(req, res, { stream = false } = {}) {
       res.setHeader("Connection", "keep-alive");
       res.flushHeaders?.();
 
-      if (confidence?.sourceCount > 0) {
-        sendSseEvent(res, { type: "confidence", confidence });
-      }
+      sendReplyMetadata(res, replyMeta);
 
       let reply = "";
       await streamChatReply(systemPrompt, messages, (text) => {
@@ -1117,9 +1184,14 @@ async function handleChatRequest(req, res, { stream = false } = {}) {
 
     const reply = await getChatReply(systemPrompt, messages, aiOptions);
     const payload = { reply };
-    if (confidence?.sourceCount > 0) {
-      payload.confidence = confidence;
+    if (replyMeta.confidence) {
+      payload.confidence = replyMeta.confidence;
     }
+    payload.metadata = {
+      mode: replyMeta.mode,
+      userQuery: replyMeta.userQuery,
+      keyFacts: replyMeta.keyFacts,
+    };
     if (mode === "tutor" && reply.trim()) {
       payload.speech = await generateTutorSpeechScript(
         getChatReply,
@@ -1155,6 +1227,17 @@ app.post("/api/chat", optionalAuth, (req, res) => handleChatRequest(req, res, { 
 app.post("/api/chat/stream", optionalAuth, (req, res) =>
   handleChatRequest(req, res, { stream: true })
 );
+
+app.post("/api/feedback", optionalAuth, (req, res) => {
+  const validation = validateFeedbackPayload(req.body);
+  if (!validation.ok) {
+    return res.status(400).json({ error: validation.errors.join("; ") });
+  }
+
+  const record = createFeedbackRecord(validation.value, req.user?.id ?? null);
+  appendFeedback(record);
+  return res.status(201).json({ ok: true, id: record.id });
+});
 
 async function handleQuizRecapRequest(req, res) {
   const { quizResults, lectureTopic = "", courseContext = null } = req.body ?? {};

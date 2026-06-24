@@ -24,6 +24,8 @@ yarn-debug.log*
 /data/user-courses/*.json
 !/data/user-courses/.gitkeep
 /data/users.json
+/data/feedback/*.jsonl
+!/data/feedback/.gitkeep
 
 # dependencies
 /node_modules

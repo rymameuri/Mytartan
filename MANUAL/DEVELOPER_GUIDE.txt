@@ -285,6 +285,39 @@ Restart server after .env changes.
   [ ] Spot-checked /api/kb/debug for 1–2 real questions
   [ ] Tested answer in Q&A mode in the UI
 
+
+================================================================================
+14. RESPONSE FEEDBACK TRIAGE
+================================================================================
+
+Users can rate assistant replies with thumbs up/down in Q&A, Campus, and Tutor
+chat views. Down votes prompt optional reason chips (wrong info, incomplete,
+out of date, etc.).
+
+Storage
+  data/feedback/feedback.jsonl   Append-only log (one JSON object per line)
+
+API
+  POST /api/feedback
+    Body: rating, messageId, userQuery, reply, mode, reason (required if down),
+          comment (optional), confidence, keyFacts
+    Auth: optional (userId attached when logged in)
+
+Each entry includes retrieval context (confidence score, KB source files,
+key-fact ids) so you can triage bad answers:
+
+  1. Read recent down votes:
+       tail -20 data/feedback/feedback.jsonl | python3 -m json.tool
+
+  2. Check confidence.sources[].file for the KB doc that led to the answer
+
+  3. Fix the KB file or key-facts.json, then run npm run kb:validate
+
+  4. Re-test with /api/kb/debug?q=... using the original userQuery
+
+Reason codes: wrong_info, incomplete, out_of_date, hard_to_understand, other
+
+
 ================================================================================
 END OF MANUAL
 ================================================================================

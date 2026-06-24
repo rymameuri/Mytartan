@@ -1,0 +1,124 @@
+.msg-feedback {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(156, 39, 51, 0.08);
+}
+
+.msg-feedback__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.msg-feedback__label {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: rgba(122, 28, 40, 0.55);
+  margin-right: 2px;
+}
+
+.msg-feedback__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid rgba(156, 39, 51, 0.15);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  font-size: 0.875rem;
+  line-height: 1;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.msg-feedback__btn:hover:not(:disabled) {
+  background: rgba(156, 39, 51, 0.06);
+  border-color: rgba(156, 39, 51, 0.25);
+}
+
+.msg-feedback__btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.msg-feedback__reasons {
+  margin-top: 8px;
+}
+
+.msg-feedback__prompt {
+  margin: 0 0 6px;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: rgba(122, 28, 40, 0.65);
+}
+
+.msg-feedback__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.msg-feedback__chip {
+  border: 1px solid rgba(156, 39, 51, 0.18);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: rgba(122, 28, 40, 0.75);
+  background: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+}
+
+.msg-feedback__chip:hover:not(:disabled),
+.msg-feedback__chip--active {
+  background: rgba(156, 39, 51, 0.08);
+  border-color: rgba(156, 39, 51, 0.3);
+}
+
+.msg-feedback__other {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.msg-feedback__input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid rgba(156, 39, 51, 0.18);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 0.75rem;
+}
+
+.msg-feedback__submit {
+  border: none;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #fff;
+  background: var(--tartan-maroon, #9c2733);
+  cursor: pointer;
+}
+
+.msg-feedback__submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.msg-feedback__error {
+  margin: 6px 0 0;
+  font-size: 0.6875rem;
+  color: #b42318;
+}
+
+.msg-feedback--done {
+  margin: 10px 0 0;
+  padding-top: 8px;
+  border-top: 1px solid rgba(156, 39, 51, 0.08);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: rgba(122, 28, 40, 0.55);
+}

@@ -10,6 +10,7 @@ import { useAvatarZoom } from "../hooks/useAvatarZoom";
 import { MenuIcon, ShareIcon, DownloadIcon, VolumeIcon, ChevronIcon } from "./Icons";
 import SettingsButton from "./SettingsButton";
 import "./PersonaView.css";
+import MessageFeedback from "./MessageFeedback";
 import "./ChatInterface.css";
 
 function PersonaView({
@@ -240,6 +241,14 @@ function PersonaView({
                         <p className="msg-confidence" title={message.confidence.message}>
                           {message.confidence.message}
                         </p>
+                      )}
+                      {!isUser && !message.streaming && !message.studio && (
+                        <MessageFeedback
+                          messageId={message.id ?? `pv-${msgId}`}
+                          reply={message.content}
+                          feedbackContext={message.feedbackContext ?? { mode }}
+                          disabled={isLoading}
+                        />
                       )}
                     </div>
                   </div>

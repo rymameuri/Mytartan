@@ -337,8 +337,10 @@ function AppShell() {
 
     let reply = "";
     let confidence = null;
+    let feedbackContext = null;
     let gotTokens = false;
     let pendingSpeech = "";
+    const assistantMessageId = crypto.randomUUID();
 
     const requestBody = {
       messages: updatedMessages,
@@ -403,14 +405,34 @@ function AppShell() {
             continue;
           }
 
-          if (event.type === "confidence") {
+          if (event.type === "metadata") {
+            confidence = event.confidence ?? confidence;
+            feedbackContext = {
+              mode: event.mode ?? activeMode,
+              userQuery: event.userQuery ?? text,
+              confidence: event.confidence ?? null,
+              keyFacts: event.keyFacts ?? [],
+            };
+          } else if (event.type === "confidence") {
             confidence = event.confidence;
+            feedbackContext = {
+              ...(feedbackContext ?? { mode: activeMode, userQuery: text, keyFacts: [] }),
+              confidence: event.confidence,
+            };
           } else if (event.type === "token") {
             gotTokens = true;
             reply += event.text;
             setMessages([
               ...updatedMessages,
-              { role: "assistant", content: reply, confidence, streaming: true, ...assistantExtras },
+              {
+                id: assistantMessageId,
+                role: "assistant",
+                content: reply,
+                confidence,
+                feedbackContext,
+                streaming: true,
+                ...assistantExtras,
+              },
             ]);
           } else if (event.type === "speech") {
             pendingSpeech = event.text;
@@ -424,9 +446,16 @@ function AppShell() {
         setMessages([
           ...updatedMessages,
           {
+            id: assistantMessageId,
             role: "assistant",
             content: stripMarkdownFormatting(reply),
             confidence,
+            feedbackContext: feedbackContext ?? {
+              mode: activeMode,
+              userQuery: text,
+              confidence,
+              keyFacts: [],
+            },
             streaming: false,
             ...assistantExtras,
           },
@@ -452,9 +481,11 @@ function AppShell() {
           setMessages([
             ...updatedMessages,
             {
+              id: assistantMessageId,
               role: "assistant",
               content: reply,
               confidence,
+              feedbackContext,
               streaming: false,
               ...assistantExtras,
             },

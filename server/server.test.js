@@ -19,6 +19,10 @@ process.env.CLAUDE_API_KEY = "placeholder";
 process.env.AI_GATEWAY_BASE_URL = "";
 
 const app = require("./server");
+const feedbackStore = require("./feedbackStore");
+const fs = require("fs");
+const path = require("path");
+const os = require("os");
 const {
   LOW_CONFIDENCE_THRESHOLD,
   LOW_CONFIDENCE_REPLY,
@@ -484,5 +488,47 @@ describe("Canvas course import API", () => {
 
     expect(listRes.status).toBe(200);
     expect(listRes.body.courses[0].name).toBe("Intro to CS");
+  });
+});
+
+describe("POST /api/feedback", () => {
+  let testDir;
+
+  beforeEach(() => {
+    testDir = fs.mkdtempSync(path.join(os.tmpdir(), "tartan-feedback-api-"));
+    feedbackStore.setFeedbackDir(testDir);
+  });
+
+  afterEach(() => {
+    feedbackStore.setFeedbackDir(feedbackStore.DEFAULT_FEEDBACK_DIR);
+    fs.rmSync(testDir, { recursive: true, force: true });
+  });
+
+  test("accepts thumbs up feedback", async () => {
+    const res = await request(app).post("/api/feedback").send({
+      rating: "up",
+      messageId: "msg-123",
+      userQuery: "When is add/drop?",
+      reply: "Add/drop ends Friday of week 1.",
+      mode: "qa",
+      confidence: { score: 85, sourceCount: 2, sources: [] },
+    });
+
+    expect(res.status).toBe(201);
+    expect(res.body.ok).toBe(true);
+    expect(res.body.id).toBeTruthy();
+  });
+
+  test("requires reason for thumbs down", async () => {
+    const res = await request(app).post("/api/feedback").send({
+      rating: "down",
+      messageId: "msg-456",
+      userQuery: "Where is the gym?",
+      reply: "The gym is on the roof.",
+      mode: "campus",
+    });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/reason/i);
   });
 });
