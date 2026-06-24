@@ -1,0 +1,25 @@
+SOURCE: https://sites.google.com/andrew.cmu.edu/mycmuq/portal-directory
+TOPIC: myCMU-Q Portal Directory
+SECTION: help
+---
+Portal Directory — myCMU-Q
+
+A directory listing all departments with short descriptions and links.
+
+Academic Departments:
+- Biological Sciences — https://sites.google.com/andrew.cmu.edu/mycmuq-bs
+- Business Administration — https://sites.google.com/andrew.cmu.edu/mycmuq-ba/home
+- Computer Science — https://sites.google.com/andrew.cmu.edu/mycmuq-cs/home
+- Information Systems — https://sites.google.com/andrew.cmu.edu/mycmuq-is/home
+
+University Offices and Services:
+- Community Excellence — https://sites.google.com/andrew.cmu.edu/mycmuq-community-excellence/home
+- Computing Services — https://sites.google.com/andrew.cmu.edu/mycmuq-computing-services/home
+- Education Office — https://sites.google.com/andrew.cmu.edu/mycmuq-education
+- Event Committee — https://sites.google.com/andrew.cmu.edu/mycmuq-events
+- Library — https://sites.google.com/andrew.cmu.edu/mycmuq-library
+- Marketing and Public Relations — https://sites.google.com/andrew.cmu.edu/mycmuq-mpr/marketing-and-public-relations
+- Staff Council — https://sites.google.com/andrew.cmu.edu/mycmuq-staff-council
+- Student Affairs — https://sites.google.com/andrew.cmu.edu/mycmuq-student-affairs/home
+
+Portal Home — https://sites.google.com/andrew.cmu.edu/mycmuq/mycmuq-portal-home

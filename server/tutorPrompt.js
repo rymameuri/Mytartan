@@ -192,6 +192,32 @@ function formatStudioItemContextBlock(studioItemContext) {
   return lines.join("\n");
 }
 
+function formatSourceItemContextBlock(sourceItemContext) {
+  if (!sourceItemContext || typeof sourceItemContext !== "object") return "";
+
+  const lines = [
+    "STUDENT SOURCE FOCUS — the student is asking about specific course material:",
+    `Source: ${sourceItemContext.title || "Untitled source"}`,
+  ];
+
+  if (sourceItemContext.excerpt?.trim()) {
+    lines.push(
+      "",
+      `Highlighted excerpt (explain this clearly in plain English — do not just repeat it):`,
+      `"${sourceItemContext.excerpt.trim()}"`
+    );
+  } else {
+    lines.push("", "The student wants help understanding this entire source.");
+  }
+
+  lines.push(
+    "",
+    "Teach the underlying concept with a concrete example when helpful. Keep tone encouraging and end with a brief check-in question."
+  );
+
+  return lines.join("\n");
+}
+
 function buildTutorSystemPrompt(
   courseContext,
   {
@@ -200,6 +226,7 @@ function buildTutorSystemPrompt(
     studioGeneration = false,
     speechMode = null,
     studioItemContext = null,
+    sourceItemContext = null,
   } = {}
 ) {
   const contextBlock = formatCourseContextBlock(courseContext);
@@ -222,6 +249,13 @@ function buildTutorSystemPrompt(
     } else {
       prompt +=
         "\n\nThe student is asking for help with something visible in the Studio panel. Teach the underlying concept without repeating the on-screen text. End with a Socratic check-in question.";
+    }
+  }
+
+  if (sourceItemContext) {
+    const sourceBlock = formatSourceItemContextBlock(sourceItemContext);
+    if (sourceBlock) {
+      prompt += `\n\n${sourceBlock}`;
     }
   }
 
@@ -262,5 +296,6 @@ module.exports = {
   hasValidCourseContext,
   formatCourseContextBlock,
   formatStudioItemContextBlock,
+  formatSourceItemContextBlock,
   MAX_SYLLABUS_CHARS,
 };

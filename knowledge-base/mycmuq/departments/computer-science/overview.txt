@@ -1,0 +1,41 @@
+SOURCE: https://sites.google.com/andrew.cmu.edu/mycmuq-cs/home
+TOPIC: Computer Science (myCMU-Q)
+SECTION: studies
+---
+Computer Science — CMU-Q
+
+About: The CS program equips students with a strong theoretical foundation. Computing is a discipline with strong links to many fields; skills transcend technological trends. CS students have identical graduation requirements to Pittsburgh students.
+
+Quick Links:
+- Minors
+- Computer Science Minor
+- cs.cmu.edu
+- Hub Registrar
+- Academic Audit
+- Transfer to Computer Science
+
+CS Event Calendar: Google Calendar — c_d395d6ei1e57nacsortvgmahp4@group.calendar.google.com
+
+Bits&Bites: A recurring event started several years back; main purpose is academic and social engagement. Announced on mailing lists.
+
+Curricula and Research:
+- computer_science_program.pdf — BS in CS; minimum 360 units required
+- artificial_intelligence_program.pdf — BS in AI; minimum 360 units required
+- Course catalog, sample schedules, and curriculum planning docs on the department site
+- Research guides, SURA fellowships, QRDI opportunities
+- Senior theses — https://kilthub.cmu.edu/cmuq_honors_theses
+- Honor thesis information on the department site
+
+Department Structure:
+- Advisor: Academic plans, course schedules, Add/Drop, career plans, minors, graduation requirements
+- Associate Area Head: Prof. Ryan Riley (rdriley@andrew.cmu.edu) — transfer credits, CS/AI minor questions for non-CS students, Pittsburgh exchange, prerequisite exceptions, waitlists, Bits&Bites suggestions
+- Area Head: Giselle Reis (greis@andrew.cmu.edu) — escalated issues
+
+SCS Concentrations (available at Qatar):
+- Algorithms & Complexity — Fall: 21-301, 21-484; Spring: 15-455
+- Computer Systems — Fall: 15-440, 15-348; Spring: 15-441, 15-330
+- Programming Languages — Fall: 15-317, 15-312; Spring: 15-316
+
+To declare a concentration: email qatareducationform@andrew.cmu.edu and CC your advisor.
+
+Documents and Resources: Google Drive folder linked from the department site.

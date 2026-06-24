@@ -191,6 +191,20 @@
   color: var(--ws-text);
 }
 
+.tutor-dash__canvas-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(196, 18, 48, 0.1);
+  color: var(--tartan-crimson);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
 .tutor-dash__class-meta {
   margin: 0;
   font-size: 0.8125rem;

@@ -6,6 +6,13 @@
 
 const request = require("supertest");
 
+jest.mock("axios", () => ({
+  get: jest.fn(),
+  defaults: { proxy: false },
+}));
+
+const axios = require("axios");
+
 // Disable real AI providers so tests run in KB-only mode (no external API calls)
 process.env.ANTHROPIC_API_KEY = "placeholder";
 process.env.CLAUDE_API_KEY = "placeholder";
@@ -104,7 +111,12 @@ describe("POST /api/chat — input validation", () => {
   });
 
   test("small talk skips KB pipeline and avoids low-confidence fallback", async () => {
-    for (const content of ["hello how are you", "thanks", "good morning"]) {
+    for (const content of [
+      "hello how are you",
+      "thanks",
+      "thank you so much for all your support",
+      "good morning",
+    ]) {
       const res = await request(app)
         .post("/api/chat")
         .send({ messages: [{ role: "user", content }], mode: "chat" });
@@ -201,10 +213,16 @@ describe("isSmallTalk", () => {
   test("classifies greetings and pleasantries as small talk", () => {
     expect(isSmallTalk("hello how are you")).toBe(true);
     expect(isSmallTalk("thanks")).toBe(true);
+    expect(isSmallTalk("thank you so much for all your support")).toBe(true);
     expect(isSmallTalk("good morning")).toBe(true);
     expect(isSmallTalk("hey what's up")).toBe(true);
     expect(isSmallTalk("ok cool")).toBe(true);
     expect(isSmallTalk("bye see you")).toBe(true);
+  });
+
+  test("does not classify gratitude mixed with campus questions as small talk", () => {
+    expect(isSmallTalk("thank you for helping me with registration")).toBe(false);
+    expect(isSmallTalk("thanks, where is the library")).toBe(false);
   });
 
   test("does not classify short campus questions as small talk", () => {
@@ -221,17 +239,34 @@ describe("isSmallTalk", () => {
 
 describe("Course library API", () => {
   let createdCourseId;
+  let authToken;
+
+  beforeEach(async () => {
+    const email = `course-api-${Date.now()}@example.com`;
+    const signupRes = await request(app)
+      .post("/api/auth/signup")
+      .send({ email, password: "testpass123" });
+    authToken = signupRes.body.token;
+  });
 
   afterEach(async () => {
     if (createdCourseId) {
-      await request(app).delete(`/api/courses/${createdCourseId}`);
+      await request(app)
+        .delete(`/api/courses/${createdCourseId}`)
+        .set("Authorization", `Bearer ${authToken}`);
       createdCourseId = null;
     }
+  });
+
+  test("requires auth for course routes", async () => {
+    const res = await request(app).get("/api/courses");
+    expect(res.status).toBe(401);
   });
 
   test("creates, approves, contributes, and deletes a course", async () => {
     const createRes = await request(app)
       .post("/api/courses")
+      .set("Authorization", `Bearer ${authToken}`)
       .send({
         courseName: "Test Course",
         courseCode: "TEST-101",
@@ -244,23 +279,210 @@ describe("Course library API", () => {
 
     const materialRes = await request(app)
       .post(`/api/courses/${createdCourseId}/materials`)
+      .set("Authorization", `Bearer ${authToken}`)
       .send({ title: "Lecture 1", content: "Intro to loops" });
 
     expect(materialRes.status).toBe(200);
     expect(materialRes.body.course.materials).toHaveLength(1);
 
-    const listRes = await request(app).get("/api/courses");
+    const listRes = await request(app)
+      .get("/api/courses")
+      .set("Authorization", `Bearer ${authToken}`);
     expect(listRes.body.courses.some((course) => course.id === createdCourseId)).toBe(true);
 
     const contributeRes = await request(app)
       .post(`/api/courses/${createdCourseId}/contribute`)
+      .set("Authorization", `Bearer ${authToken}`)
       .send({ content: "What is recursion?" });
 
     expect(contributeRes.status).toBe(200);
     expect(contributeRes.body.course.contributions).toHaveLength(1);
 
-    const approveRes = await request(app).post(`/api/courses/${createdCourseId}/approve`);
+    const approveRes = await request(app)
+      .post(`/api/courses/${createdCourseId}/approve`)
+      .set("Authorization", `Bearer ${authToken}`);
     expect(approveRes.status).toBe(200);
     expect(approveRes.body.course.status).toBe("approved");
+  });
+});
+
+// ─── Canvas connection ────────────────────────────────────────────────────────
+
+describe("POST /api/canvas/connect", () => {
+  let authToken;
+
+  beforeEach(async () => {
+    axios.get.mockReset();
+    const email = `canvas-test-${Date.now()}@example.com`;
+    const signupRes = await request(app)
+      .post("/api/auth/signup")
+      .send({ email, password: "testpass123" });
+    authToken = signupRes.body.token;
+  });
+
+  test("returns 401 without auth", async () => {
+    const res = await request(app)
+      .post("/api/canvas/connect")
+      .send({ canvasUrl: "https://canvas.cmu.edu", token: "abc" });
+    expect(res.status).toBe(401);
+  });
+
+  test("returns success when Canvas token is valid", async () => {
+    axios.get.mockResolvedValueOnce({ data: { name: "Test User", id: 42 } });
+
+    const res = await request(app)
+      .post("/api/canvas/connect")
+      .set("Authorization", `Bearer ${authToken}`)
+      .send({ canvasUrl: "https://canvas.cmu.edu/", token: "valid-token" });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      success: true,
+      user: { name: "Test User", id: 42 },
+    });
+    expect(axios.get).toHaveBeenCalledWith(
+      "https://canvas.cmu.edu/api/v1/users/self",
+      expect.objectContaining({
+        headers: { Authorization: "Bearer valid-token" },
+      })
+    );
+
+    const meRes = await request(app)
+      .get("/api/auth/me")
+      .set("Authorization", `Bearer ${authToken}`);
+    const { getUserById } = require("./userStore");
+    const stored = getUserById(meRes.body.id);
+    expect(stored.canvas.url).toBe("https://canvas.cmu.edu");
+    expect(stored.canvas.token).toBe("valid-token");
+    expect(meRes.body.canvas).toBeUndefined();
+  });
+
+  test("returns error when Canvas token is invalid", async () => {
+    axios.get.mockRejectedValueOnce(new Error("Unauthorized"));
+
+    const res = await request(app)
+      .post("/api/canvas/connect")
+      .set("Authorization", `Bearer ${authToken}`)
+      .send({ canvasUrl: "https://canvas.cmu.edu", token: "bad-token" });
+
+    expect(res.status).toBe(401);
+    expect(res.body).toEqual({ success: false, error: "Invalid token or URL" });
+  });
+});
+
+describe("POST /api/canvas/disconnect", () => {
+  test("clears connection for authenticated user", async () => {
+    axios.get.mockResolvedValueOnce({ data: { name: "Test User", id: 42 } });
+
+    const email = `canvas-disconnect-${Date.now()}@example.com`;
+    const signupRes = await request(app)
+      .post("/api/auth/signup")
+      .send({ email, password: "testpass123" });
+    const authToken = signupRes.body.token;
+
+    await request(app)
+      .post("/api/canvas/connect")
+      .set("Authorization", `Bearer ${authToken}`)
+      .send({ canvasUrl: "https://canvas.cmu.edu", token: "valid-token" });
+
+    const res = await request(app)
+      .post("/api/canvas/disconnect")
+      .set("Authorization", `Bearer ${authToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ success: true });
+
+    const statusRes = await request(app)
+      .get("/api/canvas/status")
+      .set("Authorization", `Bearer ${authToken}`);
+    expect(statusRes.body.connected).toBe(false);
+
+    const { getUserById } = require("./userStore");
+    const stored = getUserById(signupRes.body.user.id);
+    expect(stored.canvas).toBeUndefined();
+  });
+});
+
+describe("Canvas connection status in chat", () => {
+  test("answers directly when user asks if Canvas is connected", async () => {
+    axios.get.mockResolvedValueOnce({ data: { name: "Test User", id: 42 } });
+
+    const email = `canvas-chat-${Date.now()}@example.com`;
+    const signupRes = await request(app)
+      .post("/api/auth/signup")
+      .send({ email, password: "testpass123" });
+    const authToken = signupRes.body.token;
+
+    await request(app)
+      .post("/api/canvas/connect")
+      .set("Authorization", `Bearer ${authToken}`)
+      .send({ canvasUrl: "https://canvas.cmu.edu", token: "valid-token" });
+
+    const res = await request(app)
+      .post("/api/chat")
+      .set("Authorization", `Bearer ${authToken}`)
+      .send({
+        mode: "qa",
+        messages: [{ role: "user", content: "hi are you connected to my canvas" }],
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.reply).toMatch(/connected to your Canvas at https:\/\/canvas\.cmu\.edu/i);
+    expect(res.body.reply).not.toMatch(/not confident/i);
+  });
+
+  test("tells user to connect when Canvas is not linked", async () => {
+    const email = `canvas-chat-off-${Date.now()}@example.com`;
+    const signupRes = await request(app)
+      .post("/api/auth/signup")
+      .send({ email, password: "testpass123" });
+    const authToken = signupRes.body.token;
+
+    const res = await request(app)
+      .post("/api/chat")
+      .set("Authorization", `Bearer ${authToken}`)
+      .send({
+        mode: "qa",
+        messages: [{ role: "user", content: "are you connected to canvas" }],
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.reply).toMatch(/not yet/i);
+    expect(res.body.reply).toMatch(/settings/i);
+  });
+});
+
+describe("Canvas course import API", () => {
+  test("lists Canvas courses when connected", async () => {
+    axios.get.mockImplementation(async (url) => {
+      if (url.includes("/users/self")) {
+        return { data: { name: "Test User", id: 1 }, headers: {} };
+      }
+      if (url.includes("/courses?enrollment_state=active")) {
+        return {
+          data: [{ id: 101, name: "Intro to CS", course_code: "15-112", term: { name: "Fall 2026" } }],
+          headers: {},
+        };
+      }
+      return { data: [], headers: {} };
+    });
+
+    const email = `canvas-import-${Date.now()}@example.com`;
+    const signupRes = await request(app)
+      .post("/api/auth/signup")
+      .send({ email, password: "testpass123" });
+    const authToken = signupRes.body.token;
+
+    await request(app)
+      .post("/api/canvas/connect")
+      .set("Authorization", `Bearer ${authToken}`)
+      .send({ canvasUrl: "https://canvas.cmu.edu", token: "valid-token" });
+
+    const listRes = await request(app)
+      .get("/api/canvas/courses")
+      .set("Authorization", `Bearer ${authToken}`);
+
+    expect(listRes.status).toBe(200);
+    expect(listRes.body.courses[0].name).toBe("Intro to CS");
   });
 });

@@ -45,24 +45,57 @@ function normalizeCourseInput(input) {
   };
 }
 
-function listCourses({ status } = {}) {
+function belongsToUser(course, userId) {
+  if (!course || !userId) return false;
+  return course.userId === userId;
+}
+
+function listCourses({ userId, status } = {}) {
   ensureCoursesDir();
-  const courses = fs
+  let courses = fs
     .readdirSync(coursesDir)
     .filter((name) => name.endsWith(".json"))
     .map((name) => readCourseFile(name.replace(/\.json$/, "")))
     .filter(Boolean)
     .sort((a, b) => b.updatedAt - a.updatedAt);
 
-  if (!status) return courses;
-  return courses.filter((course) => course.status === status);
+  if (userId) {
+    courses = courses.filter((course) => belongsToUser(course, userId));
+  }
+
+  if (status) {
+    courses = courses.filter((course) => course.status === status);
+  }
+
+  return courses;
 }
 
 function getCourse(id) {
   return readCourseFile(id);
 }
 
-function createCourse(input, { status = "active" } = {}) {
+function getCourseForUser(id, userId) {
+  const course = getCourse(id);
+  if (!belongsToUser(course, userId)) return null;
+  return course;
+}
+
+function findCourseByExternalId(userId, externalCourseId) {
+  if (!userId || externalCourseId == null) return null;
+  const targetId = String(externalCourseId);
+  return (
+    listCourses({ userId }).find(
+      (course) =>
+        course.externalSource === "canvas" && String(course.externalCourseId) === targetId
+    ) ?? null
+  );
+}
+
+function createCourse(input, { status = "active", userId } = {}) {
+  if (!userId) {
+    throw new Error("userId is required");
+  }
+
   const normalized = normalizeCourseInput(input);
   if (!normalized.courseName || !normalized.syllabusText) {
     throw new Error("courseName and syllabusText are required");
@@ -71,6 +104,7 @@ function createCourse(input, { status = "active" } = {}) {
   const now = Date.now();
   const course = {
     id: generateId(),
+    userId,
     status,
     ...normalized,
     materials: [],
@@ -79,12 +113,16 @@ function createCourse(input, { status = "active" } = {}) {
     updatedAt: now,
   };
 
+  if (input.externalSource) course.externalSource = input.externalSource;
+  if (input.externalCourseId != null) course.externalCourseId = String(input.externalCourseId);
+  if (input.lastSyncedAt) course.lastSyncedAt = input.lastSyncedAt;
+
   writeCourseFile(course);
   return course;
 }
 
-function updateCourse(id, patch) {
-  const course = getCourse(id);
+function updateCourse(id, patch, { userId } = {}) {
+  const course = userId ? getCourseForUser(id, userId) : getCourse(id);
   if (!course) return null;
 
   const normalized = normalizeCourseInput({ ...course, ...patch });
@@ -95,16 +133,98 @@ function updateCourse(id, patch) {
     updatedAt: Date.now(),
   };
 
+  if (patch.externalSource !== undefined) updated.externalSource = patch.externalSource;
+  if (patch.externalCourseId !== undefined) {
+    updated.externalCourseId =
+      patch.externalCourseId == null ? undefined : String(patch.externalCourseId);
+  }
+  if (patch.lastSyncedAt !== undefined) updated.lastSyncedAt = patch.lastSyncedAt;
+
   writeCourseFile(updated);
   return updated;
 }
 
-function approveCourse(id) {
-  return updateCourse(id, { status: "approved" });
+function upsertCanvasCourse(userId, payload) {
+  const existing = findCourseByExternalId(userId, payload.externalCourseId);
+  const now = Date.now();
+
+  if (existing) {
+    const updated = {
+      ...existing,
+      courseName: payload.courseName || existing.courseName,
+      courseCode: payload.courseCode ?? existing.courseCode,
+      instructor: payload.instructor ?? existing.instructor,
+      semester: payload.semester ?? existing.semester,
+      syllabusText: payload.syllabusText || existing.syllabusText,
+      additionalNotes: payload.additionalNotes ?? existing.additionalNotes,
+      externalSource: "canvas",
+      externalCourseId: String(payload.externalCourseId),
+      lastSyncedAt: now,
+      updatedAt: now,
+    };
+    writeCourseFile(updated);
+    return updated;
+  }
+
+  return createCourse(
+    {
+      courseName: payload.courseName,
+      courseCode: payload.courseCode,
+      instructor: payload.instructor,
+      semester: payload.semester,
+      syllabusText: payload.syllabusText,
+      additionalNotes: payload.additionalNotes,
+      externalSource: "canvas",
+      externalCourseId: String(payload.externalCourseId),
+      lastSyncedAt: now,
+    },
+    { status: "active", userId }
+  );
 }
 
-function addMaterial(id, { title, content }) {
-  const course = getCourse(id);
+function syncCanvasMaterials(courseId, incomingMaterials, { userId } = {}) {
+  const course = userId ? getCourseForUser(courseId, userId) : getCourse(courseId);
+  if (!course) return null;
+
+  const incomingIds = new Set(
+    incomingMaterials.map((item) => item.externalItemId).filter(Boolean)
+  );
+  const manualMaterials = (course.materials ?? []).filter((item) => !item.externalItemId);
+  const keptCanvasMaterials = (course.materials ?? []).filter(
+    (item) => item.externalItemId && incomingIds.has(item.externalItemId)
+  );
+  const keptByExternalId = new Map(
+    keptCanvasMaterials.map((item) => [item.externalItemId, item])
+  );
+
+  const syncedCanvasMaterials = incomingMaterials.map((incoming) => {
+    const existing = keptByExternalId.get(incoming.externalItemId);
+    return {
+      id: existing?.id ?? generateId(),
+      title: String(incoming.title ?? "").slice(0, 200),
+      content: String(incoming.content ?? "").slice(0, MAX_CONTRIBUTION_CHARS),
+      externalItemId: incoming.externalItemId,
+      createdAt: existing?.createdAt ?? Date.now(),
+    };
+  });
+
+  const updated = {
+    ...course,
+    materials: [...manualMaterials, ...syncedCanvasMaterials],
+    lastSyncedAt: Date.now(),
+    updatedAt: Date.now(),
+  };
+
+  writeCourseFile(updated);
+  return updated;
+}
+
+function approveCourse(id, { userId } = {}) {
+  return updateCourse(id, { status: "approved" }, { userId });
+}
+
+function addMaterial(id, { title, content, externalItemId }, { userId } = {}) {
+  const course = userId ? getCourseForUser(id, userId) : getCourse(id);
   if (!course) return null;
 
   const trimmedTitle = String(title ?? "").trim();
@@ -119,6 +239,7 @@ function addMaterial(id, { title, content }) {
     content: trimmedContent.slice(0, MAX_CONTRIBUTION_CHARS),
     createdAt: Date.now(),
   };
+  if (externalItemId) material.externalItemId = externalItemId;
 
   const materials = [...(course.materials ?? []), material];
   const updated = {
@@ -131,8 +252,8 @@ function addMaterial(id, { title, content }) {
   return updated;
 }
 
-function deleteMaterial(courseId, materialId) {
-  const course = getCourse(courseId);
+function deleteMaterial(courseId, materialId, { userId } = {}) {
+  const course = userId ? getCourseForUser(courseId, userId) : getCourse(courseId);
   if (!course) return null;
 
   const materials = (course.materials ?? []).filter((item) => item.id !== materialId);
@@ -148,8 +269,8 @@ function deleteMaterial(courseId, materialId) {
   return updated;
 }
 
-function addContribution(id, content, { role = "user" } = {}) {
-  const course = getCourse(id);
+function addContribution(id, content, { role = "user", userId } = {}) {
+  const course = userId ? getCourseForUser(id, userId) : getCourse(id);
   if (!course) return null;
 
   const trimmed = String(content ?? "").trim();
@@ -175,10 +296,10 @@ function addContribution(id, content, { role = "user" } = {}) {
   return updated;
 }
 
-function deleteCourse(id) {
-  const filePath = courseFilePath(id);
-  if (!fs.existsSync(filePath)) return false;
-  fs.unlinkSync(filePath);
+function deleteCourse(id, { userId } = {}) {
+  const course = userId ? getCourseForUser(id, userId) : getCourse(id);
+  if (!course) return false;
+  fs.unlinkSync(courseFilePath(id));
   return true;
 }
 
@@ -192,6 +313,9 @@ function toPublicSummary(course) {
     semester: course.semester,
     contributionCount: course.contributions?.length ?? 0,
     materialCount: course.materials?.length ?? 0,
+    externalSource: course.externalSource ?? null,
+    externalCourseId: course.externalCourseId ?? null,
+    lastSyncedAt: course.lastSyncedAt ?? null,
     createdAt: course.createdAt,
     updatedAt: course.updatedAt,
   };
@@ -209,6 +333,9 @@ function toCourseContext(course) {
     materials: course.materials ?? [],
     contributions: course.contributions ?? [],
     status: course.status,
+    externalSource: course.externalSource ?? null,
+    externalCourseId: course.externalCourseId ?? null,
+    lastSyncedAt: course.lastSyncedAt ?? null,
   };
 }
 
@@ -218,11 +345,16 @@ function setCoursesDir(dir) {
 
 module.exports = {
   COURSES_DIR,
+  MAX_CONTRIBUTION_CHARS,
   setCoursesDir,
   listCourses,
   getCourse,
+  getCourseForUser,
+  findCourseByExternalId,
   createCourse,
   updateCourse,
+  upsertCanvasCourse,
+  syncCanvasMaterials,
   approveCourse,
   addMaterial,
   deleteMaterial,

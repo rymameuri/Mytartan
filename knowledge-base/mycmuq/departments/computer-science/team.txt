@@ -1,0 +1,22 @@
+SOURCE: https://sites.google.com/andrew.cmu.edu/mycmuq-cs/home (Meet the Team)
+TOPIC: Computer Science Team (myCMU-Q)
+SECTION: studies
+---
+Computer Science — Meet the Team
+
+- Giselle Reis — Area Head / Associate Teaching Professor — greis@andrew.cmu.edu
+- Ryan Riley — Associate Area Head / Associate Teaching Professor — rdriley@andrew.cmu.edu
+- Khaled Harras — Senior Associate Dean, Faculty / Director HBJ Center / Teaching Professor — kharras@andrew.cmu.edu
+- Mohammad Hammoud — Associate Teaching Professor — mhhammou@andrew.cmu.edu
+- Christos Kapoutsis — Associate Teaching Professor — cak@andrew.cmu.edu
+- Amy Melniczuk — Assistant Teaching Professor — amelnicz@andrew.cmu.edu
+- Gianni Di Caro — Teaching Professor — gdicaro@andrew.cmu.edu
+- Mohammad Salameh — Assistant Teaching Professor — msalameh@andrew.cmu.edu
+- Eduardo Feo Flushing — Assistant Teaching Professor — efeoflus@andrew.cmu.edu
+- Hend Gedawy — Visiting Assistant Teaching Professor — hkg@andrew.cmu.edu
+- Bilal Taha — Assistant Teaching Professor — btaha@andrew.cmu.edu
+- Joy Oclaman — Assistant to the Area Head and Program Assistant — joclaman@andrew.cmu.edu
+- Nour Ali — Teaching Assistant — ntali@andrew.cmu.edu
+- Huda Baig — Teaching Assistant — hudab@andrew.cmu.edu
+- Mohammed Yusuf Ansari — Postdoctoral Fellow — ma1@andrew.cmu.edu
+- Zikai Zhang — Postdoctoral Fellow — zikaiz2@andrew.cmu.edu

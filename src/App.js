@@ -20,6 +20,8 @@ import {
   isStructuredStudioContent,
 } from "./utils/tutorSpeechFallback";
 import { useMutedPreference } from "./hooks/useMutedPreference";
+import { useCanvasConnection } from "./hooks/useCanvasConnection";
+import SettingsModal from "./components/SettingsModal";
 import { buildTutorWelcomeMessage } from "./utils/tutorWelcome";
 import { refreshCourse } from "./utils/courseApi";
 import { stripMarkdownFormatting } from "./utils/stripMarkdown";
@@ -63,7 +65,7 @@ function AppRoutes() {
 }
 
 function AppShell() {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const userId = user?.id;
 
   const {
@@ -94,12 +96,14 @@ function AppShell() {
   const [tutorListening, setTutorListening] = useState(false);
   const [chatSessionKey, setChatSessionKey] = useState(0);
   const [tutorSpeechText, setTutorSpeechText] = useState("");
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const voiceModeRef = useRef(false);
   const avatarRef = useRef(null);
   const abortControllerRef = useRef(null);
   const isDesktop = useIsDesktop();
   const { isSpeaking, speak, stop, caption } = usePersonaSpeech(avatarRef);
   const { isMuted, toggleMute } = useMutedPreference(stop, userId);
+  const canvasConnection = useCanvasConnection(userId, token);
 
   useEffect(() => {
     setSidebarCollapsed(readSidebarCollapsed(userId));
@@ -201,7 +205,7 @@ function AppShell() {
     try {
       const course = courseRef.syllabusText
         ? courseRef
-        : await refreshCourse(courseRef.id);
+        : await refreshCourse(courseRef.id, token);
       setCourseContext(course);
       setSavedCourseId(course.id);
       setMessages([
@@ -357,12 +361,18 @@ function AppShell() {
       if (options.studioItemContext) {
         requestBody.studioItemContext = options.studioItemContext;
       }
+      if (options.sourceItemContext) {
+        requestBody.sourceItemContext = options.sourceItemContext;
+      }
     }
 
     try {
       const response = await fetch(`${API_BASE}/api/chat/stream`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify(requestBody),
         signal: controller.signal,
       });
@@ -593,7 +603,11 @@ function AppShell() {
       >
         <div className="app-main__content">
           {mode === "tutor" && tutorScreen === "dashboard" && (
-            <CourseTutorDashboard onOpenClass={handleOpenClass} onBackToQa={handleBackToQa} />
+            <CourseTutorDashboard
+              onOpenClass={handleOpenClass}
+              onBackToQa={handleBackToQa}
+              onOpenSettings={() => setSettingsOpen(true)}
+            />
           )}
 
           {mode === "tutor" && tutorScreen === "workspace" && savedCourseId && courseContext && (
@@ -642,12 +656,20 @@ function AppShell() {
               stopSpeech={stop}
               isMuted={isMuted}
               onToggleMute={toggleMute}
+              onOpenSettings={() => setSettingsOpen(true)}
               voiceModeRef={voiceModeRef}
               avatarRef={avatarRef}
               speechCaption={caption}
             />
           )}
         </div>
+
+        {settingsOpen && (
+          <SettingsModal
+            onClose={() => setSettingsOpen(false)}
+            canvasConnection={canvasConnection}
+          />
+        )}
 
         {showTutorPersonaRail && (
           <ScottyPersonaStage

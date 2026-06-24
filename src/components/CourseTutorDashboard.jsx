@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useAuth } from "../context/AuthContext";
+import { useCanvasConnection } from "../hooks/useCanvasConnection";
 import { SAMPLE_COURSE } from "../data/sampleCourse";
 import { extractSyllabusText } from "../utils/extractSyllabusText";
 import {
   listCourses,
   saveCourseToLibrary,
   deleteCourse,
+  syncCanvasCourse,
 } from "../utils/courseApi";
+import CanvasImportModal from "./CanvasImportModal";
 import "./CourseTutorDashboard.css";
 
 const ACCEPTED_FILE_TYPES = ".txt,.md,.csv,.pdf,.docx";
@@ -19,27 +23,31 @@ const EMPTY_FORM = {
   additionalNotes: "",
 };
 
-function CourseTutorDashboard({ onOpenClass, onBackToQa }) {
+function CourseTutorDashboard({ onOpenClass, onBackToQa, onOpenSettings }) {
+  const { token, user } = useAuth();
+  const { connected: canvasConnected } = useCanvasConnection(user?.id, token);
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showCreate, setShowCreate] = useState(false);
+  const [showCanvasImport, setShowCanvasImport] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
   const [parsingFile, setParsingFile] = useState(false);
+  const [syncingId, setSyncingId] = useState(null);
   const fileInputRef = useRef(null);
 
   const loadCourses = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      setCourses(await listCourses());
+      setCourses(await listCourses(token));
     } catch (err) {
       setError(err.message || "Could not load your classes");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [token]);
 
   useEffect(() => {
     loadCourses();
@@ -78,14 +86,17 @@ function CourseTutorDashboard({ onOpenClass, onBackToQa }) {
 
     setSubmitting(true);
     try {
-      const course = await saveCourseToLibrary({
-        courseName: form.courseName.trim(),
-        courseCode: form.courseCode.trim(),
-        instructor: form.instructor.trim(),
-        semester: form.semester.trim(),
-        syllabusText: form.syllabusText.trim(),
-        additionalNotes: form.additionalNotes.trim(),
-      });
+      const course = await saveCourseToLibrary(
+        {
+          courseName: form.courseName.trim(),
+          courseCode: form.courseCode.trim(),
+          instructor: form.instructor.trim(),
+          semester: form.semester.trim(),
+          syllabusText: form.syllabusText.trim(),
+          additionalNotes: form.additionalNotes.trim(),
+        },
+        token
+      );
       setForm(EMPTY_FORM);
       setShowCreate(false);
       await loadCourses();
@@ -100,10 +111,23 @@ function CourseTutorDashboard({ onOpenClass, onBackToQa }) {
   async function handleDelete(courseId) {
     if (!window.confirm("Delete this class and all its materials?")) return;
     try {
-      await deleteCourse(courseId);
+      await deleteCourse(courseId, token);
       await loadCourses();
     } catch (err) {
       setError(err.message || "Could not delete class");
+    }
+  }
+
+  async function handleSync(courseId) {
+    setSyncingId(courseId);
+    setError("");
+    try {
+      await syncCanvasCourse(courseId, token);
+      await loadCourses();
+    } catch (err) {
+      setError(err.message || "Could not sync from Canvas");
+    } finally {
+      setSyncingId(null);
     }
   }
 
@@ -131,6 +155,27 @@ function CourseTutorDashboard({ onOpenClass, onBackToQa }) {
         >
           {showCreate ? "Cancel" : "+ New class"}
         </button>
+        <button
+          type="button"
+          className="tutor-dash__ghost-btn"
+          disabled={!canvasConnected}
+          title={
+            canvasConnected
+              ? "Import courses from Canvas"
+              : "Connect Canvas in Settings first"
+          }
+          onClick={() => {
+            if (canvasConnected) setShowCanvasImport(true);
+            else onOpenSettings?.();
+          }}
+        >
+          Import from Canvas
+        </button>
+        {!canvasConnected && (
+          <span className="tutor-dash__hint">
+            Connect Canvas in Settings to import courses.
+          </span>
+        )}
         <button
           type="button"
           className="tutor-dash__ghost-btn"
@@ -226,7 +271,7 @@ function CourseTutorDashboard({ onOpenClass, onBackToQa }) {
         <div className="tutor-dash__grid">
           {courses.length === 0 ? (
             <p className="tutor-dash__muted">
-              No classes yet. Create one to start adding materials and studying with Scotty.
+              No classes yet. Create one or import from Canvas to start studying with Scotty.
             </p>
           ) : (
             courses.map((course) => (
@@ -235,11 +280,20 @@ function CourseTutorDashboard({ onOpenClass, onBackToQa }) {
                   <h3 className="tutor-dash__class-name">
                     {course.courseName}
                     {course.courseCode ? ` (${course.courseCode})` : ""}
+                    {course.externalSource === "canvas" && (
+                      <span className="tutor-dash__canvas-badge">Canvas</span>
+                    )}
                   </h3>
                   <p className="tutor-dash__class-meta">
                     {course.instructor && `${course.instructor} · `}
                     {course.materialCount ?? 0} material
                     {(course.materialCount ?? 0) === 1 ? "" : "s"}
+                    {course.lastSyncedAt && (
+                      <>
+                        {" · "}
+                        Synced {new Date(course.lastSyncedAt).toLocaleDateString()}
+                      </>
+                    )}
                   </p>
                 </div>
                 <div className="tutor-dash__class-actions">
@@ -250,6 +304,16 @@ function CourseTutorDashboard({ onOpenClass, onBackToQa }) {
                   >
                     Open class
                   </button>
+                  {course.externalSource === "canvas" && (
+                    <button
+                      type="button"
+                      className="tutor-dash__ghost-btn"
+                      disabled={syncingId === course.id}
+                      onClick={() => handleSync(course.id)}
+                    >
+                      {syncingId === course.id ? "Syncing…" : "Re-sync"}
+                    </button>
+                  )}
                   <button
                     type="button"
                     className="tutor-dash__danger-btn"
@@ -262,6 +326,16 @@ function CourseTutorDashboard({ onOpenClass, onBackToQa }) {
             ))
           )}
         </div>
+      )}
+
+      {showCanvasImport && (
+        <CanvasImportModal
+          token={token}
+          onClose={() => setShowCanvasImport(false)}
+          onImported={async () => {
+            await loadCourses();
+          }}
+        />
       )}
     </div>
   );

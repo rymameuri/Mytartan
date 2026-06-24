@@ -1,0 +1,135 @@
+{
+  "source": "sites.google.com/andrew.cmu.edu/mycmuq",
+  "generated": "2026-06-24",
+  "description": "myCMU-Q portal content. Replaces Scotty and Andy web portals. Each file maps to one portal page or sub-page for easy updates.",
+  "structure": {
+    "portal/": "Portal home and directory",
+    "departments/{dept}/overview.txt": "Department programs, curriculum, and resources",
+    "departments/{dept}/team.txt": "Department staff and faculty contacts",
+    "offices/{office}/overview.txt": "University office or service overview",
+    "offices/community-excellence/": "Also has about.txt and sharing-concerns.txt sub-pages"
+  },
+  "total_files": 20,
+  "entries": [
+    {
+      "file": "portal/portal-home.txt",
+      "topic": "myCMU-Q Portal Home",
+      "section": "help",
+      "summary": "Portal welcome page, FAQ, navigation links to all departments, and community calendar."
+    },
+    {
+      "file": "portal/portal-directory.txt",
+      "topic": "myCMU-Q Portal Directory",
+      "section": "help",
+      "summary": "Directory of all myCMU-Q department and office sites with links."
+    },
+    {
+      "file": "departments/biological-sciences/overview.txt",
+      "topic": "Biological Sciences (myCMU-Q)",
+      "section": "studies",
+      "summary": "Biological Sciences program overview, curriculum, research, minors, and resources."
+    },
+    {
+      "file": "departments/biological-sciences/team.txt",
+      "topic": "Biological Sciences Team (myCMU-Q)",
+      "section": "studies",
+      "summary": "Biological Sciences faculty and staff directory."
+    },
+    {
+      "file": "departments/business-administration/overview.txt",
+      "topic": "Business Administration (myCMU-Q)",
+      "section": "studies",
+      "summary": "Business Administration program overview, curriculum planning, and resources."
+    },
+    {
+      "file": "departments/business-administration/team.txt",
+      "topic": "Business Administration Team (myCMU-Q)",
+      "section": "studies",
+      "summary": "Business Administration faculty and staff with email contacts."
+    },
+    {
+      "file": "departments/computer-science/overview.txt",
+      "topic": "Computer Science (myCMU-Q)",
+      "section": "studies",
+      "summary": "CS and AI programs, concentrations, Bits&Bites, curriculum, and advising structure."
+    },
+    {
+      "file": "departments/computer-science/team.txt",
+      "topic": "Computer Science Team (myCMU-Q)",
+      "section": "studies",
+      "summary": "Computer Science faculty and staff with email contacts."
+    },
+    {
+      "file": "departments/information-systems/overview.txt",
+      "topic": "Information Systems (myCMU-Q)",
+      "section": "studies",
+      "summary": "Information Systems program overview, curriculum, and honors thesis resources."
+    },
+    {
+      "file": "departments/information-systems/team.txt",
+      "topic": "Information Systems Team (myCMU-Q)",
+      "section": "studies",
+      "summary": "Information Systems faculty and staff with email contacts."
+    },
+    {
+      "file": "offices/community-excellence/overview.txt",
+      "topic": "Community Excellence (myCMU-Q)",
+      "section": "help",
+      "summary": "Community Excellence office, spring events, committees, and contact info."
+    },
+    {
+      "file": "offices/community-excellence/about.txt",
+      "topic": "Community Excellence About and Team (myCMU-Q)",
+      "section": "help",
+      "summary": "About CE office, team members, and committee descriptions."
+    },
+    {
+      "file": "offices/community-excellence/sharing-concerns.txt",
+      "topic": "Sharing a Concern and ICCC (myCMU-Q)",
+      "section": "help",
+      "summary": "Reporting concerns via ICCC, Ethicspoint, Title IX, and retaliation policy."
+    },
+    {
+      "file": "offices/computing-services/overview.txt",
+      "topic": "Computing Services (myCMU-Q)",
+      "section": "help",
+      "summary": "Computing Services quick links, service categories, and support resources."
+    },
+    {
+      "file": "offices/education-office/overview.txt",
+      "topic": "Education Office (myCMU-Q)",
+      "section": "help",
+      "summary": "Education Office services, sub-pages, quick links, and team directory."
+    },
+    {
+      "file": "offices/events-committee/overview.txt",
+      "topic": "Events Committee (myCMU-Q)",
+      "section": "help",
+      "summary": "Event planning support, documents, request form, and team contacts."
+    },
+    {
+      "file": "offices/library/overview.txt",
+      "topic": "CMU-Q Library (myCMU-Q)",
+      "section": "help",
+      "summary": "Library services, loan periods, study rooms, resources, and team contacts."
+    },
+    {
+      "file": "offices/marketing-public-relations/overview.txt",
+      "topic": "Marketing and Public Relations (myCMU-Q)",
+      "section": "help",
+      "summary": "MPR services, brand resources, media contacts, and document links."
+    },
+    {
+      "file": "offices/staff-council/overview.txt",
+      "topic": "Staff Council (myCMU-Q)",
+      "section": "help",
+      "summary": "Staff Council events, awards, documents, and leadership team."
+    },
+    {
+      "file": "offices/student-affairs/overview.txt",
+      "topic": "Student Affairs (myCMU-Q)",
+      "section": "help",
+      "summary": "Student Affairs sub-pages, quick links, and team directory."
+    }
+  ]
+}

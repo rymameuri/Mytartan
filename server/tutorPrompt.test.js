@@ -6,6 +6,7 @@ const {
   buildTutorSystemPrompt,
   buildTutorWelcome,
   hasValidCourseContext,
+  formatSourceItemContextBlock,
 } = require("./tutorPrompt");
 
 describe("tutorPrompt", () => {
@@ -83,5 +84,26 @@ describe("tutorPrompt", () => {
     expect(prompt).toMatch(/STUDIO ITEM HELP/i);
     expect(prompt).toMatch(/do not repeat/i);
     expect(prompt).toMatch(/Socratic question/i);
+  });
+
+  test("buildTutorSystemPrompt adds source item context for highlight-and-ask", () => {
+    const prompt = buildTutorSystemPrompt(sampleContext, {
+      sourceItemContext: {
+        title: "Week 3 — Recursion",
+        excerpt: "A base case stops the recursion.",
+      },
+    });
+    expect(prompt).toMatch(/STUDENT SOURCE FOCUS/i);
+    expect(prompt).toMatch(/Week 3 — Recursion/);
+    expect(prompt).toMatch(/base case stops the recursion/i);
+  });
+
+  test("formatSourceItemContextBlock handles full-source requests", () => {
+    const block = formatSourceItemContextBlock({
+      title: "Lecture 4 Notes",
+      excerpt: null,
+    });
+    expect(block).toMatch(/entire source/i);
+    expect(block).not.toMatch(/Highlighted excerpt/i);
   });
 });

@@ -1,0 +1,107 @@
+.canvas-connect {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.canvas-connect__label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: rgba(122, 28, 40, 0.75);
+}
+
+.canvas-connect__input {
+  width: 100%;
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border: 1.5px solid rgba(156, 39, 51, 0.18);
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 0.9375rem;
+  color: #2a1216;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.canvas-connect__input:focus {
+  border-color: var(--tartan-maroon);
+  box-shadow: 0 0 0 3px rgba(156, 39, 51, 0.1);
+}
+
+.canvas-connect__hint {
+  margin: -8px 0 16px;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: rgba(122, 28, 40, 0.55);
+}
+
+.canvas-connect__error {
+  margin: 0 0 12px;
+  font-size: 0.8125rem;
+  color: #b3261e;
+}
+
+.canvas-connect__connect-btn {
+  align-self: flex-start;
+  padding: 10px 20px;
+  border: none;
+  border-radius: var(--ws-radius);
+  background: var(--tartan-crimson);
+  color: var(--tartan-white);
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.canvas-connect__connect-btn:hover:not(:disabled) {
+  background: #a30f28;
+}
+
+.canvas-connect__connect-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.canvas-connect--connected {
+  gap: 12px;
+}
+
+.canvas-connect__badge {
+  display: inline-block;
+  align-self: flex-start;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: #e6f4ea;
+  color: #137333;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.canvas-connect__url {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #2a1216;
+  word-break: break-all;
+}
+
+.canvas-connect__disconnect-btn {
+  align-self: flex-start;
+  padding: 8px 16px;
+  border: 1px solid rgba(156, 39, 51, 0.25);
+  border-radius: var(--ws-radius);
+  background: transparent;
+  color: var(--tartan-maroon);
+  font-family: var(--font-body);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.canvas-connect__disconnect-btn:hover {
+  background: rgba(156, 39, 51, 0.06);
+}

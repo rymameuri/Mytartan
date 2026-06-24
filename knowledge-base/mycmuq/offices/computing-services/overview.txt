@@ -1,0 +1,43 @@
+SOURCE: https://sites.google.com/andrew.cmu.edu/mycmuq-computing-services/home
+TOPIC: Computing Services (myCMU-Q)
+SECTION: help
+---
+Computing Services Qatar — CMU-Q
+
+About: Computing Services Qatar empowers the CMU-Q community by delivering secure, reliable, and user-friendly technologies.
+
+Top Quick Links:
+- Password Reset
+- Set up Wi-Fi
+- Connect to VPN
+- Printing Help
+- Set up Duo 2FA
+- Set up Email & Calendar
+- Install Microsoft Office
+- Canvas Help
+
+Announcements: Google Groups — cmuq-computingservicesupdates
+
+Sub-pages on the Computing Services site:
+- Service Requests
+- Services & How-tos
+- Quick Login Links
+- Teaching Support
+- New to CMUQ
+- Policies & Guidelines
+- FAQ
+- Meet the Team — https://qatar.cmu.edu/people/?department=computing-services
+- Contact us
+
+Service Categories:
+- Accounts & Identity
+- Artificial Intelligence
+- Audiovisual Systems
+- Business Systems
+- Communication & Collaboration
+- Files & Backups
+- Information Security
+- Network Services
+- Printing Services
+- Software
+- Teaching Support (Canvas)

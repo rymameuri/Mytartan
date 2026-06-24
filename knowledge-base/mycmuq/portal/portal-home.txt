@@ -1,0 +1,37 @@
+SOURCE: https://sites.google.com/andrew.cmu.edu/mycmuq/mycmuq-portal-home
+TOPIC: myCMU-Q Portal Home
+SECTION: help
+---
+Welcome to the myCMU-Q portal — the gateway for CMU-Q students, staff, and faculty.
+
+This portal page is the gateway for information for CMU-Q students, staff and faculty. You will find information from all corners of the university, from Academic Programs and the Education Office to Student Affairs and HR, and everyone in between. More department sites will be integrated into the portal as they become ready.
+
+What is the myCMU-Q portal?
+MyCMU-Q is a collection of Google Sites for departments at CMU-Q that replaces the Scotty and Andy web portals.
+
+FAQ:
+- Who created the portal? A team from Computing Services, Community Excellence, and MPR created the framework. Individual departments manage their own content.
+- Who keeps the content updated? Every department is responsible for their own content.
+- What if I don't know which department handles a topic? Contact the Community Excellence office. Théthé Gwiza Ngalula — tgwizang@andrew.cmu.edu
+
+Community Calendar: Embedded Google Calendar — qatar-event-planning@andrew.cmu.edu
+
+Academic Departments:
+- Biological Sciences — https://sites.google.com/andrew.cmu.edu/mycmuq-bs
+- Business Administration — https://sites.google.com/andrew.cmu.edu/mycmuq-ba/home
+- Computer Science — https://sites.google.com/andrew.cmu.edu/mycmuq-cs/home
+- Information Systems — https://sites.google.com/andrew.cmu.edu/mycmuq-is/home
+
+Other Departments and Sections:
+- Community Excellence — https://sites.google.com/andrew.cmu.edu/mycmuq-community-excellence/home
+- Computing Services — https://sites.google.com/andrew.cmu.edu/mycmuq-computing-services/home
+- Education Office — https://sites.google.com/andrew.cmu.edu/mycmuq-education
+- Event Committee — https://sites.google.com/andrew.cmu.edu/mycmuq-events
+- Library — https://sites.google.com/andrew.cmu.edu/mycmuq-library
+- Marketing and Public Relations — https://sites.google.com/andrew.cmu.edu/mycmuq-mpr/marketing-and-public-relations
+- Staff Council — https://sites.google.com/andrew.cmu.edu/mycmuq-staff-council
+- Student Affairs — https://sites.google.com/andrew.cmu.edu/mycmuq-student-affairs/home
+- Portal Directory — https://sites.google.com/andrew.cmu.edu/mycmuq/portal-directory
+
+Copyright © 2025–2026 Carnegie Mellon University in Qatar
+Website: www.qatar.cmu.edu

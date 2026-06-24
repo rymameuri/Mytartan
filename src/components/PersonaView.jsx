@@ -8,6 +8,7 @@ import AvatarScaleHandle from "./AvatarScaleHandle";
 import { useMicInput } from "../hooks/useMicInput";
 import { useAvatarZoom } from "../hooks/useAvatarZoom";
 import { MenuIcon, ShareIcon, DownloadIcon, VolumeIcon, ChevronIcon } from "./Icons";
+import SettingsButton from "./SettingsButton";
 import "./PersonaView.css";
 import "./ChatInterface.css";
 
@@ -27,6 +28,7 @@ function PersonaView({
   stopSpeech,
   isMuted = false,
   onToggleMute,
+  onOpenSettings,
   voiceModeRef,
   avatarRef,
   speechCaption = "",
@@ -210,6 +212,7 @@ function PersonaView({
           >
             <DownloadIcon />
           </button>
+          <SettingsButton onClick={onOpenSettings} />
         </div>
       </header>
 

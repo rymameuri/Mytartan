@@ -1,0 +1,141 @@
+.canvas-import__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(92, 21, 30, 0.55);
+}
+
+.canvas-import {
+  width: min(520px, 100%);
+  max-height: min(80vh, 640px);
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  border-radius: 18px;
+  background: var(--tartan-white);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+}
+
+.canvas-import__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.canvas-import__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  color: var(--tartan-maroon);
+}
+
+.canvas-import__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--tartan-maroon-dark);
+  cursor: pointer;
+}
+
+.canvas-import__close:hover {
+  background: rgba(156, 39, 51, 0.08);
+}
+
+.canvas-import__list {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  overflow-y: auto;
+  max-height: 360px;
+}
+
+.canvas-import__item {
+  border-bottom: 1px solid rgba(156, 39, 51, 0.1);
+}
+
+.canvas-import__label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 4px;
+  cursor: pointer;
+}
+
+.canvas-import__course-text {
+  font-size: 0.9375rem;
+  color: #2a1216;
+}
+
+.canvas-import__code,
+.canvas-import__term {
+  color: rgba(122, 28, 40, 0.65);
+}
+
+.canvas-import__imported-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(156, 39, 51, 0.08);
+  color: var(--tartan-maroon);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.canvas-import__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.canvas-import__primary {
+  padding: 10px 16px;
+  border: none;
+  border-radius: var(--ws-radius);
+  background: var(--tartan-crimson);
+  color: var(--tartan-white);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.canvas-import__primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.canvas-import__secondary {
+  padding: 10px 16px;
+  border: 1px solid rgba(156, 39, 51, 0.25);
+  border-radius: var(--ws-radius);
+  background: transparent;
+  color: var(--tartan-maroon);
+  cursor: pointer;
+}
+
+.canvas-import__muted {
+  margin: 0;
+  color: rgba(122, 28, 40, 0.65);
+}
+
+.canvas-import__error {
+  margin: 0 0 12px;
+  color: #b3261e;
+  font-size: 0.875rem;
+}
+
+.canvas-import__errors {
+  margin: 0 0 12px;
+  padding-left: 18px;
+  color: #b3261e;
+  font-size: 0.8125rem;
+}

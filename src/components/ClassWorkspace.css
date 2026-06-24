@@ -249,7 +249,9 @@ body.ws-resize-active .ws-resize-handle::after {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ws-space-1);
   margin: var(--ws-space-1) 0 0;
   padding: 0 var(--ws-space-1) var(--ws-space-2);
 }

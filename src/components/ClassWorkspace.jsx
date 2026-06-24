@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { extractSyllabusText } from "../utils/extractSyllabusText";
+import { useAuth } from "../context/AuthContext";
 import { useMicInput } from "../hooks/useMicInput";
 import { usePaneResize } from "../hooks/usePaneResize";
 import { useAvatarZoom } from "../hooks/useAvatarZoom";
@@ -19,6 +20,13 @@ import {
   looksLikeStudioLectureRequest,
   resolveStudioItemContext,
 } from "../utils/studioLecture";
+import {
+  previewSnippet,
+  getSourceTypeLabel,
+  buildSourceItemContext,
+  buildSourceHelpMessage,
+  buildSyllabusSource,
+} from "../utils/sourceStudy";
 import MessageContent from "./MessageContent";
 import QuizPlayer from "./QuizPlayer";
 import PersonaMicControls from "./PersonaMicControls";
@@ -26,8 +34,8 @@ import PersonaCaption from "./PersonaCaption";
 import ScottyHeadbandFrame from "./ScottyHeadbandFrame";
 import ScottyAvatar from "./ScottyAvatar";
 import AvatarScaleHandle from "./AvatarScaleHandle";
+import SourceReader from "./SourceReader";
 import {
-  DocumentIcon,
   QuizIcon,
   FlashcardsIcon,
   WhiteboardIcon,
@@ -40,6 +48,7 @@ import {
   ScottyLogoIcon,
 } from "./Icons";
 import "./ClassWorkspace.css";
+import "./SourceReader.css";
 import "./PersonaView.css";
 import "./ChatInterface.css";
 
@@ -124,6 +133,7 @@ function ClassWorkspace({
   avatarState = "idle",
   speechCaption = "",
 }) {
+  const { token } = useAuth();
   const [selectedMaterialIds, setSelectedMaterialIds] = useState(() => new Set());
   const [showAddSource, setShowAddSource] = useState(false);
   const [materialTitle, setMaterialTitle] = useState("");
@@ -141,6 +151,7 @@ function ClassWorkspace({
   const [generatingActivityId, setGeneratingActivityId] = useState(null);
   const [studioError, setStudioError] = useState("");
   const [interactionMode, setInteractionMode] = useState("persona");
+  const [activeReaderSource, setActiveReaderSource] = useState(null);
   const fileInputRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const workspaceRef = useRef(null);
@@ -171,6 +182,66 @@ function ClassWorkspace({
   const scopedContext = useMemo(
     () => buildScopedCourseContext(courseContext, selectedMaterialIds, allMaterials),
     [courseContext, selectedMaterialIds, allMaterials]
+  );
+
+  const hasSyllabus = Boolean(courseContext?.syllabusText?.trim());
+  const syllabusSource = useMemo(() => {
+    if (!hasSyllabus) return null;
+    return {
+      ...buildSyllabusSource(),
+      content: courseContext.syllabusText,
+    };
+  }, [hasSyllabus, courseContext?.syllabusText]);
+
+  const openMaterialReader = useCallback((material) => {
+    setActiveReaderSource({
+      id: material.id,
+      title: material.title,
+      content: material.content ?? "",
+      externalItemId: material.externalItemId,
+    });
+  }, []);
+
+  const openSyllabusReader = useCallback(() => {
+    if (!syllabusSource) return;
+    setActiveReaderSource(syllabusSource);
+  }, [syllabusSource]);
+
+  const requestSourceHelp = useCallback(
+    ({ materialId, title, excerpt }) => {
+      const sourceItemContext = buildSourceItemContext({ materialId, title, excerpt });
+      const message = buildSourceHelpMessage({ title, excerpt });
+
+      let contextForAsk = scopedContext;
+      if (materialId && materialId !== "__syllabus__") {
+        const material = allMaterials.find((m) => m.id === materialId);
+        if (material) {
+          contextForAsk = {
+            ...courseContext,
+            materials: [material],
+          };
+        }
+      }
+
+      setInteractionMode("chat");
+      if (!isDesktop) setMobilePane("chat");
+      setActiveReaderSource(null);
+      onSend(message, "tutor", {
+        lectureTopic: lectureTopic.trim() || title,
+        courseContext: contextForAsk,
+        tutorActivity,
+        sourceItemContext,
+      });
+    },
+    [
+      onSend,
+      lectureTopic,
+      scopedContext,
+      tutorActivity,
+      allMaterials,
+      courseContext,
+      isDesktop,
+    ]
   );
 
   const handleQuizComplete = useCallback(
@@ -403,10 +474,14 @@ function ClassWorkspace({
     setAddingMaterial(true);
     setMaterialError("");
     try {
-      const updated = await addCourseMaterial(courseId, {
-        title: materialTitle.trim(),
-        content: materialContent.trim(),
-      });
+      const updated = await addCourseMaterial(
+        courseId,
+        {
+          title: materialTitle.trim(),
+          content: materialContent.trim(),
+        },
+        token
+      );
       onCourseUpdate(updated);
       setMaterialTitle("");
       setMaterialContent("");
@@ -420,7 +495,7 @@ function ClassWorkspace({
 
   async function handleDeleteMaterial(materialId) {
     try {
-      const updated = await deleteCourseMaterial(courseId, materialId);
+      const updated = await deleteCourseMaterial(courseId, materialId, token);
       onCourseUpdate(updated);
     } catch (err) {
       setMaterialError(err.message || "Could not delete source");
@@ -491,7 +566,7 @@ function ClassWorkspace({
 
   async function handleRefreshCourse() {
     try {
-      const updated = await refreshCourse(courseId);
+      const updated = await refreshCourse(courseId, token);
       onCourseUpdate(updated);
     } catch (err) {
       setMaterialError(err.message || "Could not refresh class");
@@ -759,8 +834,15 @@ function ClassWorkspace({
           </div>
         </div>
 
-        {!sourcesCollapsed && (
-          <>
+        {!sourcesCollapsed &&
+          (activeReaderSource ? (
+            <SourceReader
+              source={activeReaderSource}
+              onClose={() => setActiveReaderSource(null)}
+              onAskScotty={requestSourceHelp}
+            />
+          ) : (
+            <>
             <div className="ws-sources__actions">
               <button
                 type="button"
@@ -823,37 +905,83 @@ function ClassWorkspace({
               <p className="ws-error">{materialError}</p>
             )}
 
-            <ul className="ws-sources__list">
-              {allMaterials.length === 0 ? (
-                <li className="ws-sources__empty">No sources yet. Add lecture notes or readings.</li>
+            <div className="ws-sources__list">
+              {!hasSyllabus && allMaterials.length === 0 ? (
+                <p className="ws-sources__empty">No sources yet. Add lecture notes or readings.</p>
               ) : (
-                allMaterials.map((item) => (
-                  <li key={item.id} className="ws-sources__item">
-                    <label className="ws-sources__label">
-                      <input
-                        type="checkbox"
-                        checked={selectedMaterialIds.has(item.id)}
-                        onChange={() => toggleMaterialSelection(item.id)}
-                      />
-                      <span className="ws-sources__icon">
-                        <DocumentIcon />
-                      </span>
-                      <span className="ws-sources__name">{item.title}</span>
-                    </label>
-                    <button
-                      type="button"
-                      className="btn-secondary ws-sources__delete"
-                      aria-label={`Delete ${item.title}`}
-                      onClick={() => handleDeleteMaterial(item.id)}
-                    >
-                      Delete
-                    </button>
-                  </li>
-                ))
+                <>
+                  {syllabusSource && (
+                    <div className="ws-source-card ws-source-card--syllabus">
+                      <button
+                        type="button"
+                        className="ws-source-card__body"
+                        onClick={openSyllabusReader}
+                      >
+                        <span className="ws-source-card__type">Syllabus · Pinned</span>
+                        <span className="ws-source-card__name">{syllabusSource.title}</span>
+                        <span className="ws-source-card__preview">
+                          {previewSnippet(courseContext.syllabusText)}
+                        </span>
+                      </button>
+                      <div className="ws-source-card__footer">
+                        <button
+                          type="button"
+                          className="ws-source-card__open"
+                          onClick={openSyllabusReader}
+                        >
+                          Open
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  {allMaterials.map((item) => (
+                    <div key={item.id} className="ws-source-card">
+                      <div className="ws-source-card__top">
+                        <input
+                          type="checkbox"
+                          className="ws-source-card__checkbox"
+                          checked={selectedMaterialIds.has(item.id)}
+                          onChange={() => toggleMaterialSelection(item.id)}
+                          aria-label={`Include ${item.title} in chat context`}
+                        />
+                        <button
+                          type="button"
+                          className="ws-source-card__body"
+                          onClick={() => openMaterialReader(item)}
+                        >
+                          <span className="ws-source-card__type">{getSourceTypeLabel(item)}</span>
+                          <span className="ws-source-card__name">{item.title}</span>
+                          {item.content?.trim() && (
+                            <span className="ws-source-card__preview">
+                              {previewSnippet(item.content)}
+                            </span>
+                          )}
+                        </button>
+                      </div>
+                      <div className="ws-source-card__footer">
+                        <button
+                          type="button"
+                          className="ws-source-card__open"
+                          onClick={() => openMaterialReader(item)}
+                        >
+                          Open
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-secondary ws-source-card__delete"
+                          aria-label={`Delete ${item.title}`}
+                          onClick={() => handleDeleteMaterial(item.id)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </>
               )}
-            </ul>
-          </>
-        )}
+            </div>
+            </>
+          ))}
 
         {sourcesCollapsed && (
           <button

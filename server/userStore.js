@@ -92,10 +92,46 @@ function updateUserProfile(id, profileFields) {
   return users[index];
 }
 
+function getUserCanvasConnection(id) {
+  const user = getUserById(id);
+  if (!user?.canvas?.url || !user?.canvas?.token) return null;
+  return { canvasUrl: user.canvas.url, token: user.canvas.token };
+}
+
+function setUserCanvasConnection(id, canvasUrl, token) {
+  const users = readUsers();
+  const index = users.findIndex((user) => user.id === id);
+  if (index < 0) return null;
+
+  users[index] = {
+    ...users[index],
+    canvas: {
+      url: canvasUrl,
+      token,
+    },
+  };
+  writeUsers(users);
+  return users[index];
+}
+
+function clearUserCanvasConnection(id) {
+  const users = readUsers();
+  const index = users.findIndex((user) => user.id === id);
+  if (index < 0) return null;
+
+  const { canvas: _removed, ...rest } = users[index];
+  users[index] = rest;
+  writeUsers(users);
+  return users[index];
+}
+
 module.exports = {
   USERS_FILE,
   getUserByEmail,
   getUserById,
   createUser,
   updateUserProfile,
+  getUserCanvasConnection,
+  setUserCanvasConnection,
+  clearUserCanvasConnection,
 };

@@ -30,7 +30,7 @@ const { generateTutorSpeechScript } = require("./tutorSpeech");
 const { generateQuizRecap } = require("./tutorQuizRecap");
 const {
   listCourses,
-  getCourse,
+  getCourseForUser,
   createCourse,
   approveCourse,
   addContribution,
@@ -52,6 +52,13 @@ const {
   signToken,
   requireAuth,
 } = require("./auth");
+const { setConnection, clearConnection, getConnection } = require("./canvasStore");
+const { getCanvasContext, clearCanvasCaches } = require("./services/canvasService");
+const {
+  listCanvasCoursesForImport,
+  importCanvasCourses,
+  syncCanvasCourse,
+} = require("./services/canvasImportService");
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -181,6 +188,31 @@ RESPONSE STYLE:
 - If there are important caveats, mention them naturally at the end, not as a separate bulleted list.
 - If you do not know, say so plainly in one sentence, then tell the user to check scotty.qatar.cmu.edu for official information.`;
 
+const CANVAS_DUE_TODAY_RULE = `CANVAS ASSIGNMENT RULES
+You HAVE access to this student's live Canvas assignment data (provided below). NEVER say you lack access to their calendar, deadlines, or course assignments when this data is present.
+
+When the student asks what is due today or any variation (anything due, what do I have today, due dates today), respond using ONLY the DUE TODAY block. List each item with assignment name, due time, points, submission type, and a plain-English 2–3 sentence summary of the instructions.
+
+When the student asks what is due this week, upcoming deadlines, or what's coming up, use BOTH the DUE TODAY and UPCOMING ASSIGNMENTS blocks. List each assignment with name, due date/time, points when available, and a brief summary. Keep tone helpful and encouraging.
+
+When the student asks whether you are connected to Canvas or linked to their account, confirm connection status directly using the CANVAS ASSIGNMENT DATA section — do not say you lack access if Canvas data is present below.`;
+
+function isCanvasConnectionStatusQuery(query) {
+  const normalized = String(query ?? "").trim().toLowerCase();
+  if (!/\bcanvas\b/.test(normalized)) return false;
+  return /\b(connected|connect|link|linked|integration|hooked|synced|using my canvas|have my canvas|access my canvas)\b/.test(
+    normalized
+  );
+}
+
+function isCanvasRelatedQuery(query) {
+  const normalized = String(query ?? "").trim().toLowerCase();
+  if (isCanvasConnectionStatusQuery(query)) return true;
+  return /\b(canvas|assignment|assignments|due date|due dates|due today|due this week|deadline|deadlines|homework|coursework|submission|submissions|what'?s due|anything due)\b/.test(
+    normalized
+  );
+}
+
 const SYSTEM_PROMPTS = {
   qa: `${KB_GROUNDING_RULES} Be accurate, concise, and helpful about academics, registration, student life, policies, and CMU-Q resources.`,
   campus: `${KB_GROUNDING_RULES} Help students navigate CMU-Q campus life, resources, and student services.`,
@@ -273,9 +305,19 @@ const SMALL_TALK_VOCAB = new Set([
   "bad",
 ]);
 
+const GRATITUDE_PREFIX =
+  /^(thanks|thank\s+you|thx|ty|i\s+appreciate(?:\s+(?:it|that|this|you|your\s+help))?|much\s+appreciated)\b/i;
+
+function isGratitudeMessage(normalized) {
+  if (!GRATITUDE_PREFIX.test(normalized)) return false;
+  if (hasContentKeywords(normalized)) return false;
+  return normalized.split(/\s+/).length <= 12;
+}
+
 function isSmallTalk(message) {
   const normalized = message.trim().replace(/\s+/g, " ");
   if (!normalized) return false;
+  if (isGratitudeMessage(normalized)) return true;
 
   const words = normalized.split(/\s+/);
   if (words.length > MAX_SMALL_TALK_WORDS) return false;
@@ -319,6 +361,15 @@ function assembleSystemPrompt(appMode, studentContext, body) {
   return parts.join("\n\n");
 }
 
+function prependCanvasContext(body, canvasContext) {
+  if (!canvasContext?.trim()) return body;
+  const canvasBlock = `CANVAS ASSIGNMENT DATA (from the student's connected Canvas account):\n${canvasContext.trim()}`;
+  if (!body?.trim()) {
+    return `${CANVAS_DUE_TODAY_RULE}\n\n${canvasBlock}`;
+  }
+  return `${CANVAS_DUE_TODAY_RULE}\n\n${canvasBlock}\n\n${body.trim()}`;
+}
+
 function buildSystemPrompt(
   mode,
   docs,
@@ -330,38 +381,47 @@ function buildSystemPrompt(
     studioGeneration = false,
     speechMode = null,
     studioItemContext = null,
+    sourceItemContext = null,
     studentContext = "",
     keyFacts = [],
+    canvasContext = null,
   } = {}
 ) {
   if (mode === "tutor") {
     return assembleSystemPrompt(
       mode,
       studentContext,
-      buildTutorSystemPrompt(courseContext, {
-        tutorActivity,
-        lectureTopic,
-        studioGeneration,
-        speechMode,
-        studioItemContext,
-      })
+      prependCanvasContext(
+        buildTutorSystemPrompt(courseContext, {
+          tutorActivity,
+          lectureTopic,
+          studioGeneration,
+          speechMode,
+          studioItemContext,
+          sourceItemContext,
+        }),
+        canvasContext
+      )
     );
   }
 
   let prompt = SYSTEM_PROMPTS[mode];
   if (!KB_MODES.has(mode)) {
-    return assembleSystemPrompt(mode, studentContext, prompt);
+    return assembleSystemPrompt(mode, studentContext, prependCanvasContext(prompt, canvasContext));
   }
 
   if (smallTalk) {
     return assembleSystemPrompt(
       mode,
       studentContext,
-      "The user is greeting you or making casual small talk. Reply warmly in one or two short sentences and invite them to ask about CMU-Q if they'd like."
+      "The user is greeting you, expressing thanks, or making casual small talk. Reply warmly in one or two short sentences. If they thanked you, acknowledge it graciously — do not say you lack information or redirect them to offices."
     );
   }
 
   const contextSections = [];
+  if (canvasContext?.trim()) {
+    contextSections.push(`${CANVAS_DUE_TODAY_RULE}\n\nCANVAS ASSIGNMENT DATA (from the student's connected Canvas account):\n${canvasContext.trim()}`);
+  }
   const keyFactsBlock = buildKeyFactsBlock(keyFacts);
   if (keyFactsBlock) contextSections.push(keyFactsBlock);
   if (docs.length) {
@@ -545,6 +605,9 @@ app.get("/", (_req, res) => {
       "GET /api/auth/me",
       "PATCH /api/auth/profile",
       "GET /api/kb/status",
+      "GET /api/canvas/courses",
+      "POST /api/courses/import/canvas",
+      "POST /api/courses/:id/sync",
       "GET /api/courses",
       "POST /api/courses",
       "GET /api/courses/:id",
@@ -554,9 +617,16 @@ app.get("/", (_req, res) => {
       "POST /api/chat",
       "POST /api/chat/stream",
       "POST /api/liveavatar-token",
+      "POST /api/canvas/connect",
+      "POST /api/canvas/disconnect",
+      "GET /api/canvas/status",
     ],
   });
 });
+
+function normalizeCanvasUrl(url) {
+  return String(url || "").trim().replace(/\/$/, "");
+}
 
 app.post("/api/auth/signup", async (req, res) => {
   const { email, password } = req.body ?? {};
@@ -630,44 +700,112 @@ app.patch("/api/auth/profile", requireAuth, (req, res) => {
   return res.json({ profile: user.profile });
 });
 
+app.post("/api/canvas/connect", requireAuth, async (req, res) => {
+  const { canvasUrl, token } = req.body ?? {};
+  const base = normalizeCanvasUrl(canvasUrl);
+
+  if (!base || !token?.trim()) {
+    return res.status(400).json({ success: false, error: "canvasUrl and token are required" });
+  }
+
+  try {
+    const response = await axios.get(`${base}/api/v1/users/self`, {
+      headers: { Authorization: `Bearer ${token.trim()}` },
+      timeout: 10000,
+    });
+
+    const user = {
+      name: response.data.name,
+      id: response.data.id,
+    };
+
+    setConnection(req.user.id, base, token.trim());
+    return res.json({ success: true, user });
+  } catch {
+    return res.status(401).json({ success: false, error: "Invalid token or URL" });
+  }
+});
+
+app.post("/api/canvas/disconnect", requireAuth, (req, res) => {
+  clearConnection(req.user.id);
+  clearCanvasCaches(req.user.id);
+  return res.json({ success: true });
+});
+
+app.get("/api/canvas/status", requireAuth, (req, res) => {
+  const connection = getConnection(req.user.id);
+  return res.json({
+    connected: Boolean(connection),
+    canvasUrl: connection?.canvasUrl ?? null,
+  });
+});
+
+app.get("/api/canvas/courses", requireAuth, async (req, res) => {
+  try {
+    const courses = await listCanvasCoursesForImport(req.user.id);
+    return res.json({ courses });
+  } catch (err) {
+    const status = err.message === "Canvas is not connected" ? 400 : 502;
+    return res.status(status).json({ error: err.message || "Failed to list Canvas courses" });
+  }
+});
+
+app.post("/api/courses/import/canvas", requireAuth, async (req, res) => {
+  const canvasCourseIds = req.body?.canvasCourseIds;
+  if (!Array.isArray(canvasCourseIds) || canvasCourseIds.length === 0) {
+    return res.status(400).json({ error: "canvasCourseIds must be a non-empty array" });
+  }
+
+  try {
+    const { courses, errors } = await importCanvasCourses(req.user.id, canvasCourseIds);
+    return res.json({
+      courses: courses.map(toCourseContext),
+      errors,
+    });
+  } catch (err) {
+    const status = err.message === "Canvas is not connected" ? 400 : 502;
+    return res.status(status).json({ error: err.message || "Canvas import failed" });
+  }
+});
+
 app.get("/api/kb/status", (_req, res) => {
   res.json(getRetrievalStatus());
 });
 
-app.get("/api/courses", (_req, res) => {
-  const courses = listCourses().map(toPublicSummary);
+app.get("/api/courses", requireAuth, (req, res) => {
+  const courses = listCourses({ userId: req.user.id }).map(toPublicSummary);
   res.json({ courses });
 });
 
-app.post("/api/courses", (req, res) => {
+app.post("/api/courses", requireAuth, (req, res) => {
   try {
-    const course = createCourse(req.body, { status: "active" });
+    const course = createCourse(req.body, { status: "active", userId: req.user.id });
     res.status(201).json({ course: toCourseContext(course) });
   } catch (err) {
     res.status(400).json({ error: err.message || "Failed to create course" });
   }
 });
 
-app.get("/api/courses/:id", (req, res) => {
-  const course = getCourse(req.params.id);
+app.get("/api/courses/:id", requireAuth, (req, res) => {
+  const course = getCourseForUser(req.params.id, req.user.id);
   if (!course) {
     return res.status(404).json({ error: "Course not found" });
   }
   return res.json({ course: toCourseContext(course) });
 });
 
-app.post("/api/courses/:id/approve", (req, res) => {
-  const course = approveCourse(req.params.id);
+app.post("/api/courses/:id/approve", requireAuth, (req, res) => {
+  const course = approveCourse(req.params.id, { userId: req.user.id });
   if (!course) {
     return res.status(404).json({ error: "Course not found" });
   }
   return res.json({ course: toCourseContext(course) });
 });
 
-app.post("/api/courses/:id/contribute", (req, res) => {
+app.post("/api/courses/:id/contribute", requireAuth, (req, res) => {
   const { content, role } = req.body ?? {};
   try {
-    const course = addContribution(req.params.id, content, { role });
+    const course = addContribution(req.params.id, content, { role, userId: req.user.id });
     if (!course) {
       return res.status(404).json({ error: "Course not found" });
     }
@@ -677,17 +815,33 @@ app.post("/api/courses/:id/contribute", (req, res) => {
   }
 });
 
-app.delete("/api/courses/:id", (req, res) => {
-  const deleted = deleteCourse(req.params.id);
+app.delete("/api/courses/:id", requireAuth, (req, res) => {
+  const deleted = deleteCourse(req.params.id, { userId: req.user.id });
   if (!deleted) {
     return res.status(404).json({ error: "Course not found" });
   }
   return res.json({ ok: true });
 });
 
-app.post("/api/courses/:id/materials", (req, res) => {
+app.post("/api/courses/:id/sync", requireAuth, async (req, res) => {
   try {
-    const course = addMaterial(req.params.id, req.body ?? {});
+    const course = await syncCanvasCourse(req.user.id, req.params.id);
+    return res.json({ course: toCourseContext(course) });
+  } catch (err) {
+    const status =
+      err.message === "Course not found"
+        ? 404
+        : err.message === "Canvas is not connected" ||
+            err.message === "This course was not imported from Canvas"
+          ? 400
+          : 502;
+    return res.status(status).json({ error: err.message || "Sync failed" });
+  }
+});
+
+app.post("/api/courses/:id/materials", requireAuth, (req, res) => {
+  try {
+    const course = addMaterial(req.params.id, req.body ?? {}, { userId: req.user.id });
     if (!course) {
       return res.status(404).json({ error: "Course not found" });
     }
@@ -697,8 +851,10 @@ app.post("/api/courses/:id/materials", (req, res) => {
   }
 });
 
-app.delete("/api/courses/:id/materials/:materialId", (req, res) => {
-  const course = deleteMaterial(req.params.id, req.params.materialId);
+app.delete("/api/courses/:id/materials/:materialId", requireAuth, (req, res) => {
+  const course = deleteMaterial(req.params.id, req.params.materialId, {
+    userId: req.user.id,
+  });
   if (!course) {
     return res.status(404).json({ error: "Course or material not found" });
   }
@@ -790,6 +946,7 @@ async function handleChatRequest(req, res, { stream = false } = {}) {
     studioGeneration = false,
     speechMode = null,
     studioItemContext = null,
+    sourceItemContext = null,
   } = req.body;
 
   if (!messages || !Array.isArray(messages)) {
@@ -809,11 +966,21 @@ async function handleChatRequest(req, res, { stream = false } = {}) {
   const latestUserMessage = [...messages].reverse().find((m) => m.role === "user");
   const userQuery = latestUserMessage?.content || "";
   const smallTalk = KB_MODES.has(mode) && isSmallTalk(userQuery);
+  const canvasConnection = req.user?.id ? getConnection(req.user.id) : null;
+  const canvasRelated = KB_MODES.has(mode) && isCanvasRelatedQuery(userQuery);
 
   if (KB_MODES.has(mode) && isProfessorNuiQuery(userQuery)) {
     const reply = getProfessorNuiReply();
     const professorNuiConfidence = computeConfidence([{ score: 999, method: "keyword" }]);
     return sendChatReply(res, reply, { stream, confidence: professorNuiConfidence });
+  }
+
+  if (KB_MODES.has(mode) && isCanvasConnectionStatusQuery(userQuery)) {
+    const reply = canvasConnection
+      ? `Yes — I'm connected to your Canvas at ${canvasConnection.canvasUrl}. Ask me what's due today or this week and I'll pull it from your assignments.`
+      : "Not yet. Click the gear icon in the top right, open Settings, and connect Canvas with your API token. Once linked, I can tell you about assignments and due dates.";
+    const canvasStatusConfidence = computeConfidence([{ score: 999, method: "canvas" }]);
+    return sendChatReply(res, reply, { stream, confidence: canvasStatusConfidence });
   }
 
   const recentMessages = messages.slice(-5);
@@ -822,6 +989,7 @@ async function handleChatRequest(req, res, { stream = false } = {}) {
     : await retrieveForQuery(mode, userQuery, recentMessages);
   const keyFacts = KB_MODES.has(mode) && !smallTalk ? checkKeyFacts(userQuery) : [];
   const studentContext = buildStudentContext(req.user?.profile);
+  const canvasContext = req.user?.id ? await getCanvasContext(req.user.id) : null;
   const systemPrompt = buildSystemPrompt(mode, docs, {
     smallTalk,
     courseContext,
@@ -830,14 +998,16 @@ async function handleChatRequest(req, res, { stream = false } = {}) {
     studioGeneration,
     speechMode,
     studioItemContext,
+    sourceItemContext,
     studentContext,
     keyFacts,
+    canvasContext,
   });
   const aiOptions = getAiGenerationOptions(mode);
   const courseContextBlock =
     mode === "tutor" ? formatCourseContextBlock(courseContext) : "";
 
-  if (KB_MODES.has(mode) && !smallTalk && docs.length === 0) {
+  if (KB_MODES.has(mode) && !smallTalk && docs.length === 0 && !canvasRelated && !canvasConnection) {
     const reply = NO_KB_MATCH_REPLY;
     const noMatchConfidence = computeConfidence([]);
     return sendChatReply(res, reply, { stream, confidence: noMatchConfidence });
@@ -848,7 +1018,9 @@ async function handleChatRequest(req, res, { stream = false } = {}) {
     !smallTalk &&
     confidence &&
     confidence.score < LOW_CONFIDENCE_THRESHOLD &&
-    confidence.sourceCount > 0
+    confidence.sourceCount > 0 &&
+    !canvasRelated &&
+    !canvasConnection
   ) {
     return sendChatReply(res, LOW_CONFIDENCE_REPLY, { stream, confidence });
   }
@@ -1099,3 +1271,5 @@ module.exports.hasAiKey = hasAiKey;
 module.exports.LOW_CONFIDENCE_THRESHOLD = LOW_CONFIDENCE_THRESHOLD;
 module.exports.LOW_CONFIDENCE_REPLY = LOW_CONFIDENCE_REPLY;
 module.exports.isSmallTalk = isSmallTalk;
+module.exports.isCanvasConnectionStatusQuery = isCanvasConnectionStatusQuery;
+module.exports.isCanvasRelatedQuery = isCanvasRelatedQuery;
