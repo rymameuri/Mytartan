@@ -1,0 +1,20 @@
+SOURCE: https://sites.google.com/andrew.cmu.edu/mycmuq-computing-services/services-how-tos/artificial-intelligence
+TOPIC: Artificial Intelligence Tools (Computing Services)
+SECTION: help
+---
+Artificial Intelligence — Computing Services Qatar
+
+AI Hub of Computing Services Qatar — Guide for responsibly using AI tools and resources.
+
+CMU-Approved AI Tools:
+- ChatGPT Edu — conversational AI for brainstorming, drafting, research; available to all CMU students, faculty, and staff
+- Microsoft Copilot Chat — built into Microsoft 365 (Word, Excel, PowerPoint); summarizes documents and automates tasks
+- Gemini Web App — Google's AI integrated with CMU Google Workspace; assists with writing and research
+- NotebookLM — Google AI for research/study; upload materials for AI-powered summaries
+- Zoom AI Companion — generates meeting summaries, highlights action items
+- CMU-Q AI Gateway (In Progress) — secure access to CMU-Q's advanced computing resources for faculty and researchers
+
+Google Chat Spaces:
+- CMU-Q AI for Productivity & Efficiency — exploring AI tools for administrative workflows
+- CMU-Q AI for Education & Research Innovation — for faculty/researchers discussing AI in teaching and research
+Join via direct link or browse in Google Chat.

@@ -1,0 +1,22 @@
+SOURCE: https://sites.google.com/andrew.cmu.edu/mycmuq-computing-services/services-how-tos/files-backups
+TOPIC: Files and Backups (Computing Services)
+SECTION: help
+---
+Files & Backups — Computing Services Qatar
+
+Google Drive — cloud storage for all CMU-Q affiliates; Shared Drives available to faculty/staff only.
+Access: drive.google.com; Desktop app available.
+
+Box — enterprise cloud storage for sensitive/large files; flexible permissions.
+Access: cmu.app.box.com; Box Drive app available.
+
+CrashPlan Backup — automatic continuous backup for faculty/staff only; installed on managed computers; supports multiple devices.
+Setup guide: see CrashPlan User Guide sub-page.
+
+Network Drives:
+- U Drive (12GB personal quota) and S Drive (shared department folders)
+- Available on classroom, cluster, and managed Windows laptops when connected to campus network
+
+Other Storage: Specialized/high-capacity solutions on case-by-case basis; email helpcenter@qatar.cmu.edu.
+
+Related sub-page: CrashPlan User Guide

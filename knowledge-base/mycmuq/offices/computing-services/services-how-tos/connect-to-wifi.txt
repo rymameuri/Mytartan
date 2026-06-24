@@ -1,0 +1,17 @@
+SOURCE: https://sites.google.com/andrew.cmu.edu/mycmuq-computing-services/services-how-tos/network-services/connect-to-wifi
+TOPIC: Connect to WiFi (Computing Services)
+SECTION: help
+---
+Connect to WiFi — Computing Services Qatar
+
+CMUQ-SECURE:
+For all CMU affiliates with Andrew ID. Step-by-step OS-specific connection instructions available on portal.
+
+eduroam:
+For visiting institution affiliates. Search eduroam.org for network support.
+
+CMUQ-GUEST:
+For all other visitors. Requires working mobile number for SMS PIN; PIN expires within 24 hours.
+Username: phone number
+Password: 4-digit PIN
+Computing Services: 4454-8440

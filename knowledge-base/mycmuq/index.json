@@ -7,129 +7,600 @@
     "departments/{dept}/overview.txt": "Department programs, curriculum, and resources",
     "departments/{dept}/team.txt": "Department staff and faculty contacts",
     "offices/{office}/overview.txt": "University office or service overview",
-    "offices/community-excellence/": "Also has about.txt and sharing-concerns.txt sub-pages"
+    "offices/computing-services/services-how-tos/": "Computing Services deep sub-pages (24 pages)",
+    "offices/education-office/academic-programs/": "Minors, certificates, StuCo, micro courses, etc.",
+    "offices/education-office/academic-resource-center/": "ARC tutoring, employment, study resources",
+    "offices/education-office/experiential-learning/": "Global learning trips and experiential programs",
+    "offices/education-office/awards-and-honors/": "Academic awards and honor society inductees",
+    "offices/education-office/academic-policies/": "Academic policies and grade appeals",
+    "offices/education-office/financial-aid/": "Financial aid, tuition, enrollment records",
+    "offices/education-office/registration-records/": "Calendars, schedules, course registration",
+    "offices/student-affairs/career-services/": "Career tools, resumes, grad school resources",
+    "offices/student-affairs/caps-q/": "Counseling and mental health services",
+    "offices/student-affairs/health-wellness/": "Health insurance and wellness programs",
+    "offices/student-affairs/international-student-support/": "Housing, immigration, new student onboarding",
+    "offices/student-affairs/student-government-clubs/": "Student Majlis and club guidelines",
+    "offices/student-affairs/study-abroad/": "Study abroad and research programs",
+    "alpha-iota-delta-award/": "Alpha Iota Delta honor society award"
   },
-  "total_files": 20,
+  "total_files": 94,
   "entries": [
     {
-      "file": "portal/portal-home.txt",
-      "topic": "myCMU-Q Portal Home",
-      "section": "help",
-      "summary": "Portal welcome page, FAQ, navigation links to all departments, and community calendar."
-    },
-    {
-      "file": "portal/portal-directory.txt",
-      "topic": "myCMU-Q Portal Directory",
-      "section": "help",
-      "summary": "Directory of all myCMU-Q department and office sites with links."
+      "file": "alpha-iota-delta-award/alpha-iota-delta-award.txt",
+      "topic": "Alpha Iota Delta Award (myCMU-Q)",
+      "section": "studies",
+      "summary": "Alpha Iota Delta Award — CMU-Q"
     },
     {
       "file": "departments/biological-sciences/overview.txt",
       "topic": "Biological Sciences (myCMU-Q)",
       "section": "studies",
-      "summary": "Biological Sciences program overview, curriculum, research, minors, and resources."
+      "summary": "Biological Sciences — CMU-Q"
     },
     {
       "file": "departments/biological-sciences/team.txt",
       "topic": "Biological Sciences Team (myCMU-Q)",
       "section": "studies",
-      "summary": "Biological Sciences faculty and staff directory."
+      "summary": "Biological Sciences — Meet the Team"
     },
     {
       "file": "departments/business-administration/overview.txt",
       "topic": "Business Administration (myCMU-Q)",
       "section": "studies",
-      "summary": "Business Administration program overview, curriculum planning, and resources."
+      "summary": "Business Administration — CMU-Q"
     },
     {
       "file": "departments/business-administration/team.txt",
       "topic": "Business Administration Team (myCMU-Q)",
       "section": "studies",
-      "summary": "Business Administration faculty and staff with email contacts."
+      "summary": "Business Administration — Meet the Team"
     },
     {
       "file": "departments/computer-science/overview.txt",
       "topic": "Computer Science (myCMU-Q)",
       "section": "studies",
-      "summary": "CS and AI programs, concentrations, Bits&Bites, curriculum, and advising structure."
+      "summary": "Computer Science — CMU-Q"
     },
     {
       "file": "departments/computer-science/team.txt",
       "topic": "Computer Science Team (myCMU-Q)",
       "section": "studies",
-      "summary": "Computer Science faculty and staff with email contacts."
+      "summary": "Computer Science — Meet the Team"
     },
     {
       "file": "departments/information-systems/overview.txt",
       "topic": "Information Systems (myCMU-Q)",
       "section": "studies",
-      "summary": "Information Systems program overview, curriculum, and honors thesis resources."
+      "summary": "Information Systems — CMU-Q"
     },
     {
       "file": "departments/information-systems/team.txt",
       "topic": "Information Systems Team (myCMU-Q)",
       "section": "studies",
-      "summary": "Information Systems faculty and staff with email contacts."
-    },
-    {
-      "file": "offices/community-excellence/overview.txt",
-      "topic": "Community Excellence (myCMU-Q)",
-      "section": "help",
-      "summary": "Community Excellence office, spring events, committees, and contact info."
+      "summary": "Information Systems — Meet the Team"
     },
     {
       "file": "offices/community-excellence/about.txt",
       "topic": "Community Excellence About and Team (myCMU-Q)",
       "section": "help",
-      "summary": "About CE office, team members, and committee descriptions."
+      "summary": "Community Excellence — About CE"
+    },
+    {
+      "file": "offices/community-excellence/overview.txt",
+      "topic": "Community Excellence (myCMU-Q)",
+      "section": "help",
+      "summary": "Community Excellence — CMU-Q"
     },
     {
       "file": "offices/community-excellence/sharing-concerns.txt",
       "topic": "Sharing a Concern and ICCC (myCMU-Q)",
       "section": "help",
-      "summary": "Reporting concerns via ICCC, Ethicspoint, Title IX, and retaliation policy."
+      "summary": "Sharing a Concern — Community Excellence"
     },
     {
       "file": "offices/computing-services/overview.txt",
       "topic": "Computing Services (myCMU-Q)",
       "section": "help",
-      "summary": "Computing Services quick links, service categories, and support resources."
+      "summary": "Computing Services Qatar — CMU-Q"
+    },
+    {
+      "file": "offices/computing-services/services-how-tos/accounts-identity.txt",
+      "topic": "Accounts and Identity (Computing Services)",
+      "section": "help",
+      "summary": "Accounts & Identity — Computing Services Qatar"
+    },
+    {
+      "file": "offices/computing-services/services-how-tos/artificial-intelligence.txt",
+      "topic": "Artificial Intelligence Tools (Computing Services)",
+      "section": "help",
+      "summary": "Artificial Intelligence — Computing Services Qatar"
+    },
+    {
+      "file": "offices/computing-services/services-how-tos/audiovisual-systems.txt",
+      "topic": "Audiovisual Systems (Computing Services)",
+      "section": "help",
+      "summary": "Audiovisual Systems — Computing Services Qatar"
+    },
+    {
+      "file": "offices/computing-services/services-how-tos/business-systems.txt",
+      "topic": "Business Systems (Computing Services)",
+      "section": "help",
+      "summary": "Business Systems — Computing Services Qatar"
+    },
+    {
+      "file": "offices/computing-services/services-how-tos/campusprinting.txt",
+      "topic": "Campus Printing User Guide (Computing Services)",
+      "section": "help",
+      "summary": "CampusPrinting User Guide — Computing Services Qatar"
+    },
+    {
+      "file": "offices/computing-services/services-how-tos/canvas-for-students.txt",
+      "topic": "Canvas for Students (Computing Services)",
+      "section": "help",
+      "summary": "Canvas for Students — Computing Services Qatar"
+    },
+    {
+      "file": "offices/computing-services/services-how-tos/canvas-help.txt",
+      "topic": "Canvas Help (Computing Services)",
+      "section": "help",
+      "summary": "Canvas Help — Computing Services Qatar"
+    },
+    {
+      "file": "offices/computing-services/services-how-tos/classroom-orientation.txt",
+      "topic": "Classroom AV Orientation (Computing Services)",
+      "section": "help",
+      "summary": "Classroom Orientation — Computing Services Qatar"
+    },
+    {
+      "file": "offices/computing-services/services-how-tos/comm-collab.txt",
+      "topic": "Communication and Collaboration (Computing Services)",
+      "section": "help",
+      "summary": "Communication & Collaboration — Computing Services Qatar"
+    },
+    {
+      "file": "offices/computing-services/services-how-tos/connect-to-wifi.txt",
+      "topic": "Connect to WiFi (Computing Services)",
+      "section": "help",
+      "summary": "Connect to WiFi — Computing Services Qatar"
+    },
+    {
+      "file": "offices/computing-services/services-how-tos/crashplan-user-guide.txt",
+      "topic": "CrashPlan Backup User Guide (Computing Services)",
+      "section": "help",
+      "summary": "CrashPlan User Guide — Computing Services Qatar"
+    },
+    {
+      "file": "offices/computing-services/services-how-tos/files-backups.txt",
+      "topic": "Files and Backups (Computing Services)",
+      "section": "help",
+      "summary": "Files & Backups — Computing Services Qatar"
+    },
+    {
+      "file": "offices/computing-services/services-how-tos/gpu-resources-guide.txt",
+      "topic": "GPU Resources Guide (Computing Services)",
+      "section": "help",
+      "summary": "GPU Resources Guide — Computing Services Qatar"
+    },
+    {
+      "file": "offices/computing-services/services-how-tos/information-security.txt",
+      "topic": "Information Security (Computing Services)",
+      "section": "help",
+      "summary": "Information Security — Computing Services Qatar"
+    },
+    {
+      "file": "offices/computing-services/services-how-tos/microsoft-365-setup-guide.txt",
+      "topic": "Microsoft 365 Setup Guide (Computing Services)",
+      "section": "help",
+      "summary": "Microsoft 365 Setup Guide — Computing Services Qatar"
+    },
+    {
+      "file": "offices/computing-services/services-how-tos/network-services.txt",
+      "topic": "Network Services (Computing Services)",
+      "section": "help",
+      "summary": "Network Services — Computing Services Qatar"
+    },
+    {
+      "file": "offices/computing-services/services-how-tos/office-equipment.txt",
+      "topic": "Office Equipment (Computing Services)",
+      "section": "help",
+      "summary": "Office Equipment — Computing Services Qatar"
+    },
+    {
+      "file": "offices/computing-services/services-how-tos/online-training.txt",
+      "topic": "Online Training (Computing Services)",
+      "section": "help",
+      "summary": "Online Training — Computing Services Qatar"
+    },
+    {
+      "file": "offices/computing-services/services-how-tos/password-management.txt",
+      "topic": "Password Management (Computing Services)",
+      "section": "help",
+      "summary": "Password Management — Computing Services Qatar"
+    },
+    {
+      "file": "offices/computing-services/services-how-tos/printing-services.txt",
+      "topic": "Printing Services (Computing Services)",
+      "section": "help",
+      "summary": "Printing Services — Computing Services Qatar"
+    },
+    {
+      "file": "offices/computing-services/services-how-tos/research-support.txt",
+      "topic": "Research Support (Computing Services)",
+      "section": "help",
+      "summary": "Research Support — Computing Services Qatar"
+    },
+    {
+      "file": "offices/computing-services/services-how-tos/software.txt",
+      "topic": "Software (Computing Services)",
+      "section": "help",
+      "summary": "Software — Computing Services Qatar"
+    },
+    {
+      "file": "offices/computing-services/services-how-tos/two-factor-authentication.txt",
+      "topic": "Two-Factor Authentication (Computing Services)",
+      "section": "help",
+      "summary": "Two-Factor Authentication (2FA) — Computing Services Qatar"
+    },
+    {
+      "file": "offices/computing-services/services-how-tos/vpn-setup-guide.txt",
+      "topic": "VPN Setup Guide (Computing Services)",
+      "section": "help",
+      "summary": "VPN Setup Guide — Computing Services Qatar"
+    },
+    {
+      "file": "offices/education-office/academic-policies/academic-actions.txt",
+      "topic": "Academic Actions (myCMU-Q)",
+      "section": "help",
+      "summary": "Academic Actions — Education Office, CMU-Q"
+    },
+    {
+      "file": "offices/education-office/academic-policies/examination-policies.txt",
+      "topic": "Examination Policies (myCMU-Q)",
+      "section": "help",
+      "summary": "Examination Policies — Education Office, CMU-Q"
+    },
+    {
+      "file": "offices/education-office/academic-policies/grade-appeal-procedure.txt",
+      "topic": "Grade Appeal Procedure for Undergraduates (myCMU-Q)",
+      "section": "help",
+      "summary": "Procedure for the Appeal of Grades and Academic Actions for Undergraduate — Education Office, CMU-Q"
+    },
+    {
+      "file": "offices/education-office/academic-policies/policy-on-changing-majors.txt",
+      "topic": "Policy on Changing Majors (myCMU-Q)",
+      "section": "help",
+      "summary": "Policy on Changing Majors — Education Office, CMU-Q"
+    },
+    {
+      "file": "offices/education-office/academic-policies/university-policies.txt",
+      "topic": "University Policies (myCMU-Q Education Office)",
+      "section": "help",
+      "summary": "University Policies — Education Office, CMU-Q"
+    },
+    {
+      "file": "offices/education-office/academic-policies/video-waivers.txt",
+      "topic": "Video Waivers (myCMU-Q)",
+      "section": "help",
+      "summary": "Video Waivers — Education Office, CMU-Q"
+    },
+    {
+      "file": "offices/education-office/academic-programs/certificates.txt",
+      "topic": "Certificates at CMU-Q (myCMU-Q Education Office)",
+      "section": "studies",
+      "summary": "Certificates — Education Office, CMU-Q"
+    },
+    {
+      "file": "offices/education-office/academic-programs/fifth-year-scholar-program.txt",
+      "topic": "Fifth-Year Scholar Program (myCMU-Q Education Office)",
+      "section": "studies",
+      "summary": "Fifth-Year Scholar Program — Education Office, CMU-Q"
+    },
+    {
+      "file": "offices/education-office/academic-programs/micro-course-information.txt",
+      "topic": "Micro Courses at CMU-Q (myCMU-Q Education Office)",
+      "section": "studies",
+      "summary": "Micro Course Information — Education Office, CMU-Q"
+    },
+    {
+      "file": "offices/education-office/academic-programs/minors.txt",
+      "topic": "Minors at CMU-Q (myCMU-Q Education Office)",
+      "section": "studies",
+      "summary": "Minors — Education Office, CMU-Q"
+    },
+    {
+      "file": "offices/education-office/academic-programs/physical-education.txt",
+      "topic": "Physical Education at CMU-Q (myCMU-Q Education Office)",
+      "section": "studies",
+      "summary": "Physical Education at CMU-Q — Education Office"
+    },
+    {
+      "file": "offices/education-office/academic-programs/stuco.txt",
+      "topic": "StuCo Student-Taught Courses (myCMU-Q Education Office)",
+      "section": "studies",
+      "summary": "StuCo (Student-Taught Courses) — Education Office, CMU-Q"
+    },
+    {
+      "file": "offices/education-office/academic-programs/washington-semester-program.txt",
+      "topic": "Washington Semester Program (myCMU-Q Education Office)",
+      "section": "studies",
+      "summary": "Washington Semester Program — Education Office, CMU-Q"
+    },
+    {
+      "file": "offices/education-office/academic-resource-center/frequently-asked-questions.txt",
+      "topic": "ARC Frequently Asked Questions (myCMU-Q)",
+      "section": "studies",
+      "summary": "ARC Frequently Asked Questions — Academic Resource Center, CMU-Q"
+    },
+    {
+      "file": "offices/education-office/academic-resource-center/self-help-study-corner.txt",
+      "topic": "Self-Help Study Corner (ARC)",
+      "section": "studies",
+      "summary": "Self-Help Study Corner — Academic Resource Center, CMU-Q"
+    },
+    {
+      "file": "offices/education-office/academic-resource-center/student-employment.txt",
+      "topic": "Student Employment (ARC)",
+      "section": "studies",
+      "summary": "Student Employment — Academic Resource Center, CMU-Q"
+    },
+    {
+      "file": "offices/education-office/academic-resource-center/supplemental-instruction.txt",
+      "topic": "Supplemental Instruction (ARC)",
+      "section": "studies",
+      "summary": "Supplemental Instruction — Academic Resource Center, CMU-Q"
+    },
+    {
+      "file": "offices/education-office/awards-and-honors/college-honors.txt",
+      "topic": "College Honors (myCMU-Q)",
+      "section": "studies",
+      "summary": "College Honors — Education Office, CMU-Q"
+    },
+    {
+      "file": "offices/education-office/awards-and-honors/outstanding-academic-achievement-award.txt",
+      "topic": "Outstanding Academic Achievement Award (myCMU-Q)",
+      "section": "studies",
+      "summary": "Outstanding Academic Achievement Award — Education Office, CMU-Q"
+    },
+    {
+      "file": "offices/education-office/awards-and-honors/outstanding-course-assistant-award.txt",
+      "topic": "Outstanding Course Assistant Award (myCMU-Q)",
+      "section": "studies",
+      "summary": "Outstanding Course Assistant Award — Education Office, CMU-Q"
+    },
+    {
+      "file": "offices/education-office/awards-and-honors/phi-alpha-theta-honor-society.txt",
+      "topic": "Phi Alpha Theta Honor Society (myCMU-Q)",
+      "section": "studies",
+      "summary": "Phi Alpha Theta Honor Society — Education Office, CMU-Q"
+    },
+    {
+      "file": "offices/education-office/awards-and-honors/qatar-campus-scholar-and-andrew-carnegie-scholar.txt",
+      "topic": "Qatar Campus Scholar and Andrew Carnegie Scholar (myCMU-Q)",
+      "section": "studies",
+      "summary": "Qatar Campus Scholar and Andrew Carnegie Scholar — Education Office, CMU-Q"
+    },
+    {
+      "file": "offices/education-office/awards-and-honors/student-academic-achievement-awards.txt",
+      "topic": "Student Academic Achievement Awards (myCMU-Q)",
+      "section": "studies",
+      "summary": "Student Academic Achievement Awards — Education Office, CMU-Q"
+    },
+    {
+      "file": "offices/education-office/awards-and-honors/university-honors.txt",
+      "topic": "University Honors (myCMU-Q)",
+      "section": "studies",
+      "summary": "University Honors — Education Office, CMU-Q"
+    },
+    {
+      "file": "offices/education-office/experiential-learning/global-learning-trip.txt",
+      "topic": "Global Learning Trip (Experiential Learning)",
+      "section": "studies",
+      "summary": "Global Learning Trip — Experiential Learning, CMU-Q"
+    },
+    {
+      "file": "offices/education-office/financial-aid/emergency-student-loans-and-grants.txt",
+      "topic": "Emergency Student Loans and Grants (myCMU-Q)",
+      "section": "help",
+      "summary": "Emergency Student Loans and Grants — Education Office, CMU-Q"
+    },
+    {
+      "file": "offices/education-office/financial-aid/enrollment-records.txt",
+      "topic": "Enrollment Records (myCMU-Q Education Office)",
+      "section": "help",
+      "summary": "Enrollment Records — Education Office, CMU-Q"
+    },
+    {
+      "file": "offices/education-office/financial-aid/financial-aid.txt",
+      "topic": "Financial Aid at CMU-Q (myCMU-Q Education Office)",
+      "section": "help",
+      "summary": "Financial Aid — Education Office, CMU-Q"
+    },
+    {
+      "file": "offices/education-office/financial-aid/tuition-and-fees.txt",
+      "topic": "Tuition and Fees at CMU-Q (myCMU-Q Education Office)",
+      "section": "help",
+      "summary": "Tuition and Fees — Education Office, CMU-Q"
     },
     {
       "file": "offices/education-office/overview.txt",
       "topic": "Education Office (myCMU-Q)",
       "section": "help",
-      "summary": "Education Office services, sub-pages, quick links, and team directory."
+      "summary": "Education Office — CMU-Q"
+    },
+    {
+      "file": "offices/education-office/registration-records/calendars-schedules.txt",
+      "topic": "Calendars and Schedules (myCMU-Q Education Office)",
+      "section": "studies",
+      "summary": "Calendars & Schedules — Education Office, CMU-Q"
+    },
+    {
+      "file": "offices/education-office/registration-records/course-registration.txt",
+      "topic": "Course Registration (myCMU-Q Education Office)",
+      "section": "studies",
+      "summary": "Course Registration — Education Office, CMU-Q"
     },
     {
       "file": "offices/events-committee/overview.txt",
       "topic": "Events Committee (myCMU-Q)",
       "section": "help",
-      "summary": "Event planning support, documents, request form, and team contacts."
+      "summary": "Events Committee — CMU-Q"
     },
     {
       "file": "offices/library/overview.txt",
       "topic": "CMU-Q Library (myCMU-Q)",
       "section": "help",
-      "summary": "Library services, loan periods, study rooms, resources, and team contacts."
+      "summary": "CMU-Q Library"
     },
     {
       "file": "offices/marketing-public-relations/overview.txt",
       "topic": "Marketing and Public Relations (myCMU-Q)",
       "section": "help",
-      "summary": "MPR services, brand resources, media contacts, and document links."
+      "summary": "Marketing and Public Relations (MPR) — CMU-Q"
     },
     {
       "file": "offices/staff-council/overview.txt",
       "topic": "Staff Council (myCMU-Q)",
       "section": "help",
-      "summary": "Staff Council events, awards, documents, and leadership team."
+      "summary": "Staff Council — CMU-Q"
+    },
+    {
+      "file": "offices/student-affairs/caps-q/accommodations-mental-health-learning-disabilities.txt",
+      "topic": "Accommodations for Mental Health and Learning Disabilities (CaPS-Q)",
+      "section": "help",
+      "summary": "Accommodations for Mental Health and Learning Disabilities — CaPS-Q, CMU-Q"
+    },
+    {
+      "file": "offices/student-affairs/caps-q/caps-services.txt",
+      "topic": "CaPS-Q Services (Counseling and Psychological Services)",
+      "section": "help",
+      "summary": "CaPS-Q Services — Counseling & Psychological Services Qatar"
+    },
+    {
+      "file": "offices/student-affairs/caps-q/mental-health-resources.txt",
+      "topic": "Mental Health Resources (CaPS-Q)",
+      "section": "help",
+      "summary": "Mental Health Resources — CaPS-Q, CMU-Q"
+    },
+    {
+      "file": "offices/student-affairs/career-services/career-tools-resources.txt",
+      "topic": "Career Tools and Resources (Student Affairs)",
+      "section": "help",
+      "summary": "Career Tools & Resources — Career Services, CMU-Q"
+    },
+    {
+      "file": "offices/student-affairs/career-services/graduate-school-resources.txt",
+      "topic": "Graduate School Resources (Career Services)",
+      "section": "help",
+      "summary": "Graduate School Resources — Career Services, CMU-Q"
+    },
+    {
+      "file": "offices/student-affairs/career-services/resumes-cover-letters.txt",
+      "topic": "Resumes and Cover Letters (Career Services)",
+      "section": "help",
+      "summary": "Resumes & Cover Letters — Career Services, CMU-Q"
+    },
+    {
+      "file": "offices/student-affairs/health-wellness/health-insurance.txt",
+      "topic": "Health Insurance (Student Affairs)",
+      "section": "help",
+      "summary": "Health Insurance — Health & Wellness, CMU-Q"
+    },
+    {
+      "file": "offices/student-affairs/health-wellness/health-services-policies.txt",
+      "topic": "Health Services and Policies (Student Affairs)",
+      "section": "help",
+      "summary": "Health Services & Policies — Health & Wellness, CMU-Q"
+    },
+    {
+      "file": "offices/student-affairs/international-student-support/financial-wellness-at-cmu.txt",
+      "topic": "Financial Wellness at CMU (Student Affairs)",
+      "section": "help",
+      "summary": "Financial Wellness at CMU — International Student Support, CMU-Q"
+    },
+    {
+      "file": "offices/student-affairs/international-student-support/immigration.txt",
+      "topic": "Immigration (Student Affairs)",
+      "section": "help",
+      "summary": "Immigration — International Student Support, CMU-Q"
+    },
+    {
+      "file": "offices/student-affairs/international-student-support/new-international-exchange-students.txt",
+      "topic": "New International and Exchange Students (Student Affairs)",
+      "section": "help",
+      "summary": "New International & Exchange Students — Student Affairs, CMU-Q"
+    },
+    {
+      "file": "offices/student-affairs/international-student-support/qf-student-housing.txt",
+      "topic": "QF Student Housing (Student Affairs)",
+      "section": "help",
+      "summary": "QF Student Housing — International Student Support, CMU-Q"
     },
     {
       "file": "offices/student-affairs/overview.txt",
       "topic": "Student Affairs (myCMU-Q)",
       "section": "help",
-      "summary": "Student Affairs sub-pages, quick links, and team directory."
+      "summary": "Student Affairs — CMU-Q"
+    },
+    {
+      "file": "offices/student-affairs/student-government-clubs/club-guidelines.txt",
+      "topic": "Club Guidelines (Student Affairs)",
+      "section": "help",
+      "summary": "Club Guidelines — Student Affairs, CMU-Q"
+    },
+    {
+      "file": "offices/student-affairs/student-government-clubs/meet-the-25-26-student-majlis-team.txt",
+      "topic": "2025-26 Student Majlis Team (Student Affairs)",
+      "section": "help",
+      "summary": "Meet the 25-26 Student Majlis Team — Student Affairs, CMU-Q"
+    },
+    {
+      "file": "offices/student-affairs/study-abroad/external-study-abroad.txt",
+      "topic": "External Study Abroad (Student Affairs)",
+      "section": "help",
+      "summary": "External Study Abroad — Study Abroad Experiences, CMU-Q"
+    },
+    {
+      "file": "offices/student-affairs/study-abroad/studying-in-pittsburgh.txt",
+      "topic": "Studying in Pittsburgh (Student Affairs)",
+      "section": "help",
+      "summary": "Studying in Pittsburgh — Study Abroad Experiences, CMU-Q"
+    },
+    {
+      "file": "offices/student-affairs/study-abroad/summer-research-institute.txt",
+      "topic": "Summer Research Institute (Student Affairs)",
+      "section": "help",
+      "summary": "Summer Research Institute — Study Abroad Experiences, CMU-Q"
+    },
+    {
+      "file": "offices/student-affairs/study-abroad/washington-semester-program.txt",
+      "topic": "Washington Semester Program (Student Affairs)",
+      "section": "help",
+      "summary": "Washington Semester Program — Study Abroad Experiences, CMU-Q"
+    },
+    {
+      "file": "portal/portal-directory.txt",
+      "topic": "myCMU-Q Portal Directory",
+      "section": "help",
+      "summary": "Portal Directory — myCMU-Q"
+    },
+    {
+      "file": "portal/portal-home.txt",
+      "topic": "myCMU-Q Portal Home",
+      "section": "help",
+      "summary": "Welcome to the myCMU-Q portal — the gateway for CMU-Q students, staff, and faculty."
     }
-  ]
+  ],
+  "topicSuggestions": {
+    "file": "src/data/topicSuggestions.js",
+    "description": "Sidebar topic suggestions — update when adding KB pages. Each item may include kbPath linking to a knowledge-base file.",
+    "sectionCount": 5,
+    "itemCount": 35,
+    "sections": [
+      "Your Studies",
+      "Campus IT & Computing",
+      "Student Life & Wellness",
+      "Financial Aid & Records",
+      "Policies & Help"
+    ]
+  }
 }

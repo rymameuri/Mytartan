@@ -171,7 +171,7 @@ describe("POST /api/chat — input validation", () => {
     const res = await request(app)
       .post("/api/chat")
       .send({
-        messages: [{ role: "user", content: "How much is tuition per semester?" }],
+        messages: [{ role: "user", content: "What are the quantum physics lab hours?" }],
         mode: "qa",
       });
 

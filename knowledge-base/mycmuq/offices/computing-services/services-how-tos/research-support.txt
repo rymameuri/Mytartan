@@ -1,0 +1,18 @@
+SOURCE: https://sites.google.com/andrew.cmu.edu/mycmuq-computing-services/services-how-tos/research-support
+TOPIC: Research Support (Computing Services)
+SECTION: help
+---
+Research Support — Computing Services Qatar
+
+Software: Wide range of licensed software; requests via Instructional Requirements Form (faculty) or Software Request Form. See cmu.edu/computing/software/access.html.
+
+DeepNet (GPU Computing):
+On-campus server with 8x NVIDIA H200 Tensor Core GPUs (141GB HBM3e each). Managed by Slurm. MIG profiles: 1g.18gb, 2g.35gb, 7g.141gb.
+Slurm policies: Max 4 concurrent jobs/user; max 48-hour runtime; MCS-Label required; time parameter required.
+Pre-installed: PyTorch, TensorFlow.
+
+Public Cloud: AWS, GCP, Microsoft Azure via CMU institutional partnerships. Computing Services assists with account setup.
+
+Custom Virtual Machines: Customizable Linux VMs for research; flexible CPU/memory/storage; managed by Computing Services. Request via Google Form.
+
+Related sub-page: GPU Resources Guide

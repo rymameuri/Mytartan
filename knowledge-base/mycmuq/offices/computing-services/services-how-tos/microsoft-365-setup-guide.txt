@@ -1,0 +1,15 @@
+SOURCE: https://sites.google.com/andrew.cmu.edu/mycmuq-computing-services/services-how-tos/software/microsoft-365-setup-guide
+TOPIC: Microsoft 365 Setup Guide (Computing Services)
+SECTION: help
+---
+Microsoft 365 Setup Guide — Computing Services Qatar
+
+Eligible Users: All Qatar faculty, staff, and students.
+
+Includes: Word, Excel, PowerPoint, Outlook, Teams, OneNote, OneDrive.
+
+Windows/macOS Installation: Download from Microsoft 365 portal or Software Center.
+
+Mobile: Install individual apps from App Store or Google Play.
+
+Sign In & Activate: Use Andrew ID@andrew.cmu.edu credentials; select "Work or school account" option.

@@ -118,7 +118,55 @@ Content goes here. This is what Scotty will use to answer questions.
 Multiple paragraphs are fine.
 ```
 
-Files are organized into subdirectories (`studies/`, `life/`, `help/`) and loaded automatically at server startup.
+Files are organized into subdirectories (`studies/`, `life/`, `help/`, `mycmuq/`) and loaded automatically at server startup.
+
+### Topic suggestions (sidebar)
+
+When you add or expand KB pages, also update **`src/data/topicSuggestions.js`** so students can discover new topics from the sidebar. Each entry should include:
+
+- `label` — short name shown in the UI
+- `prompt` — natural question sent to Scotty (should match how students ask)
+- `kbPath` — optional path under `knowledge-base/` for maintainers
+
+Run `npm test -- --testPathPattern=topicSuggestions` to verify every `kbPath` still exists.
+
+**Full developer manual:** [MANUAL/DEVELOPER_GUIDE.txt](MANUAL/DEVELOPER_GUIDE.txt) — KB workflow, commands, troubleshooting, and pre-merge checklist.
+
+### KB maintenance pipeline
+
+When CMU-Q information changes, use this workflow:
+
+1. **Edit content** — update the relevant `.txt` under `knowledge-base/` (and `data/key-facts.json` for deadlines, fees, or GPA cutoffs).
+2. **Sync manifest** (if you added or removed files) — `npm run kb:sync-manifest`
+3. **Validate** — `npm run kb:validate` (headers, manifest, tests, retrieval eval)
+4. **Restart server** and spot-check — `curl "http://localhost:3001/api/kb/debug?q=YOUR+QUESTION"`
+
+| Change type | Edit | Also update |
+|-------------|------|-------------|
+| Deadline / fee / GPA | KB `.txt` | `data/key-facts.json` (`lastVerified` to today) |
+| New portal page | New `.txt` | `npm run kb:sync-manifest`, `src/data/topicSuggestions.js`, optional `data/synonyms.json` |
+| Student slang / abbreviation | — | `data/synonyms.json` |
+| Removed page | Delete `.txt` | `npm run kb:sync-manifest`, remove from `topicSuggestions.js` and `eval/golden-set.json` |
+
+**Commands:**
+
+| Command | Purpose |
+|---------|---------|
+| `npm run kb:sync-manifest` | Regenerate `knowledge-base/manifest.json` and `mycmuq/index.json` from disk |
+| `npm run kb:validate` | Run full validation pipeline before shipping KB changes |
+| `npm run kb:eval` | Retrieval eval only (`eval/golden-set.json`, hit@3 ≥ 75%) |
+| `python scripts/clean_knowledge_base.py --apply` | Fix formatting (whitespace, duplicate lines) |
+| `GET /api/kb/debug?q=...` | Inspect which chunks match a question (no LLM call) |
+
+**Optional header** for tracking updates:
+
+```
+LAST_UPDATED: 2026-06-24
+```
+
+The manifest sync script reads this into `knowledge-base/manifest.json`.
+
+**Registry:** [`knowledge-base/manifest.json`](knowledge-base/manifest.json) lists all 176 KB files with `path`, `topic`, `section`, `sourceUrl`, and optional coupling fields (`synonyms`, `keyFactIds`, `topicSuggestionLabel`) you can set manually — they are preserved across syncs.
 
 ---
 
@@ -157,6 +205,8 @@ curl http://localhost:3001/api/kb/status
 ```bash
 npm test
 npm run test:server
+npm run kb:validate    # full KB pipeline (headers, manifest, retrieval eval)
+npm run kb:eval        # retrieval eval only
 ```
 
 ---

@@ -1,0 +1,11 @@
+SOURCE: https://sites.google.com/andrew.cmu.edu/mycmuq-computing-services/services-how-tos/audiovisual-systems/classroom-orientation
+TOPIC: Classroom AV Orientation (Computing Services)
+SECTION: help
+---
+Classroom Orientation — Computing Services Qatar
+
+Introduction: Provides introduction to AV systems in CMU-Q classrooms.
+
+Resource: Interactive Google Slides presentation "Next-Generation-Classrooms_System-Orientation" available for in-person or self-guided training.
+
+Covers: power-on, input switching, USB-C camera/mic access, document camera, lighting/shades, dual-display management, and AV Help button.

@@ -10,29 +10,8 @@ import {
 } from "./Icons";
 import ProjectModal from "./ProjectModal";
 import { useAuth } from "../context/AuthContext";
+import { TOPIC_SUGGESTIONS } from "../data/topicSuggestions";
 import "./SideMenu.css";
-
-const MENU_SECTIONS = [
-  {
-    title: "Your Studies",
-    items: [
-      { label: "Registration & scheduling", prompt: "How do I plan my course schedule at CMU-Q?" },
-      { label: "Enrollment eligibility", prompt: "What are the enrollment statuses and registration holds at CMU-Q?" },
-      { label: "Cross registration", prompt: "How does cross registration work at Education City?" },
-      { label: "Minors", prompt: "How do I declare a minor at CMU-Q?" },
-      { label: "StuCo", prompt: "What is StuCo at CMU-Q and who runs it?" },
-      { label: "Academic calendar", prompt: "Where can I find the CMU-Q academic calendar?" },
-    ],
-  },
-  {
-    title: "Getting Help",
-    items: [
-      { label: "Financial aid & scholarships", prompt: "What financial aid and scholarships are available at CMU-Q?" },
-      { label: "Accommodations", prompt: "How do I request accommodations for mental health or learning disabilities?" },
-      { label: "Student handbook", prompt: "Where can I find CMU-Q student handbook resources and contacts?" },
-    ],
-  },
-];
 
 function ConversationItem({
   conversation,
@@ -423,7 +402,7 @@ function SideMenu({
           </button>
 
           {topicsExpanded &&
-            MENU_SECTIONS.map((section) => (
+            TOPIC_SUGGESTIONS.map((section) => (
               <div key={section.title} className="side-menu__topic-group">
                 <h4 className="side-menu__topic-group-title">{section.title}</h4>
                 <ul className="side-menu__list">

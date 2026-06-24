@@ -1,0 +1,14 @@
+SOURCE: https://sites.google.com/andrew.cmu.edu/mycmuq-computing-services/services-how-tos/accounts-identity/two-factor-authentication
+TOPIC: Two-Factor Authentication (Computing Services)
+SECTION: help
+---
+Two-Factor Authentication (2FA) — Computing Services Qatar
+
+Register for 2FA:
+1. Download the DUO Mobile app
+2. Follow registration steps on the Two-Factor Authentication Self-Service Tool
+
+Update Your 2FA Device:
+Update if you get a new phone or change your number. Use the DUO Self-Service Tool or Instant Restore.
+
+More information: cmu.edu/computing/services/security/identity-access/authentication/how-to/index.html

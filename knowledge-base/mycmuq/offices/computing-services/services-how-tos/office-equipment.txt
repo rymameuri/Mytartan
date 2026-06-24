@@ -1,0 +1,19 @@
+SOURCE: https://sites.google.com/andrew.cmu.edu/mycmuq-computing-services/services-how-tos/office-equipment
+TOPIC: Office Equipment (Computing Services)
+SECTION: help
+---
+Office Equipment — Computing Services Qatar
+
+Computers:
+- Faculty: choose Windows laptop (Lenovo) or MacBook Pro (14" or 16" with Apple Silicon)
+- Staff: Windows laptop (Lenovo)
+
+Monitors: Up to two 27-inch 4K displays for all faculty/staff.
+
+Docking Stations: Thunderbolt 3/4, USB4 connectivity; supported models: Lenovo, CalDigit, CableMatters.
+
+Peripherals: Keyboard and mouse standard; headset and webcam available on request.
+
+Office Phones: Cisco IP telephone in every faculty/staff office.
+
+Office Printers: Dedicated office printer by request (justification required); faculty/staff can use campus MFPs with CMU ID card; students use public MFPs.

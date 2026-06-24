@@ -1,0 +1,17 @@
+SOURCE: https://sites.google.com/andrew.cmu.edu/mycmuq-computing-services/services-how-tos/files-backups/crashplan-user-guide
+TOPIC: CrashPlan Backup User Guide (Computing Services)
+SECTION: help
+---
+CrashPlan User Guide — Computing Services Qatar
+
+Who Can Use It: Qatar faculty and staff only. Installed on managed computers by default.
+
+What's Backed Up: Entire user profile directory (Desktop, Documents, Downloads, etc.). Cloud folders (OneDrive, Box, Google Drive) excluded.
+
+Installation:
+- Windows/macOS: Download from Software Center, install with Andrew ID credentials
+- Linux: Download via wget https://download.crashplan.com/installs/agent/latest-linux.tgz, extract, run install.sh
+
+Setup: Launch CrashPlan, sign in with Andrew ID, verify backup is running.
+
+Recovery: Open CrashPlan, go to Restore, select files/folders to recover.

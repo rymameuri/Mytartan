@@ -1,0 +1,23 @@
+SOURCE: https://sites.google.com/andrew.cmu.edu/mycmuq-computing-services/services-how-tos/information-security
+TOPIC: Information Security (Computing Services)
+SECTION: help
+---
+Information Security — Computing Services Qatar
+
+Overview: Computing Services and ISO-Qatar implement security tools; shared responsibility for digital safety.
+Computing Policy: cmu.edu/policies/information-technology/computing.html
+
+Verify Direct Email From CMU: Use cmu.edu/computing/verify/index.html to verify communications.
+
+University Data Protection: Data classification guidelines govern protections. See cmu.edu/data/guidelines/data-classification.html.
+
+Endpoint Protection: CrowdStrike EPDR required on all university-owned devices. Contact helpcenter@qatar.cmu.edu for installation assistance.
+
+Phishing & Email Abuse:
+- Don't click suspicious links/attachments
+- Verify sender address carefully
+- Review Phish Bowl at cmu.edu/computing/safe/report-concerns/phish-bowl.html
+- Report to qatar-infosec@qatar.cmu.edu
+- If compromised: change Andrew password immediately
+
+Secure Computing: Follow "Secure Your Technology" guidelines; Security 101 training available; report compromised accounts/devices.

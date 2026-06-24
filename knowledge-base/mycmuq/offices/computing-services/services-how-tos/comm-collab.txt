@@ -1,0 +1,17 @@
+SOURCE: https://sites.google.com/andrew.cmu.edu/mycmuq-computing-services/services-how-tos/comm-collab
+TOPIC: Communication and Collaboration (Computing Services)
+SECTION: help
+---
+Communication & Collaboration — Computing Services Qatar
+
+Email: Google Mail (Gmail) for all students, faculty, staff. Features mailing lists, group email, shared mailboxes.
+
+Calendars: Google Calendar for personal/shared scheduling. Resource calendars (classrooms, conference rooms) managed by Computing Services.
+
+Mailing Lists: Mailman distribution lists and Google Groups; created by Computing Services on request.
+
+Chat Groups: Google Chat with Spaces for departments, committees, projects.
+
+Web Conferencing: Zoom (primary), Google Meet, Microsoft Teams (limited support).
+
+Collaboration & File Storage: Google Drive (personal/shared), Departmental Shared Drives, Andrew File System (AFS), real-time document collaboration.

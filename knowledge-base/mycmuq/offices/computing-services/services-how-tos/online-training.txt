@@ -1,0 +1,15 @@
+SOURCE: https://sites.google.com/andrew.cmu.edu/mycmuq-computing-services/services-how-tos/online-training
+TOPIC: Online Training (Computing Services)
+SECTION: help
+---
+Online Training — Computing Services Qatar
+
+LinkedIn Learning:
+24/7 access to 10,000+ expert-led courses in technology, business, creative domains. Login with Andrew ID.
+Access: linkedin.com/learning
+More info: cmu.edu/computing/services/it-professional/training/
+
+FocusU:
+CMU's LMS for faculty/staff; courses, playlists, professional development. New employees: available 3-5 days after onboarding.
+Access: focusu.percipio.com
+More info: cmu.edu/hr/resources/focusu.html

@@ -102,6 +102,82 @@ describe("retrieveRelevantDocs", () => {
   });
 });
 
+// ─── myCMU-Q portal retrieval (deep sub-pages) ───────────────────────────────
+
+describe("retrieveRelevantDocs — myCMU-Q portal content", () => {
+  function expectRelevant(results, { topicPattern, filePattern }) {
+    expect(results.length).toBeGreaterThan(0);
+    const topics = results.map((r) => r.topic.toLowerCase()).join(" ");
+    const files = results.map((r) => r.file.toLowerCase()).join(" ");
+    if (topicPattern) {
+      expect(topics).toMatch(topicPattern);
+    }
+    if (filePattern) {
+      expect(files).toMatch(filePattern);
+    }
+  }
+
+  test("WiFi setup question retrieves connect-to-wifi content", () => {
+    const results = retrieveRelevantDocs("How do I connect to CMUQ-SECURE wifi?");
+    expectRelevant(results, { topicPattern: /wifi|network/i, filePattern: /connect-to-wifi|network-services/ });
+  });
+
+  test("VPN question retrieves vpn setup guide", () => {
+    const results = retrieveRelevantDocs("How do I set up VPN with AnyConnect?");
+    expectRelevant(results, { topicPattern: /vpn/i, filePattern: /vpn-setup-guide|network-services/ });
+  });
+
+  test("2FA question retrieves two-factor authentication page", () => {
+    const results = retrieveRelevantDocs("How do I register for Duo 2FA?");
+    expectRelevant(results, { topicPattern: /two.factor|2fa|authentication/i, filePattern: /two-factor-authentication/ });
+  });
+
+  test("printing question retrieves campus printing content", () => {
+    const results = retrieveRelevantDocs("Where can I print on campus and release jobs?");
+    expectRelevant(results, { topicPattern: /print/i, filePattern: /printing-services|campusprinting/ });
+  });
+
+  test("GPU question retrieves gpu resources guide", () => {
+    const results = retrieveRelevantDocs("How do I access GPU resources for research?");
+    expectRelevant(results, { topicPattern: /gpu|research/i, filePattern: /gpu-resources-guide|research-support/ });
+  });
+
+  test("CaPS-Q question retrieves counseling services", () => {
+    const results = retrieveRelevantDocs("Is counseling free at CaPS-Q?");
+    expectRelevant(results, { topicPattern: /caps|counseling|mental health/i, filePattern: /caps-q/ });
+  });
+
+  test("QF housing question retrieves housing page", () => {
+    const results = retrieveRelevantDocs("How much is QF student housing per semester?");
+    expectRelevant(results, { topicPattern: /housing|qf/i, filePattern: /qf-student-housing/ });
+  });
+
+  test("career tools question retrieves Handshake and VMock page", () => {
+    const results = retrieveRelevantDocs("Where do I find Handshake and VMock?");
+    expectRelevant(results, { topicPattern: /career/i, filePattern: /career-tools-resources/ });
+  });
+
+  test("Canvas student question retrieves canvas for students", () => {
+    const results = retrieveRelevantDocs("How do I submit assignments on Canvas?");
+    expectRelevant(results, { topicPattern: /canvas/i, filePattern: /canvas-for-students|canvas-help/ });
+  });
+
+  test("AI tools question retrieves artificial intelligence page", () => {
+    const results = retrieveRelevantDocs("What CMU-approved AI tools can I use?");
+    expectRelevant(results, { topicPattern: /artificial intelligence|ai tools/i, filePattern: /artificial-intelligence/ });
+  });
+
+  test("supplemental instruction question retrieves ARC SI page", () => {
+    const results = retrieveRelevantDocs("What is supplemental instruction and who are SI leaders?");
+    expectRelevant(results, { topicPattern: /supplemental instruction/i, filePattern: /supplemental-instruction/ });
+  });
+
+  test("emergency loan question retrieves emergency grants page", () => {
+    const results = retrieveRelevantDocs("How do I apply for an emergency student loan?");
+    expectRelevant(results, { topicPattern: /emergency|loan|grant/i, filePattern: /emergency-student-loans/ });
+  });
+});
+
 // ─── buildContextBlock ────────────────────────────────────────────────────────
 
 describe("buildContextBlock", () => {
@@ -134,6 +210,26 @@ describe("checkKeyFacts", () => {
   test("matches course overload question to unit limit fact", () => {
     const facts = checkKeyFacts("What's the course overload unit limit?");
     expect(facts.some((f) => f.id === "courseOverloadUnitLimit")).toBe(true);
+  });
+
+  test("matches WiFi question to campus wifi networks fact", () => {
+    const facts = checkKeyFacts("What are the campus WiFi network names?");
+    expect(facts.some((f) => f.id === "campusWifiNetworks")).toBe(true);
+  });
+
+  test("matches QF housing cost question to housing rate fact", () => {
+    const facts = checkKeyFacts("How much is QF residence hall per semester?");
+    expect(facts.some((f) => f.id === "qfHousingSemesterRate")).toBe(true);
+  });
+
+  test("matches printing portal question to print retention fact", () => {
+    const facts = checkKeyFacts("How long before print jobs are deleted on PaperCut?");
+    expect(facts.some((f) => f.id === "printPortalAndRetention")).toBe(true);
+  });
+
+  test("matches CaPS-Q question to confidential services fact", () => {
+    const facts = checkKeyFacts("Is CaPS-Q counseling free and confidential?");
+    expect(facts.some((f) => f.id === "capsQConfidentialFree")).toBe(true);
   });
 
   test("returns no facts for unrelated queries", () => {
@@ -170,11 +266,17 @@ describe("computeConfidence", () => {
   });
 
   test("assigns low confidence to weak tangential matches", () => {
-    const results = retrieveRelevantDocs("How much is tuition per semester?", { limit: 2 });
+    const results = retrieveRelevantDocs("What are the quantum physics lab hours?", { limit: 2 });
     if (results.length) {
       const conf = computeConfidence(results);
       expect(conf.score).toBeLessThan(45);
     }
+  });
+
+  test("assigns high confidence to strong matches for tuition", () => {
+    const results = retrieveRelevantDocs("How much is tuition per semester?", { limit: 2 });
+    const conf = computeConfidence(results);
+    expect(conf.score).toBeGreaterThanOrEqual(80);
   });
 
   test("assigns high confidence to strong matches", () => {

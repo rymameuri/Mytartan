@@ -1,0 +1,19 @@
+SOURCE: https://sites.google.com/andrew.cmu.edu/mycmuq-computing-services/services-how-tos/research-support/gpu-resources-guide
+TOPIC: GPU Resources Guide (Computing Services)
+SECTION: help
+---
+GPU Resources Guide — Computing Services Qatar
+
+Access: Request at https://docs.google.com/forms/d/e/1FAIpQLSfhpNw1uAQnJDaKLM0-QexTo6pvZxefbJ4OLLCghQ25W5-C3w/viewform
+
+Two GPU types: DeepNet2 (campus server) and public cloud via CMU partnerships.
+
+Quick Start: SSH to gpujobs.qatar.cmu.edu, set up conda environment, submit jobs via Slurm.
+
+Running Jobs:
+- Bash/Python script: sbatch --mcs-label=crs-12345 your_script.sh
+- Jupyter Notebook: Two-terminal SSH tunnel setup; access via http://127.0.0.1:PORT/tree?token=...
+
+Hardware Specs: Available via linked Google Spreadsheet on portal.
+
+IMPORTANT: Do not run jobs directly on GPU server; submit via login node.

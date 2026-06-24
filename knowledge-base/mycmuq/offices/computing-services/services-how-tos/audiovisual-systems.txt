@@ -1,0 +1,26 @@
+SOURCE: https://sites.google.com/andrew.cmu.edu/mycmuq-computing-services/services-how-tos/audiovisual-systems
+TOPIC: Audiovisual Systems (Computing Services)
+SECTION: help
+---
+Audiovisual Systems — Computing Services Qatar
+
+Classroom AV Systems:
+Video inputs: Podium PC, laptop (USB-C and HDMI), document camera, wireless projection (AirPlay/Miracast).
+Video outputs: Projectors/flat-panel displays.
+Audio inputs: Program audio from devices, audience microphones, lavalier microphone.
+Audio outputs: Wall-mounted and ceiling speakers.
+Classroom System Orientation sessions available; interactive guide covers power-on, input switching, USB-C camera/mic access, document camera, lighting/shades, dual-display management, AV Help button.
+
+Conference Room AV Systems:
+Single display (projector or large TV), resident PC, HDMI/USB-C laptop inputs, AirPlay/Miracast wireless.
+Many rooms feature Zoom Room capability for single-touch meeting join.
+
+Open Areas:
+East/West walkways, Food Court, and ground floor assembly area equipped with microphones/speakers for public-address announcements.
+Event AV support: submit Event Support Request Form via forms.qatar.cmu.edu.
+
+Events Support:
+Computing Services provides technical support for approved events including equipment installation.
+Submit Events Support Request Form for customized setup.
+
+Related sub-page: Classroom Orientation

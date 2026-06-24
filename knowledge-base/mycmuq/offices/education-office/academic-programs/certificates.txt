@@ -1,0 +1,20 @@
+SOURCE: https://sites.google.com/andrew.cmu.edu/mycmuq-education/academic-programs/certificates
+TOPIC: Certificates at CMU-Q (myCMU-Q Education Office)
+SECTION: studies
+---
+Certificates — Education Office, CMU-Q
+
+Overview: 4 courses (33-36 units); includes capstone or e-Portfolio; currently 1 certificate offered.
+
+AI + Finance Certificate:
+- Apply AI techniques to financial data, investment, and risk management
+- Format: 4 courses + capstone
+- Field: Finance
+- Open to: all CMU-Q majors
+- Advisors: Serkan Akguc & Gianni DiCaro
+- Now accepting applications
+
+Certificate vs. Minor:
+- Certificate = targeted/practical, 4 courses, capstone required
+- Minor = broader subject survey, 6-8 courses, no capstone
+- Note: certificate does not satisfy minor requirement for majors that require one

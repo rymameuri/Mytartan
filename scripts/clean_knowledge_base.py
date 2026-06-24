@@ -10,8 +10,9 @@ Cleans all .txt files in the knowledge-base/ directory by:
   5. Reporting a summary of every change made
 
 Usage:
-  python scripts/clean_knowledge_base.py           # preview changes (dry run)
-  python scripts/clean_knowledge_base.py --apply   # apply changes to files
+  python scripts/clean_knowledge_base.py              # preview changes (dry run)
+  python scripts/clean_knowledge_base.py --apply      # apply changes to files
+  python scripts/clean_knowledge_base.py --strict     # fail (exit 1) on header errors only
 """
 
 import os
@@ -98,7 +99,7 @@ def clean_body(body_lines):
 
 
 def process_file(filepath, apply=False):
-    """Process one file. Returns (had_issues, report_lines)."""
+    """Process one file. Returns (header_errors, had_format_issues, report_lines)."""
     report = [f"\n📄 {filepath.relative_to(KB_ROOT)}"]
     original = filepath.read_text(encoding="utf-8")
 
@@ -109,9 +110,12 @@ def process_file(filepath, apply=False):
     report.extend(warnings)
     report.extend(changes)
 
-    if not warnings and not changes:
+    header_errors = len(warnings) > 0
+    had_format_issues = len(changes) > 0
+
+    if not header_errors and not had_format_issues:
         report.append("  ✅  Clean — no issues found")
-        return False, report
+        return header_errors, had_format_issues, report
 
     # Reconstruct cleaned file
     cleaned_header = [l.rstrip() for l in header_lines]
@@ -121,12 +125,17 @@ def process_file(filepath, apply=False):
         filepath.write_text(cleaned_content, encoding="utf-8")
         report.append("  💾  File updated")
 
-    return bool(warnings or changes), report
+    return header_errors, had_format_issues, report
 
 
 def main():
     parser = argparse.ArgumentParser(description="Clean CMU-Q knowledge base files")
     parser.add_argument("--apply", action="store_true", help="Apply changes (default: dry run)")
+    parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Exit with code 1 if any file is missing required headers (for kb:validate)",
+    )
     args = parser.parse_args()
 
     if not KB_ROOT.exists():
@@ -138,6 +147,26 @@ def main():
         print("❌ No .txt files found in knowledge-base/")
         sys.exit(1)
 
+    if args.strict:
+        header_failures = []
+        for filepath in txt_files:
+            original = filepath.read_text(encoding="utf-8")
+            header_lines, _ = parse_file(original)
+            warnings = validate_headers(header_lines, filepath)
+            if warnings:
+                header_failures.append((filepath.relative_to(KB_ROOT), warnings))
+
+        if header_failures:
+            print(f"❌ {len(header_failures)} file(s) missing required headers:")
+            for rel_path, warnings in header_failures:
+                print(f"\n📄 {rel_path}")
+                for w in warnings:
+                    print(w)
+            sys.exit(1)
+
+        print(f"✓ All {len(txt_files)} knowledge-base files have valid headers")
+        sys.exit(0)
+
     mode = "APPLYING CHANGES" if args.apply else "DRY RUN (use --apply to save changes)"
     print(f"\n{'='*55}")
     print(f"  Tartan Scotty — Knowledge Base Cleaner ({mode})")
@@ -145,10 +174,13 @@ def main():
     print(f"  Found {len(txt_files)} files in {KB_ROOT}\n")
 
     total_issues = 0
+    header_error_count = 0
     for filepath in txt_files:
-        had_issues, report = process_file(filepath, apply=args.apply)
-        if had_issues:
+        header_errors, had_format_issues, report = process_file(filepath, apply=args.apply)
+        if header_errors or had_format_issues:
             total_issues += 1
+        if header_errors:
+            header_error_count += 1
         print("\n".join(report))
 
     print(f"\n{'='*55}")
@@ -156,9 +188,14 @@ def main():
         print("  🎉  All files are clean!")
     else:
         print(f"  📊  {total_issues}/{len(txt_files)} file(s) had issues")
+        if header_error_count:
+            print(f"  ⚠️  {header_error_count} file(s) have header validation errors")
         if not args.apply:
-            print("  👉  Run with --apply to fix them automatically")
+            print("  👉  Run with --apply to fix formatting issues automatically")
     print(f"{'='*55}\n")
+
+    if header_error_count:
+        sys.exit(1)
 
 
 if __name__ == "__main__":

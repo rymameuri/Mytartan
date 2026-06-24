@@ -1,0 +1,25 @@
+SOURCE: https://sites.google.com/andrew.cmu.edu/mycmuq-computing-services/services-how-tos/teaching-support/canvas-for-students
+TOPIC: Canvas for Students (Computing Services)
+SECTION: help
+---
+Canvas for Students — Computing Services Qatar
+
+Log into Canvas: Navigate to Canvas URL, enter Andrew ID credentials.
+
+Navigate Dashboard: Find enrolled courses; courses appear up to 4 hours after enrollment.
+
+Set Your Time Zone: Account > Settings > Time Zone (set to Qatar/Doha).
+
+View Syllabus & Modules: Click course → Modules or Syllabus tab.
+
+Submit Assignments/Quizzes: Click Assignments, select assignment, upload file or type response.
+
+Check Grades & Feedback: Click Grades in course sidebar.
+
+Announcements & Inbox: Check Announcements tab; use Inbox for messaging instructors.
+
+Mobile Access: Download Canvas Student app (iOS/Android).
+
+Tips: Check Canvas daily, set up notifications, use the calendar.
+
+For Canvas support: helpcenter@qatar.cmu.edu

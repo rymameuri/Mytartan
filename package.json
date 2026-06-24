@@ -35,6 +35,8 @@
     "test:server": "jest server/ --testEnvironment node --no-coverage",
     "test:all": "CI=true react-scripts test --watchAll=false && jest server/ --testEnvironment node --no-coverage",
     "eval:rag": "node scripts/eval_rag.js",
+    "kb:sync-manifest": "node scripts/kb-sync-manifest.js",
+    "kb:validate": "node scripts/kb-validate.js",
     "test:retrieval": "node scripts/test-retrieval.js",
     "test:tone": "node scripts/test-tone.js",
     "generate:sample-pdf": "node scripts/generate_sample_syllabus_pdf.js",

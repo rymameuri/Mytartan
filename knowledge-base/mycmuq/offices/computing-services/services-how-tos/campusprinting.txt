@@ -1,0 +1,15 @@
+SOURCE: https://sites.google.com/andrew.cmu.edu/mycmuq-computing-services/services-how-tos/printing-services/campusprinting
+TOPIC: Campus Printing User Guide (Computing Services)
+SECTION: help
+---
+CampusPrinting User Guide — Computing Services Qatar
+
+Register ID Card: Visit any MFP, tap ID card, follow prompts to register.
+
+Windows/Mac Setup: Connect to CMUQ-SECURE, install CampusPrinting queue from PaperCut portal, print and release with ID card.
+
+Mobile Setup: Connect to campus Wi-Fi, upload via PaperCut web portal (print.qatar.cmu.edu), release at printer.
+
+Linux Setup: 11-step process via CUPS print system.
+
+Releasing Print Jobs: Swipe ID card at printer OR log in to print.qatar.cmu.edu and release online. Jobs auto-deleted after 8 hours.

@@ -1,0 +1,13 @@
+SOURCE: https://sites.google.com/andrew.cmu.edu/mycmuq-computing-services/services-how-tos/teaching-support/canvas-help
+TOPIC: Canvas Help (Computing Services)
+SECTION: help
+---
+Canvas Help — Computing Services Qatar
+
+CMU-Q uses Canvas as the official Learning Management System (LMS).
+
+Canvas helps instructors plan, deliver, and assess courses.
+
+For Canvas support: helpcenter@qatar.cmu.edu
+
+Related sub-page: Canvas for Students

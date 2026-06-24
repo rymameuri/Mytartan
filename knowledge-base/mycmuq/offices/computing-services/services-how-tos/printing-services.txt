@@ -1,0 +1,29 @@
+SOURCE: https://sites.google.com/andrew.cmu.edu/mycmuq-computing-services/services-how-tos/printing-services
+TOPIC: Printing Services (Computing Services)
+SECTION: help
+---
+Printing Services — Computing Services Qatar
+
+Overview: Campus Printing via Multi-Function Printers (MFPs); managed by PaperCut MF.
+
+- Faculty/staff can print to any MFP campus-wide
+- Students can print to publicly available MFPs
+- Available from Windows, macOS, Linux, iOS, Android
+
+Features: Secure release printing (CMU ID card), print-from-anywhere via PaperCut portal (print.qatar.cmu.edu), duplex/color options, scan & copy.
+
+Printer Locations:
+Faculty/staff: every pantry and department suite.
+Students:
+- Hallway behind male prayer room (1st floor)
+- Hallway behind female prayer room (2nd floor)
+- Library (inside and outside)
+- Academic Resource Center (ARC)
+
+A0 Printing (Large Format): Submit print-ready PDF to Computing Services Help Center for poster printing.
+
+Security: Jobs stored securely until released; jobs not released within 8 hours auto-deleted.
+
+Please Print Responsibly: Use duplex and black-and-white; cancel mistaken jobs via PaperCut portal.
+
+Related sub-page: CampusPrinting User Guide

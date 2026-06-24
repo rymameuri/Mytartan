@@ -1,0 +1,15 @@
+SOURCE: https://sites.google.com/andrew.cmu.edu/mycmuq-computing-services/services-how-tos/software
+TOPIC: Software (Computing Services)
+SECTION: help
+---
+Software — Computing Services Qatar
+
+Academic Software Requests: Faculty must use the Instructional Requirements Form before semester deadline. Late requests may delay availability.
+
+Specialized Software: Fill out Software Request Form.
+
+License Review: All requests (free or paid) go through IT review; University Contracts Office (UCO) involved.
+
+Software List: cmu.edu/computing/software/access.html — lists all licensed/approved titles with cost, OS compatibility, affiliation-based access.
+
+Related sub-page: Microsoft 365 Setup Guide

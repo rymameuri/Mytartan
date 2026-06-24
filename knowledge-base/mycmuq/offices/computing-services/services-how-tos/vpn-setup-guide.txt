@@ -1,0 +1,15 @@
+SOURCE: https://sites.google.com/andrew.cmu.edu/mycmuq-computing-services/services-how-tos/network-services/vpn-setup-guide
+TOPIC: VPN Setup Guide (Computing Services)
+SECTION: help
+---
+VPN Setup Guide — Computing Services Qatar
+
+Windows, macOS, Linux:
+Download Cisco AnyConnect from CMU software center; connect to vpn.qatar.cmu.edu (Qatar) or vpn.cmu.edu (Pittsburgh).
+
+iOS & Android:
+Install Cisco AnyConnect app; enter same VPN addresses.
+
+VPN Addresses:
+- vpn.qatar.cmu.edu — CMU-Q campus VPN (two access levels)
+- vpn.cmu.edu — Pittsburgh campus VPN (two access levels)

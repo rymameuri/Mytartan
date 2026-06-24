@@ -2,32 +2,52 @@
   {
     "id": "reg-001",
     "query": "How do I register for courses?",
-    "expectedFiles": ["studies/registration-and-schedule-planning-resources.txt", "studies/plan-course-schedule.txt"]
+    "expectedFiles": [
+      "studies/registration-and-schedule-planning-resources.txt",
+      "studies/plan-course-schedule.txt",
+      "mycmuq/offices/education-office/registration-records/course-registration.txt"
+    ]
   },
   {
     "id": "reg-002",
     "query": "When is the add/drop deadline?",
-    "expectedFiles": ["studies/academic-calendar.txt", "studies/registration-and-schedule-planning-resources.txt"]
+    "expectedFiles": [
+      "studies/academic-calendar.txt",
+      "studies/registration-and-schedule-planning-resources.txt",
+      "mycmuq/offices/education-office/registration-records/calendars-schedules.txt"
+    ]
   },
   {
     "id": "stuco-001",
     "query": "What is StuCo?",
-    "expectedFiles": ["studies/about-stuco.txt"]
+    "expectedFiles": [
+      "studies/about-stuco.txt",
+      "mycmuq/offices/education-office/academic-programs/stuco.txt"
+    ]
   },
   {
     "id": "stuco-002",
     "query": "What are student taught courses at CMU-Q?",
-    "expectedFiles": ["studies/about-stuco.txt"]
+    "expectedFiles": [
+      "studies/about-stuco.txt",
+      "mycmuq/offices/education-office/academic-programs/stuco.txt"
+    ]
   },
   {
     "id": "minor-001",
     "query": "How do I declare a minor?",
-    "expectedFiles": ["studies/minors.txt"]
+    "expectedFiles": [
+      "studies/minors.txt",
+      "mycmuq/offices/education-office/academic-programs/minors.txt"
+    ]
   },
   {
     "id": "minor-002",
     "query": "What minors are available?",
-    "expectedFiles": ["studies/minors.txt"]
+    "expectedFiles": [
+      "studies/minors.txt",
+      "mycmuq/offices/education-office/academic-programs/minors.txt"
+    ]
   },
   {
     "id": "major-001",
@@ -37,47 +57,74 @@
   {
     "id": "major-002",
     "query": "What is the Information Systems program?",
-    "expectedFiles": ["studies/degree-programs.txt"]
+    "expectedFiles": [
+      "studies/degree-programs.txt",
+      "mycmuq/departments/information-systems/overview.txt"
+    ]
   },
   {
     "id": "fin-001",
     "query": "How do I apply for financial aid?",
-    "expectedFiles": ["help/financial-aid-and-scholarship.txt"]
+    "expectedFiles": [
+      "help/financial-aid-and-scholarship.txt",
+      "mycmuq/offices/education-office/financial-aid/financial-aid.txt"
+    ]
   },
   {
     "id": "fin-002",
     "query": "What scholarships are available at CMU-Q?",
-    "expectedFiles": ["help/financial-aid-and-scholarship.txt"]
+    "expectedFiles": [
+      "help/financial-aid-and-scholarship.txt",
+      "mycmuq/offices/education-office/financial-aid/financial-aid.txt"
+    ]
   },
   {
     "id": "cal-001",
     "query": "When does the spring semester start?",
-    "expectedFiles": ["studies/academic-calendar.txt"]
+    "expectedFiles": [
+      "studies/academic-calendar.txt",
+      "mycmuq/offices/education-office/registration-records/calendars-schedules.txt"
+    ]
   },
   {
     "id": "cal-002",
     "query": "What are the important academic dates?",
-    "expectedFiles": ["studies/academic-calendar.txt"]
+    "expectedFiles": [
+      "studies/academic-calendar.txt",
+      "mycmuq/offices/education-office/registration-records/calendars-schedules.txt"
+    ]
   },
   {
     "id": "cert-001",
     "query": "How do I earn a certificate?",
-    "expectedFiles": ["studies/certificates.txt"]
+    "expectedFiles": [
+      "studies/certificates.txt",
+      "mycmuq/offices/education-office/academic-programs/certificates.txt"
+    ]
   },
   {
     "id": "cert-002",
     "query": "What certificates does CMU-Q offer?",
-    "expectedFiles": ["studies/certificates.txt"]
+    "expectedFiles": [
+      "studies/certificates.txt",
+      "mycmuq/offices/education-office/academic-programs/certificates.txt"
+    ]
   },
   {
     "id": "cross-001",
     "query": "Can I take classes at other Education City universities?",
-    "expectedFiles": ["studies/cross-registration.txt"]
+    "expectedFiles": [
+      "studies/cross-registration.txt",
+      "mycmuq/offices/education-office/registration-records/course-registration.txt"
+    ]
   },
   {
     "id": "cross-002",
     "query": "How does cross registration work?",
-    "expectedFiles": ["studies/cross-registration.txt"]
+    "expectedFiles": [
+      "studies/cross-registration.txt",
+      "mycmuq/offices/education-office/registration-records/course-registration.txt"
+    ]
   },
   {
     "id": "overload-001",
@@ -92,17 +139,27 @@
   {
     "id": "acc-001",
     "query": "How do I get accommodations for a learning disability?",
-    "expectedFiles": ["help/accommodations-mental-health-learning-disabilities.txt"]
+    "expectedFiles": [
+      "help/accommodations-mental-health-learning-disabilities.txt",
+      "mycmuq/offices/student-affairs/caps-q/accommodations-mental-health-learning-disabilities.txt"
+    ]
   },
   {
     "id": "acc-002",
     "query": "What mental health support is available?",
-    "expectedFiles": ["help/accommodations-mental-health-learning-disabilities.txt"]
+    "expectedFiles": [
+      "help/accommodations-mental-health-learning-disabilities.txt",
+      "mycmuq/offices/student-affairs/caps-q/caps-services.txt",
+      "mycmuq/offices/student-affairs/caps-q/mental-health-resources.txt"
+    ]
   },
   {
     "id": "handbook-001",
     "query": "What is the academic integrity policy?",
-    "expectedFiles": ["help/student-handbook.txt"]
+    "expectedFiles": [
+      "help/student-handbook.txt",
+      "help/academic-policies/statement-on-academic-integrity.txt"
+    ]
   },
   {
     "id": "handbook-002",
@@ -112,27 +169,137 @@
   {
     "id": "micro-001",
     "query": "What are micro courses?",
-    "expectedFiles": ["studies/micro-courses.txt"]
+    "expectedFiles": [
+      "studies/micro-courses.txt",
+      "mycmuq/offices/education-office/academic-programs/micro-course-information.txt"
+    ]
   },
   {
     "id": "enroll-001",
     "query": "Am I eligible to enroll in courses?",
-    "expectedFiles": ["studies/enrollment-eligibility.txt"]
+    "expectedFiles": [
+      "studies/enrollment-eligibility.txt",
+      "mycmuq/offices/education-office/financial-aid/enrollment-records.txt"
+    ]
   },
   {
     "id": "schedule-001",
     "query": "How do I plan my course schedule?",
-    "expectedFiles": ["studies/plan-course-schedule.txt", "studies/registration-and-schedule-planning-resources.txt"]
+    "expectedFiles": [
+      "studies/plan-course-schedule.txt",
+      "studies/registration-and-schedule-planning-resources.txt"
+    ]
   },
   {
     "id": "voice-001",
     "query": "What is stucco?",
-    "expectedFiles": ["studies/about-stuco.txt"]
+    "expectedFiles": [
+      "studies/about-stuco.txt",
+      "mycmuq/offices/education-office/academic-programs/stuco.txt"
+    ]
   },
   {
     "id": "voice-002",
     "query": "Tell me about mesure options",
     "expectedFiles": ["studies/degree-programs.txt", "studies/minors.txt"]
+  },
+  {
+    "id": "wifi-001",
+    "query": "How do I connect to CMUQ-SECURE WiFi?",
+    "expectedFiles": [
+      "mycmuq/offices/computing-services/services-how-tos/connect-to-wifi.txt",
+      "mycmuq/offices/computing-services/services-how-tos/network-services.txt"
+    ]
+  },
+  {
+    "id": "vpn-001",
+    "query": "How do I set up VPN with AnyConnect?",
+    "expectedFiles": [
+      "mycmuq/offices/computing-services/services-how-tos/vpn-setup-guide.txt",
+      "mycmuq/offices/computing-services/services-how-tos/network-services.txt"
+    ]
+  },
+  {
+    "id": "2fa-001",
+    "query": "How do I register for Duo 2FA?",
+    "expectedFiles": [
+      "mycmuq/offices/computing-services/services-how-tos/two-factor-authentication.txt",
+      "mycmuq/offices/computing-services/services-how-tos/accounts-identity.txt"
+    ]
+  },
+  {
+    "id": "print-001",
+    "query": "Where can I print on campus and release jobs?",
+    "expectedFiles": [
+      "mycmuq/offices/computing-services/services-how-tos/printing-services.txt",
+      "mycmuq/offices/computing-services/services-how-tos/campusprinting.txt"
+    ]
+  },
+  {
+    "id": "canvas-001",
+    "query": "How do I submit assignments on Canvas?",
+    "expectedFiles": [
+      "mycmuq/offices/computing-services/services-how-tos/canvas-for-students.txt",
+      "mycmuq/offices/computing-services/services-how-tos/canvas-help.txt"
+    ]
+  },
+  {
+    "id": "gpu-001",
+    "query": "How do I access GPU resources for research?",
+    "expectedFiles": [
+      "mycmuq/offices/computing-services/services-how-tos/gpu-resources-guide.txt",
+      "mycmuq/offices/computing-services/services-how-tos/research-support.txt"
+    ]
+  },
+  {
+    "id": "caps-001",
+    "query": "Is counseling free at CaPS-Q?",
+    "expectedFiles": [
+      "mycmuq/offices/student-affairs/caps-q/caps-services.txt",
+      "mycmuq/offices/student-affairs/caps-q/mental-health-resources.txt"
+    ]
+  },
+  {
+    "id": "housing-001",
+    "query": "How much is QF student housing per semester?",
+    "expectedFiles": [
+      "mycmuq/offices/student-affairs/international-student-support/qf-student-housing.txt"
+    ]
+  },
+  {
+    "id": "career-001",
+    "query": "Where do I find Handshake and VMock?",
+    "expectedFiles": [
+      "mycmuq/offices/student-affairs/career-services/career-tools-resources.txt"
+    ]
+  },
+  {
+    "id": "ai-001",
+    "query": "What CMU-approved AI tools can I use?",
+    "expectedFiles": [
+      "mycmuq/offices/computing-services/services-how-tos/artificial-intelligence.txt"
+    ]
+  },
+  {
+    "id": "tuition-001",
+    "query": "How do I pay tuition and view my e-bill?",
+    "expectedFiles": [
+      "mycmuq/offices/education-office/financial-aid/tuition-and-fees.txt"
+    ]
+  },
+  {
+    "id": "si-001",
+    "query": "What is supplemental instruction at the ARC?",
+    "expectedFiles": [
+      "mycmuq/offices/education-office/academic-resource-center/supplemental-instruction.txt"
+    ]
+  },
+  {
+    "id": "emergency-001",
+    "query": "How do I apply for an emergency student loan?",
+    "expectedFiles": [
+      "mycmuq/offices/education-office/financial-aid/emergency-student-loans-and-grants.txt"
+    ]
   },
   {
     "id": "neg-001",
@@ -154,19 +321,28 @@
   {
     "id": "halluc-003",
     "query": "How do I declare a minor and renew my Qatari visa at the same time?",
-    "expectedFiles": ["studies/minors.txt"],
+    "expectedFiles": [
+      "studies/minors.txt",
+      "mycmuq/offices/education-office/academic-programs/minors.txt"
+    ],
     "notes": "Mixed topics — minor info exists but visa guidance does not"
   },
   {
     "id": "halluc-004",
     "query": "What is fa?",
-    "expectedFiles": ["help/financial-aid-and-scholarship.txt"],
+    "expectedFiles": [
+      "help/financial-aid-and-scholarship.txt",
+      "mycmuq/offices/education-office/financial-aid/financial-aid.txt"
+    ],
     "notes": "Slang abbreviation for financial aid"
   },
   {
     "id": "halluc-005",
     "query": "What GPA do I need for tafawq?",
-    "expectedFiles": ["help/financial-aid-and-scholarship.txt"],
+    "expectedFiles": [
+      "help/financial-aid-and-scholarship.txt",
+      "mycmuq/offices/education-office/financial-aid/financial-aid.txt"
+    ],
     "notes": "Slang scholarship name — should hit financial aid page"
   },
   {
@@ -178,13 +354,16 @@
   {
     "id": "halluc-007",
     "query": "How do I cross-register and apply for tamaiyuz in one step?",
-    "expectedFiles": ["studies/cross-registration.txt", "help/financial-aid-and-scholarship.txt"],
+    "expectedFiles": [
+      "studies/cross-registration.txt",
+      "help/financial-aid-and-scholarship.txt",
+      "mycmuq/offices/education-office/financial-aid/financial-aid.txt"
+    ],
     "notes": "Mixed unrelated processes — should retrieve at least one relevant file"
   },
   {
     "id": "halluc-008",
     "query": "What's the overload unit cap?",
-    "expectedFiles": ["studies/course-overload.txt"],
-    "notes": "Abbreviation-style question for a numeric policy fact"
+    "expectedFiles": ["studies/course-overload.txt"]
   }
 ]

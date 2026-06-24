@@ -1,0 +1,21 @@
+SOURCE: https://sites.google.com/andrew.cmu.edu/mycmuq-computing-services/services-how-tos/accounts-identity
+TOPIC: Accounts and Identity (Computing Services)
+SECTION: help
+---
+Accounts & Identity — Computing Services Qatar
+
+Eligibility: Students, faculty, staff, alumni, and sponsored guests while they have an active affiliation.
+
+Your Online Identity at CMU:
+- Andrew ID (username)
+- @andrew.cmu.edu email address
+- Preferred name management options
+
+Your Access to CMU Services:
+- Andrew Account — gateway to CMU computing
+- Password Management — change or reset Andrew password
+- Two-Factor Authentication (2FA) — protects account with a second code or mobile click
+
+Related sub-pages:
+- Password Management
+- Two-Factor Authentication (2FA)

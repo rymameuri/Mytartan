@@ -1,0 +1,13 @@
+SOURCE: https://sites.google.com/andrew.cmu.edu/mycmuq-computing-services/services-how-tos/business-systems
+TOPIC: Business Systems (Computing Services)
+SECTION: help
+---
+Business Systems — Computing Services Qatar
+
+InfoSilem — scheduling/timetabling system; used by Academic Affairs for course and exam scheduling.
+
+Titanium — HIPAA-compliant clinical/appointment management; used by CaPS-Q for counseling appointments.
+
+Odoo — ERP/workflow management (finance, purchasing, inventory, project management); used by Office of Strategic Engagement and Student Affairs.
+
+Asana — cloud-based project/task management; used by Computing Services and administrative units.

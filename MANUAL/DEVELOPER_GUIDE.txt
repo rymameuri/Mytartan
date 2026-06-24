@@ -1,0 +1,290 @@
+================================================================================
+TARTAN SCOTTY — DEVELOPER MANUAL
+Carnegie Mellon University in Qatar (CMU-Q)
+Last updated: 2026-06-24
+================================================================================
+
+This manual is for developers maintaining Tartan Scotty (MyTartan): the React
+frontend, Express backend, and especially the knowledge base (KB) that powers
+Scotty's answers.
+
+For quick setup, see README.md in the project root.
+
+
+================================================================================
+1. PROJECT OVERVIEW
+================================================================================
+
+Tartan Scotty is a RAG (Retrieval-Augmented Generation) chatbot:
+  - Students ask questions in natural language
+  - The server finds relevant .txt chunks from knowledge-base/
+  - Claude generates an answer ONLY from those excerpts (no guessing)
+
+Stack:
+  - Frontend: React (port 3000)
+  - Backend:  Express (port 3001)
+  - AI:       Claude via CMU AI Gateway or Anthropic API (server/.env)
+  - Retrieval: Keyword TF-IDF + synonym expansion + optional Haiku rerank
+
+
+================================================================================
+2. KNOWLEDGE BASE LAYOUT
+================================================================================
+
+All official content lives under:  knowledge-base/
+
+Main areas:
+  knowledge-base/studies/          Academic programs, registration, minors, etc.
+  knowledge-base/help/               Policies, handbook, financial aid (legacy Scotty)
+  knowledge-base/mycmuq/           myCMU-Q portal content (94+ pages)
+  knowledge-base/manifest.json     Central registry of ALL .txt files
+
+Coupled files (update these when KB changes):
+  data/synonyms.json               Student slang → search terms
+  data/key-facts.json              Authoritative deadlines, fees, GPA cutoffs
+  src/data/topicSuggestions.js     Sidebar "Topic suggestions" chips
+  eval/golden-set.json             Retrieval regression tests
+  knowledge-base/mycmuq/index.json Auto-generated from manifest (myCMUQ only)
+
+
+================================================================================
+3. KB FILE FORMAT (REQUIRED)
+================================================================================
+
+Every .txt file MUST use this structure:
+
+  SOURCE: https://sites.google.com/andrew.cmu.edu/...   (or scotty URL)
+  TOPIC: Human-readable topic name
+  SECTION: studies | help | life
+  LAST_UPDATED: 2026-06-24                              (optional but recommended)
+  ---
+  Body content starts here.
+  Use clear headings, bullet lists, and contact emails.
+  First paragraph should summarize the answer — retrieval uses it heavily.
+
+Rules:
+  - TOPIC, SECTION, and --- divider are REQUIRED (validation will fail without them)
+  - Write how students ask ("Connect to WiFi", not internal jargon)
+  - Include keywords students might search (WiFi, CMUQ-SECURE, VPN, CaPS-Q, etc.)
+  - Do NOT put secrets or private data in KB files
+
+
+================================================================================
+4. STANDARD UPDATE WORKFLOW
+================================================================================
+
+When CMU-Q information changes:
+
+  STEP 1 — Edit content
+    - Wording only:        edit the .txt file
+    - Number/deadline/GPA: edit .txt AND data/key-facts.json (set lastVerified to today)
+    - New page:            create new .txt under the right subfolder
+    - Removed page:        delete .txt and clean up coupled files (see Section 5)
+
+  STEP 2 — Sync manifest (only if you added or removed .txt files)
+    npm run kb:sync-manifest
+
+  STEP 3 — Validate everything
+    npm run kb:validate
+
+  STEP 4 — Restart server and spot-check
+    npm run server
+    curl "http://localhost:3001/api/kb/debug?q=How+do+I+connect+to+wifi"
+
+  STEP 5 — Test in the UI
+    Open the app → Q&A mode → ask the same question → verify answer quality
+
+
+================================================================================
+5. WHAT TO UPDATE FOR EACH CHANGE TYPE
+================================================================================
+
+Change type                  | Edit              | Also update
+-----------------------------|-------------------|------------------------------------------
+Wording only                 | KB .txt           | (nothing else)
+Deadline / fee / GPA         | KB .txt           | data/key-facts.json
+New portal page              | New KB .txt       | kb:sync-manifest, topicSuggestions.js,
+                             |                   | optional: synonyms.json, golden-set
+Student slang / abbreviation | —                 | data/synonyms.json
+Removed page                 | Delete KB .txt    | kb:sync-manifest, topicSuggestions,
+                             |                   | eval/golden-set.json
+
+
+================================================================================
+6. COMMANDS REFERENCE
+================================================================================
+
+Knowledge base pipeline:
+  npm run kb:sync-manifest     Regenerate manifest.json + mycmuq/index.json
+  npm run kb:validate          Full pipeline (run before every KB ship)
+  npm run kb:eval              Retrieval eval only (golden-set, hit@3 >= 75%)
+
+Formatting:
+  python3 scripts/clean_knowledge_base.py              Dry run (preview fixes)
+  python3 scripts/clean_knowledge_base.py --apply      Apply whitespace fixes
+  python3 scripts/clean_knowledge_base.py --strict     Header check only (used by validate)
+
+Testing:
+  npm run test:server                              Server + KB unit tests
+  npm test -- --testPathPattern=topicSuggestions   Sidebar kbPath alignment
+  node scripts/test-retrieval.js                   Manual retrieval smoke test
+  node scripts/test-tone.js                        End-to-end answer tone check
+
+Development:
+  npm run dev                    Start frontend + backend together
+  npm run server                 Backend only (port 3001)
+
+Debug (server must be running):
+  GET /api/kb/status             Retrieval stats
+  GET /api/kb/debug?q=QUESTION   Show matched chunks + confidence (no LLM)
+
+
+================================================================================
+7. WHAT kb:validate RUNS (IN ORDER)
+================================================================================
+
+  1. Header lint        — every .txt has TOPIC, SECTION, ---
+  2. Manifest check     — manifest.json matches files on disk
+  3. KB unit tests      — server/knowledgeBase.test.js
+  4. Topic suggestions  — every kbPath in topicSuggestions.js exists
+  5. Retrieval eval     — eval/golden-set.json (must hit >= 75% at k=3)
+  6. Key facts warning  — flags key-facts older than 90 days (non-blocking)
+
+If any step fails, fix the issue and re-run npm run kb:validate.
+
+
+================================================================================
+8. COUPLED FILES — DETAIL
+================================================================================
+
+8a. data/synonyms.json
+  Maps informal terms to search phrases. Examples:
+    "wifi"  → "connect wifi cmuq-secure network services"
+    "stuco" → "student college"
+    "caps"  → "counseling psychological services"
+  Add lowercase keys. Restart server after editing.
+
+8b. data/key-facts.json
+  Structured facts that OVERRIDE prose in the LLM prompt.
+  Use for: GPA cutoffs, fees, deadlines, housing rates.
+  Each entry needs: id, topic, value, lastVerified, source
+  Update lastVerified whenever the fact changes.
+
+8c. src/data/topicSuggestions.js
+  Sidebar chips under "Topic suggestions" in SideMenu.
+  Each item: { label, prompt, kbPath }
+  kbPath must point to a real file (tested automatically).
+
+8d. eval/golden-set.json
+  Hand-labeled test queries with expectedFiles arrays.
+  Add a new entry when you add important new content.
+  Multiple expectedFiles allowed (legacy + myCMUQ paths both OK).
+
+8e. knowledge-base/manifest.json
+  Auto-generated registry. Do NOT hand-edit paths/topics — run sync instead.
+  You MAY manually set on entries:
+    owner, synonyms, keyFactIds, topicSuggestionLabel
+  These fields are preserved across syncs.
+
+
+================================================================================
+9. myCMU-Q CONTENT STRUCTURE
+================================================================================
+
+  knowledge-base/mycmuq/
+    portal/                          Home + directory
+    departments/{dept}/              BA, BS, CS, IS overviews + teams
+    offices/computing-services/      IT help (WiFi, VPN, printing, Canvas…)
+    offices/education-office/        Registration, minors, financial aid…
+    offices/student-affairs/         CaPS-Q, housing, career services…
+    alpha-iota-delta-award/
+
+One .txt file = one portal page or sub-page.
+SOURCE header should be the myCMU-Q Google Sites URL when possible.
+
+
+================================================================================
+10. AI CONFIGURATION (server/.env)
+================================================================================
+
+For fluent answers + retrieval reranking, configure ONE of:
+
+  Option A — CMU AI Gateway (recommended):
+    AI_GATEWAY_BASE_URL=...
+    CLAUDE_API_KEY=...
+
+  Option B — Direct Anthropic:
+    ANTHROPIC_API_KEY=...
+
+Without an API key, Scotty returns raw KB excerpts (accurate but not conversational).
+
+Restart server after .env changes.
+
+
+================================================================================
+11. TROUBLESHOOTING
+================================================================================
+
+"Manifest is out of date"
+  → npm run kb:sync-manifest
+
+"Missing TOPIC or SECTION header"
+  → Fix the .txt file header format (see Section 3)
+
+"kbPath entries point to missing files"
+  → Update src/data/topicSuggestions.js or restore the deleted .txt
+
+"Retrieval eval FAIL (hit@k < 75%)"
+  → Read the miss list in eval output
+  → Add synonyms in data/synonyms.json OR improve TOPIC/first paragraph in .txt
+  → Optionally add query to eval/golden-set.json with correct expectedFiles
+
+"Scotty gives wrong answer but debug shows right file"
+  → AI issue: check server/.env keys, restart server
+  → Or add/update key-facts.json for the specific fact
+
+"Scotty says it doesn't know"
+  → curl /api/kb/debug?q=... — if no matches, fix synonyms or KB keywords
+  → If matches exist but low confidence, expand content in .txt
+
+"Validation passes but answer feels stiff"
+  → Ensure AI keys are configured (not KB-only fallback mode)
+
+
+================================================================================
+12. FILE MAP (KEY PATHS)
+================================================================================
+
+  README.md                           Project setup + KB pipeline summary
+  MANUAL/DEVELOPER_GUIDE.txt          This file
+  knowledge-base/                     All KB content
+  knowledge-base/manifest.json        Central KB registry
+  data/synonyms.json                  Query expansion
+  data/key-facts.json                 Authoritative facts
+  src/data/topicSuggestions.js        Sidebar suggestions
+  eval/golden-set.json                Retrieval regression tests
+  server/knowledgeBase.js             Load, chunk, retrieve, rerank
+  server/server.js                    API + prompts + /api/kb/debug
+  scripts/kb-validate.js              Unified validation pipeline
+  scripts/kb-sync-manifest.js         Manifest generator
+  scripts/eval_rag.js                 Golden-set evaluator
+  scripts/clean_knowledge_base.py     Format linter
+
+
+================================================================================
+13. CHECKLIST BEFORE MERGING KB CHANGES
+================================================================================
+
+  [ ] Edited the correct .txt file(s)
+  [ ] Updated key-facts.json if numbers/deadlines changed
+  [ ] Updated topicSuggestions.js if new page added
+  [ ] Updated synonyms.json if new student slang
+  [ ] Ran npm run kb:sync-manifest (if files added/removed)
+  [ ] Ran npm run kb:validate — all green
+  [ ] Restarted server
+  [ ] Spot-checked /api/kb/debug for 1–2 real questions
+  [ ] Tested answer in Q&A mode in the UI
+
+================================================================================
+END OF MANUAL
+================================================================================

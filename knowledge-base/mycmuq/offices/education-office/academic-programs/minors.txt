@@ -1,0 +1,38 @@
+SOURCE: https://sites.google.com/andrew.cmu.edu/mycmuq-education/academic-programs/minors
+TOPIC: Minors at CMU-Q (myCMU-Q Education Office)
+SECTION: studies
+---
+Minors — Education Office, CMU-Q
+
+16 Available Minors — declare by end of sophomore year.
+
+Humanities:
+- Arabic Studies — Language proficiency and Arabic cultural understanding. Advisor: Ezzohra Moufid.
+- History — Writing, argumentation, source analysis. Advisor: Benjamin Reilly. Prereq: 79-104.
+- Professional Writing — Writing/communications career preparation. Advisor: Tom Mitchell.
+
+Business & Economics:
+- Business Administration — Functional areas of business; application required. Advisor: Agustin Indaco.
+- Business Analytics & Optimization — Data-driven business decisions. Advisor: Fuad Farooqi. Prereq: Multivariate Calculus.
+- Economics — Economic theory and data analysis. Advisor: Agustin Indaco.
+- Financial Management — Financial markets; mirrors Finance concentration. Advisor: Fuad Farooqi.
+
+Science & Technology:
+- Biological Sciences — Biochemistry, genetics, cell biology. Advisor: Mohamed Bouaouina.
+- Computational Biology — Mathematical/computational methods in biology. Advisor: Ryan Riley.
+- Computer Science — Algorithms, data structures, programming paradigms. Advisor: Ryan Riley. Prereq: 21-127, 15-112.
+- Mathematical Sciences — Real analysis, discrete math, linear algebra. Advisor: Zelealem Yilma. Prereq: 21-127.
+- Tech Entrepreneurship — Build tech-driven startups from ideation to investor pitch. Advisor: Nui Vatanasakdakul.
+
+Social Sciences:
+- Neuroscience — Natural, social, and computer sciences curriculum. Advisor: Nesrine Affara.
+- Psychology — 8-course curriculum covering psychological theories and scientific method. Advisor: Jennifer Bruder.
+- Sociology — Social networks, technology, empirical inquiry. Advisor: Jocelyn Belanger.
+
+Student-Defined Minor (SDM): Custom academic path; contact Education Office.
+
+How to Declare:
+1. Choose minor
+2. Meet faculty advisor
+3. Complete PDF declaration form
+4. Email to qatareducationform@andrew.cmu.edu

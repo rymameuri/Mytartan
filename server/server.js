@@ -62,9 +62,9 @@ const {
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-const AI_MAX_TOKENS = 200;
+const AI_MAX_TOKENS = 350;
 const AI_MAX_TOKENS_TUTOR = 512;
-const AI_TEMPERATURE = 0.3;
+const AI_TEMPERATURE = 0.35;
 
 // Tune after eval: scores below this skip full LLM generation (weak retrieval / hallucination risk).
 const LOW_CONFIDENCE_THRESHOLD = 40;
@@ -605,6 +605,7 @@ app.get("/", (_req, res) => {
       "GET /api/auth/me",
       "PATCH /api/auth/profile",
       "GET /api/kb/status",
+      "GET /api/kb/debug?q=...",
       "GET /api/canvas/courses",
       "POST /api/courses/import/canvas",
       "POST /api/courses/:id/sync",
@@ -770,6 +771,30 @@ app.post("/api/courses/import/canvas", requireAuth, async (req, res) => {
 
 app.get("/api/kb/status", (_req, res) => {
   res.json(getRetrievalStatus());
+});
+
+/** Dev helper: inspect which KB chunks match a question (no LLM call). */
+app.get("/api/kb/debug", async (req, res) => {
+  const query = String(req.query.q || "").trim();
+  if (!query) {
+    return res.status(400).json({ error: "Pass ?q=your question" });
+  }
+
+  const docs = await retrieveRelevantDocsAsync(query);
+  const keyFacts = checkKeyFacts(query);
+
+  res.json({
+    query,
+    confidence: computeConfidence(docs),
+    keyFacts: keyFacts.map((f) => ({ id: f.id, topic: f.topic, value: f.value })),
+    sources: docs.map((d) => ({
+      topic: d.topic,
+      file: d.file,
+      score: d.score,
+      method: d.method,
+      preview: d.body.slice(0, 200),
+    })),
+  });
 });
 
 app.get("/api/courses", requireAuth, (req, res) => {

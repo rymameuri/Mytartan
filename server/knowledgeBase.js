@@ -432,6 +432,11 @@ const CMU_VOCABULARY = [
   "forms", "petition", "waiver", "prerequisite", "credit", "units",
   "orientation", "graduation", "diploma", "commencement",
   "deadline", "deadlines", "building", "buildings",
+  "wifi", "vpn", "duo", "printing", "gpu", "canvas", "crashplan",
+  "eduroam", "handshake", "vmock", "counseling", "therapy", "papercut",
+  "anyconnect", "chatgpt", "copilot", "backup", "phishing", "slurm",
+  "deepnet", "caps", "residence", "dorm", "immigration", "visa",
+  "supplemental", "tutoring", "honors", "thesis", "scholar",
 ];
 
 function hasContentKeywords(query) {
@@ -456,6 +461,11 @@ const SOUND_CORRECTIONS = {
   adviser: "advisor",
   "micro course": "micro-courses",
   "student hand book": "student handbook",
+  "wi fi": "wifi",
+  "w fi": "wifi",
+  "two fa": "2fa",
+  "duo mobile": "duo",
+  papercut: "printing",
 };
 
 function fuzzyCorrectTokens(tokens) {
@@ -733,7 +743,7 @@ function retrieveRelevantDocs(query, options = {}) {
 
 async function retrieveRelevantDocsAsync(
   query,
-  { limit = 3, maxChars = 5000, maxDocChars = 600, recentMessages = [] } = {}
+  { limit = 4, maxChars = 6500, maxDocChars = 900, recentMessages = [] } = {}
 ) {
   if (!query?.trim()) {
     recordLastQuery({ rawQuery: query, retrievalQuery: query, usedQueryRewriting: false, usedReranking: false });
