@@ -87,17 +87,13 @@
 .scotty-avatar__facial-stage {
   position: absolute;
   z-index: 2;
-  inset: 0;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: auto;
+  aspect-ratio: 3 / 4;
   pointer-events: none;
-}
-
-.scotty-avatar--persona .scotty-avatar__facial-stage,
-.scotty-avatar--dock .scotty-avatar__facial-stage {
-  inset: 5.5%;
-}
-
-.scotty-avatar--compact .scotty-avatar__facial-stage {
-  inset: 5%;
+  transform: translateX(-50%);
 }
 
 .scotty-avatar__eyes,
@@ -112,8 +108,8 @@
 
 .scotty-avatar__eye {
   position: absolute;
-  top: 31.8%;
-  width: 7.2%;
+  top: 34.5%;
+  width: 7.6%;
   aspect-ratio: 1;
   border-radius: 50%;
   background: #11131a;
@@ -124,11 +120,11 @@
 }
 
 .scotty-avatar__eye--left {
-  left: 35.4%;
+  left: 34.7%;
 }
 
 .scotty-avatar__eye--right {
-  right: 35.4%;
+  right: 34.7%;
   animation-delay: 0.08s;
 }
 
@@ -155,7 +151,7 @@
 
 .scotty-avatar__mouth {
   left: 50%;
-  top: 54.8%;
+  top: 60.8%;
   width: 15.5%;
   height: 7.2%;
   opacity: 0;
