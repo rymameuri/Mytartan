@@ -1,8 +1,5 @@
 import { forwardRef, useImperativeHandle } from "react";
 import tartanScottyFacialBase from "../assets/tartan-scotty-facial-base.png";
-import scottyMouthClosed from "../assets/scotty-mouth-closed.png";
-import scottyMouthSmallOpen from "../assets/scotty-mouth-small-open.png";
-import scottyMouthWideOpen from "../assets/scotty-mouth-wide-open.png";
 import "./ScottyAvatar.css";
 
 function ScottyEyes() {
@@ -21,9 +18,15 @@ function ScottyEyes() {
 function ScottyMouth() {
   return (
     <span className="scotty-avatar__mouth" aria-hidden="true">
-      <img className="scotty-avatar__mouth-shape scotty-avatar__mouth-shape--closed" src={scottyMouthClosed} alt="" />
-      <img className="scotty-avatar__mouth-shape scotty-avatar__mouth-shape--small" src={scottyMouthSmallOpen} alt="" />
-      <img className="scotty-avatar__mouth-shape scotty-avatar__mouth-shape--wide" src={scottyMouthWideOpen} alt="" />
+      <span className="scotty-avatar__mouth-state scotty-avatar__mouth-state--closed" />
+      <span className="scotty-avatar__mouth-state scotty-avatar__mouth-state--small">
+        <span className="scotty-avatar__mouth-opening" />
+        <span className="scotty-avatar__tongue" />
+      </span>
+      <span className="scotty-avatar__mouth-state scotty-avatar__mouth-state--wide">
+        <span className="scotty-avatar__mouth-opening" />
+        <span className="scotty-avatar__tongue" />
+      </span>
     </span>
   );
 }

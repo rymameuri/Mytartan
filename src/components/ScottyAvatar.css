@@ -152,23 +152,49 @@
 .scotty-avatar__mouth {
   position: absolute;
   inset: 0;
-  opacity: 1;
+  pointer-events: none;
 }
 
-.scotty-avatar__mouth-shape {
+.scotty-avatar__mouth-state {
   position: absolute;
   left: 50%;
-  top: 60.8%;
-  width: 31%;
-  height: 31%;
-  object-fit: contain;
+  top: 64.2%;
+  width: 10.5%;
+  height: 4.2%;
   opacity: 0;
-  pointer-events: none;
   transform: translate(-50%, -50%);
+  transform-origin: center;
 }
 
-.scotty-avatar__mouth-shape--closed {
+.scotty-avatar__mouth-state--closed {
   opacity: 1;
+}
+
+.scotty-avatar__mouth-state--closed::after {
+  position: absolute;
+  inset: 42% 12% auto;
+  height: 10%;
+  border-radius: 50%;
+  background: rgba(19, 15, 23, 0.72);
+  content: "";
+}
+
+.scotty-avatar__mouth-opening {
+  position: absolute;
+  inset: 8% 0 4%;
+  border: 1px solid #08070b;
+  border-radius: 48% 48% 54% 54%;
+  background: #17131b;
+}
+
+.scotty-avatar__tongue {
+  position: absolute;
+  left: 27%;
+  right: 27%;
+  bottom: 10%;
+  height: 23%;
+  border-radius: 50% 50% 42% 42%;
+  background: #c86a7a;
 }
 
 .shb--speaking .scotty-avatar__eye {
@@ -179,15 +205,19 @@
   animation-delay: 0.16s;
 }
 
-.shb--speaking .scotty-avatar__mouth-shape--closed {
+.shb--speaking .scotty-avatar__mouth-state--closed {
   animation: scotty-mouth-closed-cycle 1.08s steps(1, end) infinite;
 }
 
-.shb--speaking .scotty-avatar__mouth-shape--small {
+.shb--speaking .scotty-avatar__mouth-state--small {
+  width: 11.5%;
+  height: 4.9%;
   animation: scotty-mouth-small-cycle 1.08s steps(1, end) infinite;
 }
 
-.shb--speaking .scotty-avatar__mouth-shape--wide {
+.shb--speaking .scotty-avatar__mouth-state--wide {
+  width: 14%;
+  height: 6.4%;
   animation: scotty-mouth-wide-cycle 1.08s steps(1, end) infinite;
 }
 
@@ -382,9 +412,9 @@
   .shb--speaking .scotty-avatar__mascot-stage::before,
   .scotty-avatar__eye,
   .shb--speaking .scotty-avatar__eye,
-  .shb--speaking .scotty-avatar__mouth-shape--closed,
-  .shb--speaking .scotty-avatar__mouth-shape--small,
-  .shb--speaking .scotty-avatar__mouth-shape--wide {
+  .shb--speaking .scotty-avatar__mouth-state--closed,
+  .shb--speaking .scotty-avatar__mouth-state--small,
+  .shb--speaking .scotty-avatar__mouth-state--wide {
     animation: none;
   }
 
