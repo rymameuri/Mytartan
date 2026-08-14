@@ -12,6 +12,10 @@
   --tartan-panel: rgba(255, 255, 255, 0.96);
   --tartan-panel-soft: rgba(255, 255, 255, 0.88);
   --tartan-panel-border: rgba(255, 255, 255, 0.22);
+  --tartan-ink: #241317;
+  --tartan-ink-muted: rgba(36, 19, 23, 0.62);
+  --tartan-surface-glass: rgba(255, 255, 255, 0.12);
+  --tartan-surface-glass-strong: rgba(255, 255, 255, 0.18);
   --tartan-shadow: rgba(0, 0, 0, 0.18);
   --font-display: "Fredoka", "Arial Rounded MT Bold", "Helvetica Rounded", sans-serif;
   --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;

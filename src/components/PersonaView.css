@@ -16,7 +16,7 @@
   inset: 0;
   z-index: 0;
   background:
-    radial-gradient(ellipse 85% 65% at 50% 35%, rgba(122, 28, 40, 0.12) 0%, rgba(92, 21, 30, 0.4) 100%);
+    radial-gradient(ellipse 90% 70% at 50% 18%, rgba(229, 159, 143, 0.16) 0%, rgba(92, 21, 30, 0.48) 68%, rgba(55, 10, 18, 0.62) 100%);
   pointer-events: none;
 }
 
@@ -27,8 +27,11 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 16px 20px 8px;
+  gap: 16px;
+  padding: 14px 24px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(74, 10, 20, 0.2);
+  backdrop-filter: blur(18px);
 }
 
 .pv-header__actions {
@@ -42,19 +45,21 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  margin-left: auto;
-  margin-right: 8px;
-  padding: 3px;
+  margin-left: 0;
+  margin-right: auto;
+  padding: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.18);
+  background: rgba(34, 5, 11, 0.28);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .pv-mode-tab {
   border: none;
   border-radius: 999px;
-  padding: 6px 12px;
+  padding: 7px 13px;
   background: transparent;
-  color: rgba(255, 255, 255, 0.75);
+  color: rgba(255, 255, 255, 0.68);
   font: inherit;
   font-size: 0.8125rem;
   font-weight: 600;
@@ -67,17 +72,19 @@
 }
 
 .pv-mode-tab--active {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.18);
   color: var(--tartan-white);
+  box-shadow: 0 3px 10px rgba(28, 4, 10, 0.16);
 }
 
 .pv-interaction-tabs {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 3px;
+  padding: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.18);
+  background: rgba(34, 5, 11, 0.28);
 }
 
 .pv-interaction-tab {
@@ -98,8 +105,9 @@
 }
 
 .pv-interaction-tab--active {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.18);
   color: var(--tartan-white);
+  box-shadow: 0 3px 10px rgba(28, 4, 10, 0.16);
 }
 
 .pv--persona-mode .pv-body {
@@ -151,18 +159,20 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  border: none;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.1);
+  width: 38px;
+  height: 38px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
   color: var(--tartan-white);
   cursor: pointer;
-  transition: background 0.15s ease;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
 }
 
 .pv-icon-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.24);
+  transform: translateY(-1px);
 }
 
 .pv-icon-btn:disabled {
@@ -218,7 +228,9 @@
 }
 
 .pv-body--chat .pv-messages {
-  padding: 4px 20px 6px;
+  padding: 12px 24px 10px;
+  width: min(100%, 920px);
+  align-self: center;
 }
 
 .pv-body--chat .pv-stage {
@@ -247,8 +259,10 @@
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
   scrollbar-gutter: stable;
-  padding: 8px 20px 12px;
+  padding: 12px 24px 18px;
   width: 100%;
+  max-width: 920px;
+  align-self: center;
   display: flex;
   flex-direction: column;
 }
@@ -369,9 +383,9 @@
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  padding: 0 20px 20px;
-  width: 100%;
-  max-width: 720px;
+  padding: 10px 24px 24px;
+  width: min(100%, 920px);
+  max-width: 920px;
   margin: 0 auto;
 }
 
@@ -483,12 +497,12 @@
   .pv-header__actions { order: 2; flex-wrap: wrap; justify-content: flex-end; gap: 4px; }
   .pv-interaction-tabs { order: -1; width: 100%; justify-content: center; margin-bottom: 4px; }
   .pv-interaction-tab { font-size: 0.6875rem; padding: 5px 10px; }
-  .pv-messages { padding: 4px 12px 8px; }
+  .pv-messages { padding: 8px 12px 14px; }
   .pv-body--chat .pv-messages { padding: 2px 12px 4px; }
   .pv-scroll-down { bottom: 6px; }
   .pv-stage { padding: 8px 16px 4px; }
   .pv-body--chat .pv-stage { padding: 2px 16px 4px; }
-  .pv-footer { padding: 0 16px 16px; }
+  .pv-footer { padding: 8px 16px 16px; }
 }
 
 @media (max-height: 700px) {

@@ -150,9 +150,7 @@ function PersonaView({
             <MenuIcon />
           </button>
         )}
-        {!isDesktop && (
-          <span className="pv-brand__name brand-display">MY TARTAN</span>
-        )}
+        <span className="pv-brand__name brand-display">MY TARTAN</span>
         <div className="pv-mode-tabs" role="tablist" aria-label="Assistant mode">
           <button
             type="button"
