@@ -112,8 +112,8 @@
 
 .scotty-avatar__eye {
   position: absolute;
-  top: 40.5%;
-  width: 7.6%;
+  top: 31.8%;
+  width: 7.2%;
   aspect-ratio: 1;
   border-radius: 50%;
   background: #11131a;
@@ -124,11 +124,11 @@
 }
 
 .scotty-avatar__eye--left {
-  left: 37.8%;
+  left: 35.4%;
 }
 
 .scotty-avatar__eye--right {
-  right: 37.8%;
+  right: 35.4%;
   animation-delay: 0.08s;
 }
 
@@ -155,9 +155,9 @@
 
 .scotty-avatar__mouth {
   left: 50%;
-  top: 65.5%;
+  top: 54.8%;
   width: 15.5%;
-  height: 8.3%;
+  height: 7.2%;
   opacity: 0;
   transform: translate(-50%, -50%) scale(0.82);
   transform-origin: center top;
