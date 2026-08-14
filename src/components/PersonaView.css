@@ -197,6 +197,21 @@
   max-width: none;
 }
 
+.pv-body--chat-full {
+  justify-content: stretch;
+}
+
+.pv-body--chat-full .pv-messages-wrap {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.pv-body--chat-full .pv-messages {
+  flex: 1;
+  padding-bottom: 16px;
+}
+
 .pv-body--chat .pv-messages-wrap {
   flex: 1;
   min-height: 0;
@@ -285,11 +300,21 @@
 
 .pv-avatar-frame {
   position: relative;
-  width: min(240px, 48vw);
-  height: min(240px, 48vw);
+  width: min(260px, 62vw);
+  height: min(260px, 62vw);
   flex-shrink: 0;
   margin-inline: auto;
-  overflow: visible;
+  overflow: hidden;
+  border-radius: 22px;
+  --avatar-scale: 1;
+}
+
+.pv-avatar-frame--speaking {
+  filter: drop-shadow(0 0 18px rgba(255, 255, 255, 0.18));
+}
+
+.pv-avatar-frame--listening {
+  box-shadow: 0 0 0 3px rgba(255, 212, 218, 0.35);
 }
 
 .pv-identity {

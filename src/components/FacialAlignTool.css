@@ -1,0 +1,260 @@
+.fat {
+  min-height: 100vh;
+  background: #1a1d24;
+  color: #f4f1ea;
+  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+  padding: 20px 24px 40px;
+}
+
+.fat-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.fat-header h1 {
+  margin: 0 0 6px;
+  font-size: 1.4rem;
+}
+
+.fat-header p {
+  margin: 0;
+  color: rgba(244, 241, 234, 0.72);
+  font-size: 0.92rem;
+}
+
+.fat-link {
+  color: #ffd4da;
+  text-decoration: none;
+  border: 1px solid rgba(255, 212, 218, 0.35);
+  border-radius: 999px;
+  padding: 8px 14px;
+  white-space: nowrap;
+}
+
+.fat-layout {
+  display: grid;
+  grid-template-columns: minmax(320px, 1fr) minmax(280px, 360px);
+  gap: 20px;
+  align-items: start;
+}
+
+.fat-preview {
+  display: grid;
+  place-items: center;
+  min-height: 70vh;
+  background:
+    radial-gradient(circle at 50% 30%, rgba(156, 39, 51, 0.18), transparent 50%),
+    #12141a;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 24px;
+}
+
+.fat-stage {
+  /* Match PersonaView .pv-avatar-frame exactly */
+  width: min(420px, 78vw);
+  height: min(420px, 78vw);
+  max-width: min(420px, 78vw);
+  max-height: min(420px, 78vw);
+  border-radius: 22px;
+  overflow: hidden;
+  background: #f3f3f3;
+}
+
+.fat-avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+  background: transparent;
+  overflow: hidden;
+}
+
+.fat-stage--frozen .scotty-avatar__mascot-stage,
+.fat-stage--frozen .scotty-avatar__eye {
+  animation: none !important;
+}
+
+.fat-handle {
+  pointer-events: auto !important;
+  cursor: grab;
+  outline: 2px dashed rgba(255, 255, 255, 0.55);
+  outline-offset: 2px;
+  touch-action: none;
+  user-select: none;
+}
+
+.fat-handle:active {
+  cursor: grabbing;
+}
+
+.fat-handle--active {
+  outline-color: #9c2733;
+  outline-width: 3px;
+  box-shadow: 0 0 0 4px rgba(156, 39, 51, 0.25);
+}
+
+.fat-label {
+  position: absolute;
+  left: 50%;
+  top: -18px;
+  transform: translateX(-50%);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #fff;
+  background: rgba(20, 22, 28, 0.85);
+  border-radius: 999px;
+  padding: 2px 6px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.fat-mouth-hit {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  border: 0;
+  background: rgba(156, 39, 51, 0.08);
+  border-radius: 18%;
+  padding: 0;
+}
+
+.fat-resize {
+  position: absolute;
+  z-index: 5;
+  width: 16px;
+  height: 16px;
+  border: 0;
+  border-radius: 4px;
+  background: #9c2733;
+  transform: translate(-50%, -50%);
+  cursor: nwse-resize;
+  touch-action: none;
+  box-shadow: 0 0 0 2px #fff;
+}
+
+.fat-panel {
+  background: #222632;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.fat-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fat-controls label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.92rem;
+}
+
+.fat-values h2,
+.fat-nudge h2 {
+  margin: 0 0 8px;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(244, 241, 234, 0.65);
+}
+
+.fat-values dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.fat-values dl > div {
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+
+.fat-values dt {
+  font-size: 0.72rem;
+  color: rgba(244, 241, 234, 0.55);
+}
+
+.fat-values dd {
+  margin: 2px 0 0;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.fat-nudge-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.fat-nudge-grid button,
+.fat-size-row button,
+.fat-btn {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: inherit;
+  border-radius: 10px;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.fat-size-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.fat-css {
+  margin: 0;
+  max-height: 220px;
+  overflow: auto;
+  background: #12141a;
+  border-radius: 12px;
+  padding: 12px;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
+
+.fat-actions {
+  display: grid;
+  gap: 8px;
+}
+
+.fat-btn--primary {
+  background: #9c2733;
+  border-color: #9c2733;
+  font-weight: 600;
+}
+
+.fat-btn--ghost {
+  background: transparent;
+}
+
+.fat-note {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #ffd4da;
+}
+
+@media (max-width: 900px) {
+  .fat-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .fat-preview {
+    min-height: 55vh;
+  }
+}

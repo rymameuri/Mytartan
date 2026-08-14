@@ -8,8 +8,8 @@
   letter-spacing: 0.01em;
   text-align: center;
   color: var(--tartan-text-on-dark);
-  white-space: nowrap;
-  overflow: hidden;
+  white-space: normal;
+  overflow: visible;
   animation: persona-caption-swap 0.22s ease;
 }
 

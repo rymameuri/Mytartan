@@ -24,7 +24,7 @@ function ScottyPersonaStage({
       <div className={`sp-stage sp-stage--${avatarState}`}>
         <div className={`sp-avatar-frame sp-avatar-frame--${avatarState}`}>
           <ScottyHeadbandFrame avatarState={avatarState} className="shb--sm">
-            <ScottyAvatar ref={avatarRef} persona />
+            <ScottyAvatar ref={avatarRef} persona avatarState={avatarState} />
           </ScottyHeadbandFrame>
         </div>
 

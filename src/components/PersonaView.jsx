@@ -1,6 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import ScottyAvatar from "./ScottyAvatar";
-import ScottyHeadbandFrame from "./ScottyHeadbandFrame";
 import MessageContent from "./MessageContent";
 import PersonaMicControls from "./PersonaMicControls";
 import PersonaCaption from "./PersonaCaption";
@@ -43,6 +42,14 @@ function PersonaView({
   const hasUserMessages = messages.some((message) => message.role === "user");
   const showChatHistory = interactionMode === "chat" && hasUserMessages;
   const showPersonaStage = interactionMode === "persona" || !hasUserMessages;
+  const showAvatarStage = interactionMode === "persona" || !hasUserMessages;
+  const lastAssistantReply = [...messages]
+    .reverse()
+    .find((message) => message.role === "assistant" && message.content?.trim())?.content;
+  const personaCaptionText =
+    (isSpeaking && speechCaption?.trim()) ||
+    (interactionMode === "persona" && !isSpeaking && lastAssistantReply?.trim()) ||
+    "";
 
   const SCROLL_THRESHOLD = 72;
 
@@ -118,7 +125,13 @@ function PersonaView({
         ? "Tap to stop"
         : "Tap to speak";
 
-  const avatarState = isSpeaking ? "speaking" : listening ? "listening" : "idle";
+  const avatarState = isSpeaking
+    ? "speaking"
+    : listening
+      ? "listening"
+      : isLoading
+        ? "thinking"
+        : "idle";
   const showIdleHint = showPersonaStage && !isSpeaking && !isLoading && !hasUserMessages;
   const isTutor = mode === "tutor";
 
@@ -217,7 +230,11 @@ function PersonaView({
         </div>
       </header>
 
-      <main className={`pv-body${showChatHistory ? " pv-body--chat" : " pv-body--idle"}`}>
+      <main
+        className={`pv-body${showChatHistory ? " pv-body--chat" : " pv-body--idle"}${
+          showChatHistory && !showAvatarStage ? " pv-body--chat-full" : ""
+        }`}
+      >
         {showChatHistory && (
           <div className="pv-messages-wrap">
             <div
@@ -279,14 +296,13 @@ function PersonaView({
           </div>
         )}
 
+        {showAvatarStage && (
         <div className={`pv-stage${interactionMode === "persona" ? " pv-stage--persona-main" : ""}`}>
           <div
             className={`pv-avatar-frame pv-avatar-frame--${avatarState}`}
             style={avatarStyle}
           >
-            <ScottyHeadbandFrame avatarState={avatarState}>
-              <ScottyAvatar ref={avatarRef} persona />
-            </ScottyHeadbandFrame>
+            <ScottyAvatar ref={avatarRef} persona avatarState={avatarState} />
           </div>
 
           {interactionMode === "persona" && (
@@ -309,8 +325,8 @@ function PersonaView({
             </div>
           )}
 
-          {isSpeaking && speechCaption && (
-            <PersonaCaption text={speechCaption} />
+          {personaCaptionText && (
+            <PersonaCaption text={personaCaptionText} />
           )}
 
           {showIdleHint && (
@@ -327,6 +343,8 @@ function PersonaView({
             <p className="pv-idle-hint pv-idle-hint--live">Scotty is thinking…</p>
           )}
         </div>
+        )}
+        {!showAvatarStage && <ScottyAvatar ref={avatarRef} hidden />}
       </main>
 
       <footer className="pv-footer">
@@ -339,6 +357,7 @@ function PersonaView({
           onSend={onSend}
           voiceModeRef={voiceModeRef}
           micOnly={interactionMode === "persona"}
+          inputOnly={interactionMode === "chat"}
           placeholder={
             isTutor
               ? "Ask Scotty about your course…"

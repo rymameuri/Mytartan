@@ -14,14 +14,18 @@ function ScottyPersonaDock({
       ? "listening"
       : avatarState === "speaking"
         ? "speaking"
-        : "idle";
+        : avatarState === "thinking"
+          ? "thinking"
+          : "idle";
 
   const statusLabel =
     resolvedState === "speaking"
       ? "Speaking…"
       : resolvedState === "listening"
         ? "Listening…"
-        : "Ready to help";
+        : resolvedState === "thinking"
+          ? "Thinking…"
+          : "Ready to help";
 
   if (variant === "hero") {
     return (

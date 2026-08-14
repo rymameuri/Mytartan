@@ -3,9 +3,9 @@ import { useAuth } from "../context/AuthContext";
 import { getUserStorageKey } from "../utils/userStorage";
 
 const STORAGE_KEY = "tartan-avatar-zoom";
-const DEFAULT_ZOOM = 148;
-const MIN_ZOOM = 115;
-const MAX_ZOOM = 220;
+const DEFAULT_ZOOM = 100;
+const MIN_ZOOM = 85;
+const MAX_ZOOM = 130;
 
 function readStoredZoom(userId) {
   try {
@@ -47,7 +47,7 @@ export function useAvatarZoom() {
   }, []);
 
   const avatarStyle = {
-    "--avatar-zoom-size": `${zoom}%`,
+    "--avatar-scale": (zoom / 100).toFixed(2),
   };
 
   return { zoom, setZoom, resetZoom, avatarStyle, minZoom: MIN_ZOOM, maxZoom: MAX_ZOOM };

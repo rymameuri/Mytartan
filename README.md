@@ -21,9 +21,10 @@
 |-------|-----------|
 | Frontend | React 19, Create React App |
 | Backend | Node.js, Express |
-| AI Provider | Anthropic Claude API |
+| AI Provider | Anthropic Claude API, CMU AI Gateway, or Hugging Face Inference Providers |
 | Knowledge Retrieval | Custom RAG pipeline (keyword matching with fuzzy correction and alias expansion) |
 | Avatar (optional) | LiveAvatar API |
+| Voice persona | ElevenLabs TTS (talking mascot image) |
 
 ---
 
@@ -93,16 +94,34 @@ The app opens at `http://localhost:3000`.
 
 | Variable | Required | Description |
 |----------|----------|-------------|
+| `AI_PROVIDER` | No | `claude` (default), `huggingface`, or `hf` |
 | `AI_GATEWAY_BASE_URL` | Yes* | CMU AI Gateway URL: `https://ai-gateway.andrew.cmu.edu` |
 | `CLAUDE_API_KEY` | Yes* | Your CMU AI Gateway token (for Claude) |
-| `AI_MODEL` | No | Claude model (default: `us.anthropic.claude-haiku-4-5-20251001-v1:0`). Also: `claude-3-5-sonnet-20241022`, `claude-3-7-sonnet-20250219-v1:0` |
+| `AI_MODEL` | No | Claude model (default: `claude-haiku-4-5-20251001-v1:0`). Also: `claude-sonnet-4-20250514-v1:0`, `gpt-5-nano`, `gpt-5.4-mini` |
 | `ANTHROPIC_API_KEY` | Alt | Use Claude directly from Anthropic instead of the CMU gateway (leave `AI_GATEWAY_BASE_URL` empty) |
-| `LIVEAVATAR_API_KEY` | No | Optional — enables the AI avatar feature |
+| `HUGGINGFACE_API_KEY` | Alt | Hugging Face token with **Inference Providers** permission (use with `AI_PROVIDER=huggingface`) |
+| `HUGGINGFACE_MODEL` | No | HF model id (default: `deepseek-ai/DeepSeek-V4-Flash-0731`) |
+| `HF_REASONING_EFFORT` | No | Optional DeepSeek reasoning level: `low`, `high`, or `max` |
+| `LIVEAVATAR_API_KEY` | No | Optional — legacy LiveAvatar video avatar |
+| `ELEVENLABS_API_KEY` | No | ElevenLabs API key for talking mascot voice |
+| `ELEVENLABS_VOICE_ID` | No | ElevenLabs voice ID (required with `ELEVENLABS_API_KEY`) |
+| `ELEVENLABS_MODEL_ID` | No | TTS model (default: `eleven_multilingual_v2`) |
 | `PORT` | No | Backend port (default: `3001`) |
 
-\* Use either the CMU AI Gateway vars **or** `ANTHROPIC_API_KEY`, not both.
+\* Use either the CMU AI Gateway vars **or** `ANTHROPIC_API_KEY`, or set `AI_PROVIDER=huggingface` with `HUGGINGFACE_API_KEY` — not multiple providers at once.
 
 If no AI key is configured, the app falls back to returning raw knowledge base excerpts.
+
+### Troubleshooting: `getaddrinfo ENOTFOUND ai-gateway.andrew.cmu.edu`
+
+The CMU AI Gateway hostname is only resolvable on CMU networks. If you see this error (common from CMU-Q or off-campus):
+
+1. Install **Cisco AnyConnect** (CMU software center).
+2. Connect to the **Pittsburgh campus VPN**: `vpn.cmu.edu` (not just `vpn.qatar.cmu.edu`).
+3. Restart the backend: `cd server && npm start`.
+4. Verify DNS resolves: `ping ai-gateway.andrew.cmu.edu` — you should get an IP, not "Unknown host".
+
+If it still fails after Pittsburgh VPN, contact your course admin or `it-help@cmu.edu` — the gateway may not be reachable from your region yet.
 
 ---
 
@@ -190,6 +209,17 @@ Express Backend (port 3001)
  └── Claude API call (Anthropic)
        System prompt = role instructions + KB context
        → Returns grounded answer
+
+When using Hugging Face instead of Claude:
+
+```bash
+# server/.env
+AI_PROVIDER=huggingface
+HUGGINGFACE_API_KEY=hf_your_token
+HUGGINGFACE_MODEL=deepseek-ai/DeepSeek-V4-Flash-0731
+```
+
+Scotty then calls `https://router.huggingface.co/v1/chat/completions` with the same system prompt and message history.
 ```
 
 Check retrieval status at runtime:
@@ -216,7 +246,7 @@ npm run kb:eval        # retrieval eval only
 - **Retrieval is keyword-based**, not semantic embedding search.
 - **No user authentication** — conversation history is stored in the browser's local storage only.
 - **Knowledge base is static** — content must be manually updated as CMU-Q policies change.
-- **Avatar feature** requires a paid LiveAvatar API key and is optional.
+- **Avatar feature** uses your mascot image with ElevenLabs voice (or browser TTS fallback). Legacy LiveAvatar video is optional.
 
 ---
 

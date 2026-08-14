@@ -64,6 +64,13 @@ const {
   importCanvasCourses,
   syncCanvasCourse,
 } = require("./services/canvasImportService");
+const {
+  chatWithHuggingface,
+  streamChatWithHuggingface,
+  getHuggingfaceProviderLabel,
+  hasHuggingfaceKey,
+  useHuggingfaceProvider,
+} = require("./huggingfaceProvider");
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -98,7 +105,7 @@ function getAiGatewayBaseUrl() {
 }
 
 function getAiModel() {
-  return process.env.AI_MODEL?.trim() || "us.anthropic.claude-haiku-4-5-20251001-v1:0";
+  return process.env.AI_MODEL?.trim() || "claude-haiku-4-5-20251001-v1:0";
 }
 
 function getAnthropicApiKey() {
@@ -118,21 +125,30 @@ function useAiGateway() {
 }
 
 function hasAiKey() {
+  if (useHuggingfaceProvider()) {
+    return hasHuggingfaceKey();
+  }
   return isConfiguredKey(getClaudeApiKey());
 }
 
-function hasAnthropicKey() {
-  return !useAiGateway() && isConfiguredKey(getAnthropicApiKey());
-}
-
 function getAiProviderLabel() {
+  if (useHuggingfaceProvider() && hasHuggingfaceKey()) {
+    return getHuggingfaceProviderLabel();
+  }
   if (useAiGateway() && hasAiKey()) {
     return `Claude via CMU AI Gateway (${getAiModel()})`;
   }
   if (hasAnthropicKey()) {
     return "Anthropic Claude (direct)";
   }
-  return "knowledge base only (add AI_GATEWAY_BASE_URL + CLAUDE_API_KEY, or ANTHROPIC_API_KEY)";
+  if (useHuggingfaceProvider()) {
+    return "Hugging Face (add HUGGINGFACE_API_KEY in server/.env)";
+  }
+  return "knowledge base only (add AI_PROVIDER + provider credentials in server/.env)";
+}
+
+function hasAnthropicKey() {
+  return !useAiGateway() && !useHuggingfaceProvider() && isConfiguredKey(getAnthropicApiKey());
 }
 
 function toPublicUser(user) {
@@ -147,10 +163,24 @@ function toPublicUser(user) {
 function formatApiError(err, fallback = "Request failed") {
   const status = err.response?.status;
   if (status === 401) {
+    if (useHuggingfaceProvider()) {
+      return "Your Hugging Face API token is invalid or expired. Update HUGGINGFACE_API_KEY in server/.env and restart the server.";
+    }
     if (useAiGateway()) {
       return "Your Claude API key is invalid or expired. Update CLAUDE_API_KEY in server/.env and restart the server.";
     }
     return "Your Anthropic API key is invalid or expired. Update ANTHROPIC_API_KEY in server/.env and restart the server.";
+  }
+
+  const networkCode = err.code || err.cause?.code;
+  if (
+    useAiGateway() &&
+    (networkCode === "ENOTFOUND" ||
+      networkCode === "EAI_AGAIN" ||
+      /getaddrinfo ENOTFOUND/i.test(err.message || ""))
+  ) {
+    const host = getAiGatewayBaseUrl().replace(/^https?:\/\//, "");
+    return `Cannot reach the CMU AI Gateway (${host}). Connect to the Pittsburgh campus VPN (vpn.cmu.edu via Cisco AnyConnect), then restart the server. CMU-Q VPN alone may not resolve this hostname.`;
   }
 
   const data = err.response?.data;
@@ -577,6 +607,10 @@ async function streamChatReply(systemPrompt, messages, onToken, aiOptions) {
   if (!hasAiKey()) {
     throw new Error("No AI provider configured");
   }
+  if (useHuggingfaceProvider()) {
+    await streamChatWithHuggingface(systemPrompt, messages, onToken, aiOptions);
+    return;
+  }
   if (useAiGateway()) {
     await streamChatWithClaudeGateway(systemPrompt, messages, onToken, aiOptions);
     return;
@@ -624,6 +658,7 @@ app.get("/", (_req, res) => {
       "POST /api/chat/stream",
       "POST /api/feedback",
       "POST /api/liveavatar-token",
+      "POST /api/tts",
       "POST /api/canvas/connect",
       "POST /api/canvas/disconnect",
       "GET /api/canvas/status",
@@ -938,6 +973,9 @@ async function getChatReply(systemPrompt, messages, aiOptions) {
   if (!hasAiKey()) {
     throw new Error("No AI provider configured");
   }
+  if (useHuggingfaceProvider()) {
+    return chatWithHuggingface(systemPrompt, messages, aiOptions);
+  }
   if (useAiGateway()) {
     return chatWithClaudeGateway(systemPrompt, messages, aiOptions);
   }
@@ -1133,12 +1171,12 @@ async function handleChatRequest(req, res, { stream = false } = {}) {
     if (mode === "tutor") {
       return res.status(500).json({
         error:
-          "Tutor mode requires an AI API key. Add AI_GATEWAY_BASE_URL + CLAUDE_API_KEY, or ANTHROPIC_API_KEY, in server/.env.",
+          "Tutor mode requires an AI provider. Set AI_PROVIDER=huggingface with HUGGINGFACE_API_KEY, or configure Claude/Anthropic in server/.env.",
       });
     }
     return res.status(500).json({
       error:
-        "No AI API key configured. Add AI_GATEWAY_BASE_URL + CLAUDE_API_KEY for Claude via CMU AI Gateway, or ANTHROPIC_API_KEY for direct Claude access, in server/.env.",
+        "No AI provider configured. Set AI_PROVIDER=huggingface with HUGGINGFACE_API_KEY, or configure Claude/Anthropic in server/.env.",
     });
   }
 
@@ -1360,6 +1398,69 @@ async function createLiveAvatarToken(_req, res) {
 
 app.post("/api/liveavatar-token", createLiveAvatarToken);
 app.post("/api/heygen-token", createLiveAvatarToken);
+
+app.post("/api/tts", async (req, res) => {
+  const apiKey = process.env.ELEVENLABS_API_KEY?.trim();
+  const voiceId = process.env.ELEVENLABS_VOICE_ID?.trim();
+
+  if (!isConfiguredKey(apiKey) || !voiceId) {
+    return res.status(500).json({
+      error:
+        "ELEVENLABS_API_KEY and ELEVENLABS_VOICE_ID must be set in server/.env",
+    });
+  }
+
+  const text = String(req.body?.text || "").trim();
+  if (!text) {
+    return res.status(400).json({ error: "text is required" });
+  }
+
+  const modelId = process.env.ELEVENLABS_MODEL_ID?.trim() || "eleven_multilingual_v2";
+
+  try {
+    const response = await axios.post(
+      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
+      {
+        text,
+        model_id: modelId,
+        voice_settings: {
+          stability: 0.5,
+          similarity_boost: 0.75,
+          style: 0.35,
+          use_speaker_boost: true,
+        },
+      },
+      {
+        headers: {
+          "xi-api-key": apiKey,
+          "Content-Type": "application/json",
+          Accept: "audio/mpeg",
+        },
+        responseType: "arraybuffer",
+      }
+    );
+
+    res.set("Content-Type", "audio/mpeg");
+    res.send(Buffer.from(response.data));
+  } catch (err) {
+    const status = err.response?.status || 500;
+    const detail = err.response?.data;
+    let message = "ElevenLabs TTS failed";
+    if (Buffer.isBuffer(detail)) {
+      try {
+        const parsed = JSON.parse(detail.toString("utf8"));
+        message = parsed.detail?.message || parsed.detail || message;
+      } catch {
+        // keep default message
+      }
+    } else if (detail?.detail?.message) {
+      message = detail.detail.message;
+    } else if (typeof detail?.detail === "string") {
+      message = detail.detail;
+    }
+    res.status(status).json({ error: message });
+  }
+});
 
 const kbCount = loadKnowledgeBase();
 

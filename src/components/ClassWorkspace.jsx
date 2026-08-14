@@ -408,7 +408,13 @@ function ClassWorkspace({
     !isLoading &&
     suggestedQuestions.length > 0 &&
     (interactionMode === "persona" ? !isSpeaking : !hasUserMessages);
-  const resolvedAvatarState = listening ? "listening" : avatarState;
+  const resolvedAvatarState = listening
+    ? "listening"
+    : isSpeaking
+      ? "speaking"
+      : isLoading
+        ? "thinking"
+        : avatarState || "idle";
 
   const micLabel = isLoading
     ? "Processing…"
@@ -1119,7 +1125,7 @@ function ClassWorkspace({
               style={avatarStyle}
             >
               <ScottyHeadbandFrame avatarState={resolvedAvatarState}>
-                <ScottyAvatar ref={avatarRef} persona />
+                <ScottyAvatar ref={avatarRef} persona avatarState={resolvedAvatarState} />
               </ScottyHeadbandFrame>
             </div>
 

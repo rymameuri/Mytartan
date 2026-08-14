@@ -163,23 +163,16 @@ export function usePersonaSpeech(avatarRef) {
 
       if (avatarRef?.current) {
         try {
-          const avatarResult = await avatarRef.current.speak(normalized);
-          if (avatarResult?.useBrowserTts) {
-            speakBrowser(normalized);
-            return;
-          }
-
           setIsSpeaking(true);
           updateCaptionForWord(normalized, 0);
           const msPerWord = 450;
           startTimedReveal(normalized, msPerWord);
-          const ms = Math.max(2500, splitSpeechWords(normalized).length * msPerWord + 300);
-          speakTimerRef.current = setTimeout(() => {
-            finishSpeaking();
-          }, ms);
+          await avatarRef.current.speak(normalized);
+          finishSpeaking();
           return;
         } catch (err) {
-          console.warn("[usePersonaSpeech] Avatar speech unavailable, using browser TTS:", err.message);
+          finishSpeaking();
+          console.warn("[usePersonaSpeech] ElevenLabs unavailable, using browser TTS:", err.message);
         }
       }
 

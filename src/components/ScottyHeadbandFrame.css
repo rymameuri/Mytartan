@@ -138,6 +138,14 @@
   transform: rotate(38deg);
 }
 
+.shb--thinking .shb__ear--left {
+  transform: rotate(-28deg) translateY(-4%);
+}
+
+.shb--thinking .shb__ear--right {
+  transform: rotate(42deg) translateY(-2%);
+}
+
 .shb--speaking .shb__band {
   box-shadow:
     0 6px 22px rgba(0, 0, 0, 0.22),
@@ -180,6 +188,13 @@
   box-shadow:
     0 0 0 2px rgba(255, 212, 218, 0.55),
     0 0 24px rgba(255, 212, 218, 0.35),
+    0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.shb--thinking .shb__face {
+  box-shadow:
+    0 0 0 2px rgba(200, 214, 240, 0.55),
+    0 0 22px rgba(180, 200, 235, 0.3),
     0 8px 24px rgba(0, 0, 0, 0.2);
 }
 

@@ -22,6 +22,7 @@ import {
 import { useMutedPreference } from "./hooks/useMutedPreference";
 import { useCanvasConnection } from "./hooks/useCanvasConnection";
 import SettingsModal from "./components/SettingsModal";
+import FacialAlignTool from "./components/FacialAlignTool";
 import { buildTutorWelcomeMessage } from "./utils/tutorWelcome";
 import { refreshCourse } from "./utils/courseApi";
 import { stripMarkdownFormatting } from "./utils/stripMarkdown";
@@ -30,6 +31,11 @@ import "./App.css";
 
 const API_BASE = process.env.REACT_APP_API_URL || "";
 const DESKTOP_BREAKPOINT = 900;
+
+function useFacialAlignMode() {
+  if (typeof window === "undefined") return false;
+  return new URLSearchParams(window.location.search).has("facialAlign");
+}
 
 function useIsDesktop() {
   const [isDesktop, setIsDesktop] = useState(
@@ -587,8 +593,14 @@ function AppShell() {
         ? "speaking"
         : tutorListening
           ? "listening"
-          : "idle"
-      : "idle";
+          : isLoading
+            ? "thinking"
+            : "idle"
+      : isSpeaking
+        ? "speaking"
+        : isLoading
+          ? "thinking"
+          : "idle";
 
   let personaSubtitle = "Course Tutor";
   let personaHint = "";
@@ -720,6 +732,10 @@ function AppShell() {
 }
 
 function App() {
+  if (useFacialAlignMode()) {
+    return <FacialAlignTool />;
+  }
+
   return (
     <AuthProvider>
       <AppRoutes />

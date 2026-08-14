@@ -14,6 +14,9 @@ jest.mock("axios", () => ({
 const axios = require("axios");
 
 // Disable real AI providers so tests run in KB-only mode (no external API calls)
+process.env.AI_PROVIDER = "claude";
+process.env.HUGGINGFACE_API_KEY = "";
+process.env.HF_TOKEN = "";
 process.env.ANTHROPIC_API_KEY = "placeholder";
 process.env.CLAUDE_API_KEY = "placeholder";
 process.env.AI_GATEWAY_BASE_URL = "";

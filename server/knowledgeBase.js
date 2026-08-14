@@ -273,7 +273,7 @@ function getClaudeApiKey() {
 }
 
 function getAiModel() {
-  return process.env.AI_MODEL?.trim() || "us.anthropic.claude-haiku-4-5-20251001-v1:0";
+  return process.env.AI_MODEL?.trim() || "claude-haiku-4-5-20251001-v1:0";
 }
 
 function isConfiguredKey(value) {
@@ -286,13 +286,69 @@ function isConfiguredKey(value) {
 }
 
 function hasRetrievalAiKey() {
+  if (process.env.AI_PROVIDER?.trim().toLowerCase() === "huggingface" ||
+      process.env.AI_PROVIDER?.trim().toLowerCase() === "hf") {
+    const hfKey =
+      process.env.HUGGINGFACE_API_KEY?.trim() ||
+      process.env.HF_TOKEN?.trim() ||
+      process.env.HUGGINGFACE_HUB_TOKEN?.trim();
+    return isConfiguredKey(hfKey);
+  }
   if (getAiGatewayBaseUrl() && isConfiguredKey(getClaudeApiKey())) return true;
   return isConfiguredKey(getAnthropicApiKey());
+}
+
+function getHuggingfaceModelForRetrieval() {
+  return (
+    process.env.HUGGINGFACE_MODEL?.trim() ||
+    process.env.HF_MODEL?.trim() ||
+    "deepseek-ai/DeepSeek-V4-Flash-0731"
+  );
+}
+
+function getHuggingfaceRouterBaseUrlForRetrieval() {
+  return (
+    process.env.HUGGINGFACE_ROUTER_BASE_URL?.trim() ||
+    process.env.HF_ROUTER_BASE_URL?.trim() ||
+    "https://router.huggingface.co/v1"
+  ).replace(/\/$/, "");
+}
+
+function getHuggingfaceApiKeyForRetrieval() {
+  return (
+    process.env.HUGGINGFACE_API_KEY?.trim() ||
+    process.env.HF_TOKEN?.trim() ||
+    process.env.HUGGINGFACE_HUB_TOKEN?.trim() ||
+    ""
+  );
 }
 
 async function callHaiku(systemPrompt, userContent, { maxTokens = 256 } = {}) {
   if (!hasRetrievalAiKey()) {
     throw new Error("No AI API key configured for retrieval");
+  }
+
+  const aiProvider = process.env.AI_PROVIDER?.trim().toLowerCase();
+  if (aiProvider === "huggingface" || aiProvider === "hf") {
+    const response = await axios.post(
+      `${getHuggingfaceRouterBaseUrlForRetrieval()}/chat/completions`,
+      {
+        model: getHuggingfaceModelForRetrieval(),
+        max_tokens: maxTokens,
+        temperature: 0,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userContent },
+        ],
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${getHuggingfaceApiKeyForRetrieval()}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+    return response.data.choices[0].message.content.trim();
   }
 
   if (getAiGatewayBaseUrl()) {

@@ -10,9 +10,11 @@ describe("personaPrompt", () => {
 
   test("buildPersonaPrompt includes core identity and tone rules", () => {
     const prompt = buildPersonaPrompt("qa");
-    expect(prompt).toMatch(/Scottish terrier mascot/i);
-    expect(prompt).toMatch(/Never use sarcasm/i);
+    expect(prompt).toMatch(/You are Scotty/i);
+    expect(prompt).toMatch(/cartoon dog mascot/i);
+    expect(prompt).toMatch(/Avoid sarcasm/i);
     expect(prompt).toMatch(/financial aid/i);
+    expect(prompt).toMatch(/VISUAL IDENTITY AND ANIMATION/i);
   });
 
   test("buildPersonaPrompt includes mode-specific guidance", () => {
