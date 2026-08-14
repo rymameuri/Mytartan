@@ -108,7 +108,7 @@
 
 .scotty-avatar__eye {
   position: absolute;
-  top: 34.5%;
+  top: 36.5%;
   width: 7.6%;
   aspect-ratio: 1;
   border-radius: 50%;
@@ -150,36 +150,25 @@
 }
 
 .scotty-avatar__mouth {
+  position: absolute;
+  inset: 0;
+  opacity: 1;
+}
+
+.scotty-avatar__mouth-shape {
+  position: absolute;
   left: 50%;
   top: 60.8%;
-  width: 15.5%;
-  height: 7.2%;
+  width: 31%;
+  height: 31%;
+  object-fit: contain;
   opacity: 0;
-  transform: translate(-50%, -50%) scale(0.82);
-  transform-origin: center top;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
 }
 
-.scotty-avatar__mouth-opening {
-  position: absolute;
-  inset: 14% 0 18%;
-  border-radius: 48% 48% 52% 52%;
-  background: #17131b;
-  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.32);
-  transform: scaleY(0.16);
-  transform-origin: center top;
-}
-
-.scotty-avatar__tongue {
-  position: absolute;
-  left: 24%;
-  right: 24%;
-  bottom: 16%;
-  height: 19%;
-  border-radius: 50% 50% 42% 42%;
-  background: #d66d7c;
-  opacity: 0;
-  transform: scaleY(0.2);
-  transform-origin: center bottom;
+.scotty-avatar__mouth-shape--closed {
+  opacity: 1;
 }
 
 .shb--speaking .scotty-avatar__eye {
@@ -190,17 +179,16 @@
   animation-delay: 0.16s;
 }
 
-.shb--speaking .scotty-avatar__mouth {
-  opacity: 1;
-  animation: scotty-mouth-presence 1.06s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+.shb--speaking .scotty-avatar__mouth-shape--closed {
+  animation: scotty-mouth-closed-cycle 1.08s steps(1, end) infinite;
 }
 
-.shb--speaking .scotty-avatar__mouth-opening {
-  animation: scotty-mouth-open 0.36s ease-in-out infinite alternate;
+.shb--speaking .scotty-avatar__mouth-shape--small {
+  animation: scotty-mouth-small-cycle 1.08s steps(1, end) infinite;
 }
 
-.shb--speaking .scotty-avatar__tongue {
-  animation: scotty-tongue-move 0.36s ease-in-out infinite alternate;
+.shb--speaking .scotty-avatar__mouth-shape--wide {
+  animation: scotty-mouth-wide-cycle 1.08s steps(1, end) infinite;
 }
 
 .shb--listening .scotty-avatar__eye {
@@ -343,34 +331,46 @@
   }
 }
 
-@keyframes scotty-mouth-presence {
+@keyframes scotty-mouth-closed-cycle {
   0%,
+  25%,
+  75%,
   100% {
-    transform: translate(-50%, -50%) scale(0.82);
+    opacity: 1;
   }
-  24%,
-  70% {
-    transform: translate(-50%, -50%) scale(1);
-  }
-}
-
-@keyframes scotty-mouth-open {
-  from {
-    transform: scaleY(0.18);
-  }
-  to {
-    transform: scaleY(0.92);
+  26%,
+  74% {
+    opacity: 0;
   }
 }
 
-@keyframes scotty-tongue-move {
-  from {
-    opacity: 0.35;
-    transform: scaleY(0.25);
+@keyframes scotty-mouth-small-cycle {
+  0%,
+  25%,
+  75%,
+  100% {
+    opacity: 0;
   }
-  to {
-    opacity: 0.9;
-    transform: scaleY(1);
+  26%,
+  50% {
+    opacity: 1;
+  }
+  51%,
+  74% {
+    opacity: 0;
+  }
+}
+
+@keyframes scotty-mouth-wide-cycle {
+  0%,
+  49%,
+  76%,
+  100% {
+    opacity: 0;
+  }
+  50%,
+  75% {
+    opacity: 1;
   }
 }
 
@@ -382,9 +382,9 @@
   .shb--speaking .scotty-avatar__mascot-stage::before,
   .scotty-avatar__eye,
   .shb--speaking .scotty-avatar__eye,
-  .shb--speaking .scotty-avatar__mouth,
-  .shb--speaking .scotty-avatar__mouth-opening,
-  .shb--speaking .scotty-avatar__tongue {
+  .shb--speaking .scotty-avatar__mouth-shape--closed,
+  .shb--speaking .scotty-avatar__mouth-shape--small,
+  .shb--speaking .scotty-avatar__mouth-shape--wide {
     animation: none;
   }
 
