@@ -35,7 +35,7 @@
   overflow: hidden;
 }
 
-/* The supplied portrait stays intact; movement is added around it rather than by altering the artwork. */
+/* Keep the supplied illustration intact and animate it as a single character. */
 .scotty-avatar__mascot-stage {
   position: relative;
   width: 100%;
@@ -43,11 +43,27 @@
   display: grid;
   place-items: center;
   isolation: isolate;
-  transform-origin: 50% 68%;
-  animation: scotty-mascot-breathe 4.6s ease-in-out infinite;
+  transform-origin: 50% 76%;
+  will-change: transform;
+  animation: scotty-mascot-idle 5.6s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+.scotty-avatar__mascot-stage::before {
+  position: absolute;
+  z-index: 0;
+  width: 78%;
+  height: 78%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(156, 39, 51, 0.17) 0%, rgba(156, 39, 51, 0.06) 42%, rgba(156, 39, 51, 0) 72%);
+  content: "";
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.74);
 }
 
 .scotty-avatar__mascot {
+  position: relative;
+  z-index: 1;
   display: block;
   width: 100%;
   height: 100%;
@@ -67,114 +83,316 @@
   padding: 5%;
 }
 
-/* A subtle mouth overlay activates only while the existing speech state is active. */
-.scotty-avatar__mouth {
+/* Facial features are separate layers so blinking and speech never distort the base illustration. */
+.scotty-avatar__facial-stage {
   position: absolute;
   z-index: 2;
-  left: 50%;
-  top: 62.5%;
-  width: 10%;
-  height: 3.6%;
-  border-radius: 45% 45% 55% 55%;
-  background: #c65d73;
-  box-shadow: inset 0 -1px 0 rgba(87, 31, 48, 0.4);
-  opacity: 0;
-  transform: translate(-50%, -50%) scaleY(0.28);
-  transform-origin: center top;
+  inset: 0;
   pointer-events: none;
 }
 
-.scotty-avatar__spark {
+.scotty-avatar--persona .scotty-avatar__facial-stage,
+.scotty-avatar--dock .scotty-avatar__facial-stage {
+  inset: 5.5%;
+}
+
+.scotty-avatar--compact .scotty-avatar__facial-stage {
+  inset: 5%;
+}
+
+.scotty-avatar__eyes,
+.scotty-avatar__mouth {
   position: absolute;
-  z-index: 1;
-  width: 6%;
+  pointer-events: none;
+}
+
+.scotty-avatar__eyes {
+  inset: 0;
+}
+
+.scotty-avatar__eye {
+  position: absolute;
+  top: 40.5%;
+  width: 7.6%;
   aspect-ratio: 1;
   border-radius: 50%;
-  border: 2px solid rgba(156, 39, 51, 0.48);
+  background: #11131a;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 1px 1px rgba(15, 13, 22, 0.25);
+  transform-origin: center;
+  animation: scotty-eye-blink 7.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  will-change: transform;
+}
+
+.scotty-avatar__eye--left {
+  left: 37.8%;
+}
+
+.scotty-avatar__eye--right {
+  right: 37.8%;
+  animation-delay: 0.08s;
+}
+
+.scotty-avatar__eye::after {
+  position: absolute;
+  top: 17%;
+  right: 18%;
+  width: 25%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #fffaf1;
+  content: "";
+}
+
+.scotty-avatar__pupil {
+  position: absolute;
+  top: 42%;
+  left: 43%;
+  width: 28%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #05060a;
+}
+
+.scotty-avatar__mouth {
+  left: 50%;
+  top: 65.5%;
+  width: 15.5%;
+  height: 8.3%;
   opacity: 0;
-  pointer-events: none;
+  transform: translate(-50%, -50%) scale(0.82);
+  transform-origin: center top;
 }
 
-.scotty-avatar__spark--one {
-  right: 11%;
-  top: 28%;
+.scotty-avatar__mouth-opening {
+  position: absolute;
+  inset: 14% 0 18%;
+  border-radius: 48% 48% 52% 52%;
+  background: #17131b;
+  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.32);
+  transform: scaleY(0.16);
+  transform-origin: center top;
 }
 
-.scotty-avatar__spark--two {
-  left: 13%;
-  top: 38%;
+.scotty-avatar__tongue {
+  position: absolute;
+  left: 24%;
+  right: 24%;
+  bottom: 16%;
+  height: 19%;
+  border-radius: 50% 50% 42% 42%;
+  background: #d66d7c;
+  opacity: 0;
+  transform: scaleY(0.2);
+  transform-origin: center bottom;
 }
 
-.shb--listening .scotty-avatar__mascot-stage {
-  animation: scotty-mascot-listen 1.4s ease-in-out infinite;
+.shb--speaking .scotty-avatar__eye {
+  animation: scotty-speaking-eyes 2.6s ease-in-out infinite;
 }
 
-.shb--listening .scotty-avatar__spark {
-  animation: scotty-mascot-ping 1.4s ease-out infinite;
-}
-
-.shb--listening .scotty-avatar__spark--two {
-  animation-delay: 0.28s;
-}
-
-.shb--speaking .scotty-avatar__mascot-stage {
-  animation: scotty-mascot-talk 0.68s ease-in-out infinite;
+.shb--speaking .scotty-avatar__eye--right {
+  animation-delay: 0.16s;
 }
 
 .shb--speaking .scotty-avatar__mouth {
-  opacity: 0.88;
-  animation: scotty-mascot-mouth 0.38s ease-in-out infinite alternate;
+  opacity: 1;
+  animation: scotty-mouth-presence 1.06s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
 
-.shb--speaking .scotty-avatar__spark {
-  opacity: 0.55;
-  animation: scotty-mascot-sparkle 1.05s ease-in-out infinite alternate;
+.shb--speaking .scotty-avatar__mouth-opening {
+  animation: scotty-mouth-open 0.36s ease-in-out infinite alternate;
 }
 
-.shb--speaking .scotty-avatar__spark--two {
-  animation-delay: 0.32s;
+.shb--speaking .scotty-avatar__tongue {
+  animation: scotty-tongue-move 0.36s ease-in-out infinite alternate;
 }
 
-@keyframes scotty-mascot-breathe {
-  0%, 100% { transform: translateY(0) scale(1); }
-  50% { transform: translateY(-1.5%) scale(1.012); }
+.shb--listening .scotty-avatar__eye {
+  animation-duration: 6.8s;
 }
 
+.shb--listening .scotty-avatar__eye--right {
+  animation-delay: 0.12s;
+}
+
+.shb--listening .scotty-avatar__mascot-stage {
+  animation: scotty-mascot-listen 2.4s cubic-bezier(0.37, 0, 0.63, 1) infinite;
+}
+
+.shb--listening .scotty-avatar__mascot-stage::before {
+  animation: scotty-listen-halo 2.4s ease-out infinite;
+}
+
+.shb--speaking .scotty-avatar__mascot-stage {
+  animation: scotty-mascot-talk 1.06s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+.shb--speaking .scotty-avatar__mascot-stage::before {
+  animation: scotty-talk-halo 1.06s ease-in-out infinite;
+}
+
+@keyframes scotty-mascot-idle {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+  }
+  30% {
+    transform: translate3d(0, -0.55%, 0) rotate(-0.45deg) scale(1.006);
+  }
+  58% {
+    transform: translate3d(0, -1%, 0) rotate(0.3deg) scale(1.009);
+  }
+  78% {
+    transform: translate3d(0, -0.3%, 0) rotate(0.2deg) scale(1.003);
+  }
+}
+
+/* A short, asymmetrical lean feels attentive without looking like a looping wobble. */
 @keyframes scotty-mascot-listen {
-  0%, 100% { transform: rotate(0deg) translateY(0); }
-  35% { transform: rotate(-1.7deg) translateY(-1%); }
-  70% { transform: rotate(1.2deg) translateY(-0.4%); }
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+  }
+  18% {
+    transform: translate3d(-0.35%, -0.6%, 0) rotate(-1.15deg) scale(1.008);
+  }
+  44% {
+    transform: translate3d(-0.8%, -1.15%, 0) rotate(-2.15deg) scale(1.013);
+  }
+  66% {
+    transform: translate3d(-0.45%, -0.65%, 0) rotate(-1.25deg) scale(1.008);
+  }
+  84% {
+    transform: translate3d(0.12%, -0.15%, 0) rotate(0.25deg) scale(1.002);
+  }
 }
 
+/* A restrained two-beat bounce suggests speech while preserving Scotty’s illustrated face. */
 @keyframes scotty-mascot-talk {
-  0%, 100% { transform: translateY(0) scale(1); }
-  35% { transform: translateY(-2.1%) scale(1.022); }
-  68% { transform: translateY(0.6%) scale(0.998); }
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+  }
+  20% {
+    transform: translate3d(0, -1.35%, 0) rotate(-0.45deg) scale(1.014);
+  }
+  42% {
+    transform: translate3d(0, -0.25%, 0) rotate(0.3deg) scale(1.004);
+  }
+  64% {
+    transform: translate3d(0, -0.9%, 0) rotate(0.55deg) scale(1.01);
+  }
+  82% {
+    transform: translate3d(0, -0.08%, 0) rotate(-0.12deg) scale(1.001);
+  }
 }
 
-@keyframes scotty-mascot-mouth {
-  from { transform: translate(-50%, -50%) scaleY(0.3); }
-  to { transform: translate(-50%, -50%) scaleY(1.04); }
+@keyframes scotty-listen-halo {
+  0% {
+    opacity: 0;
+    transform: scale(0.72);
+  }
+  22% {
+    opacity: 0.52;
+  }
+  68% {
+    opacity: 0.1;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.1);
+  }
 }
 
-@keyframes scotty-mascot-ping {
-  0% { opacity: 0; transform: scale(0.45); }
-  45% { opacity: 0.78; }
-  100% { opacity: 0; transform: scale(1.7); }
+@keyframes scotty-talk-halo {
+  0%,
+  100% {
+    opacity: 0.16;
+    transform: scale(0.84);
+  }
+  24% {
+    opacity: 0.46;
+    transform: scale(1.03);
+  }
+  58% {
+    opacity: 0.22;
+    transform: scale(0.9);
+  }
+  78% {
+    opacity: 0.38;
+    transform: scale(0.99);
+  }
 }
 
-@keyframes scotty-mascot-sparkle {
-  from { transform: scale(0.7) rotate(0deg); }
-  to { transform: scale(1.25) rotate(30deg); }
+@keyframes scotty-eye-blink {
+  0%,
+  43%,
+  47%,
+  100% {
+    transform: scaleY(1);
+  }
+  45% {
+    transform: scaleY(0.08);
+  }
+}
+
+@keyframes scotty-speaking-eyes {
+  0%,
+  100% {
+    transform: scaleY(1);
+  }
+  46%,
+  54% {
+    transform: scaleY(0.92);
+  }
+}
+
+@keyframes scotty-mouth-presence {
+  0%,
+  100% {
+    transform: translate(-50%, -50%) scale(0.82);
+  }
+  24%,
+  70% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes scotty-mouth-open {
+  from {
+    transform: scaleY(0.18);
+  }
+  to {
+    transform: scaleY(0.92);
+  }
+}
+
+@keyframes scotty-tongue-move {
+  from {
+    opacity: 0.35;
+    transform: scaleY(0.25);
+  }
+  to {
+    opacity: 0.9;
+    transform: scaleY(1);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .scotty-avatar__mascot-stage,
   .shb--listening .scotty-avatar__mascot-stage,
   .shb--speaking .scotty-avatar__mascot-stage,
+  .shb--listening .scotty-avatar__mascot-stage::before,
+  .shb--speaking .scotty-avatar__mascot-stage::before,
+  .scotty-avatar__eye,
+  .shb--speaking .scotty-avatar__eye,
   .shb--speaking .scotty-avatar__mouth,
-  .shb--listening .scotty-avatar__spark,
-  .shb--speaking .scotty-avatar__spark {
+  .shb--speaking .scotty-avatar__mouth-opening,
+  .shb--speaking .scotty-avatar__tongue {
     animation: none;
+  }
+
+  .scotty-avatar__mascot-stage::before {
+    opacity: 0;
   }
 }

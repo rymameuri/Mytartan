@@ -1,11 +1,33 @@
 import { forwardRef, useImperativeHandle } from "react";
-import tartanScottyMascot from "../assets/tartan-scotty-mascot.png";
+import tartanScottyFacialBase from "../assets/tartan-scotty-facial-base.png";
 import "./ScottyAvatar.css";
+
+function ScottyEyes() {
+  return (
+    <div className="scotty-avatar__eyes" aria-hidden="true">
+      <span className="scotty-avatar__eye scotty-avatar__eye--left">
+        <span className="scotty-avatar__pupil" />
+      </span>
+      <span className="scotty-avatar__eye scotty-avatar__eye--right">
+        <span className="scotty-avatar__pupil" />
+      </span>
+    </div>
+  );
+}
+
+function ScottyMouth() {
+  return (
+    <span className="scotty-avatar__mouth" aria-hidden="true">
+      <span className="scotty-avatar__mouth-opening" />
+      <span className="scotty-avatar__tongue" />
+    </span>
+  );
+}
 
 /**
  * A lightweight expressive mascot that works without an external avatar service.
- * Speech is intentionally delegated to usePersonaSpeech's browser TTS fallback,
- * while the surrounding state classes animate the character in sync with playback.
+ * Speech is delegated to usePersonaSpeech's browser TTS fallback, while the
+ * surrounding state classes animate the character and its facial layers in sync.
  */
 const ScottyAvatar = forwardRef(function ScottyAvatar(
   { compact = false, hero = false, persona = false, dock = false, dockLg = false, hidden = false },
@@ -35,13 +57,14 @@ const ScottyAvatar = forwardRef(function ScottyAvatar(
       <div className="scotty-avatar__mascot-stage" aria-hidden="true">
         <img
           className="scotty-avatar__mascot"
-          src={tartanScottyMascot}
+          src={tartanScottyFacialBase}
           alt=""
           draggable="false"
         />
-        <span className="scotty-avatar__mouth" />
-        <span className="scotty-avatar__spark scotty-avatar__spark--one" />
-        <span className="scotty-avatar__spark scotty-avatar__spark--two" />
+        <div className="scotty-avatar__facial-stage">
+          <ScottyEyes />
+          <ScottyMouth />
+        </div>
       </div>
     </div>
   );
