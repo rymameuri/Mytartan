@@ -6,16 +6,16 @@
   align-items: center;
   justify-content: center;
   padding: 16px;
-  background: rgba(92, 21, 30, 0.55);
+  background: rgba(28, 25, 23, 0.28);
 }
 
 .project-modal {
   width: min(400px, 100%);
   padding: 20px;
-  border-radius: 18px;
-  background: var(--tartan-white);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(156, 39, 51, 0.1);
+  border-radius: 16px;
+  background: var(--app-surface);
+  box-shadow: 0 12px 40px rgba(28, 25, 23, 0.12);
+  border: 1px solid var(--app-border);
 }
 
 .project-modal__header {
@@ -27,29 +27,30 @@
 
 .project-modal__title {
   margin: 0;
-  font-family: var(--font-display);
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--tartan-maroon);
+  font-family: var(--font-body);
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--app-text);
 }
 
 .project-modal__label {
   display: block;
   margin-bottom: 8px;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-weight: 500;
-  color: rgba(122, 28, 40, 0.75);
+  color: var(--app-text);
 }
 
 .project-modal__input {
   width: 100%;
   margin-bottom: 20px;
   padding: 12px 14px;
-  border: 1.5px solid rgba(156, 39, 51, 0.18);
-  border-radius: 12px;
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
   font-family: inherit;
   font-size: 0.9375rem;
-  color: #2a1216;
+  color: var(--app-text);
   outline: none;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
@@ -68,8 +69,8 @@
 .project-modal__btn {
   padding: 10px 16px;
   border: none;
-  border-radius: 999px;
-  font-family: var(--font-display);
+  border-radius: 10px;
+  font-family: var(--font-body);
   font-size: 0.875rem;
   font-weight: 600;
   cursor: pointer;
@@ -77,8 +78,8 @@
 }
 
 .project-modal__btn--secondary {
-  background: rgba(156, 39, 51, 0.08);
-  color: var(--tartan-maroon);
+  background: transparent;
+  color: var(--app-text-secondary);
 }
 
 .project-modal__btn--secondary:hover {

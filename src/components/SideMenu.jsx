@@ -289,7 +289,7 @@ function SideMenu({
       aria-label="Chat history"
     >
       <div className="side-menu__header">
-        {!collapsed && <h2 className="side-menu__title brand-display">MyTartan</h2>}
+        {!collapsed && <h2 className="side-menu__title">MyTartan</h2>}
         <div className="side-menu__header-actions">
           {isPersistent && onToggleCollapsed && (
             <button

@@ -4,7 +4,6 @@ import LoginSignup from "./components/Auth/LoginSignup";
 import OnboardingFlow from "./components/Onboarding/OnboardingFlow";
 import PersonaView from "./components/PersonaView";
 import SideMenu from "./components/SideMenu";
-import ScottyPattern from "./components/ScottyPattern";
 import ScottyPersonaStage from "./components/ScottyPersonaStage";
 import CourseTutorDashboard from "./components/CourseTutorDashboard";
 import ClassWorkspace from "./components/ClassWorkspace";
@@ -622,7 +621,6 @@ function AppShell() {
         sidebarCollapsed ? " app-shell--sidebar-collapsed" : ""
       }${COURSE_TUTOR_ENABLED && mode === "tutor" ? " app-shell--tutor" : ""}`}
     >
-      {!(COURSE_TUTOR_ENABLED && mode === "tutor") && <ScottyPattern />}
       <SideMenu
         isOpen={menuOpen || isDesktop}
         isPersistent={isDesktop}

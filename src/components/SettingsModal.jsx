@@ -34,12 +34,12 @@ function SettingsModal({ onClose, canvasConnection }) {
         </header>
 
         <section className="settings-modal__section">
-          <h3 className="settings-modal__section-title">Scotty look</h3>
+          <h3 className="settings-modal__section-title">Appearance</h3>
           <p className="settings-modal__hint">
-            Adjust how large Scotty appears, or open the face editor to place his mouth and eyes.
+            Optional avatar size. The chat itself stays the same.
           </p>
           <label className="settings-modal__zoom">
-            <span className="settings-modal__zoom-label">Scotty size</span>
+            <span className="settings-modal__zoom-label">Avatar size</span>
             <div className="settings-modal__zoom-row">
               <input
                 type="range"
@@ -55,9 +55,6 @@ function SettingsModal({ onClose, canvasConnection }) {
               </button>
             </div>
           </label>
-          <a className="settings-modal__link" href="/?facialAlign">
-            Open face editor
-          </a>
         </section>
 
         {COURSE_TUTOR_ENABLED && (

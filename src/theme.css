@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
 
 :root {
   --tartan-maroon: #9c2733;
@@ -9,65 +9,57 @@
   --tartan-text-on-dark: rgba(255, 255, 255, 0.92);
   --tartan-text-muted-on-dark: rgba(255, 255, 255, 0.58);
   --tartan-text-faint-on-dark: rgba(255, 255, 255, 0.32);
-  --tartan-panel: rgba(255, 255, 255, 0.96);
-  --tartan-panel-soft: rgba(255, 255, 255, 0.88);
-  --tartan-panel-border: rgba(255, 255, 255, 0.22);
-  --tartan-ink: #241317;
-  --tartan-ink-muted: rgba(36, 19, 23, 0.62);
-  --tartan-surface-glass: rgba(255, 255, 255, 0.12);
-  --tartan-surface-glass-strong: rgba(255, 255, 255, 0.18);
-  --tartan-shadow: rgba(0, 0, 0, 0.18);
-  --font-display: "Fredoka", "Arial Rounded MT Bold", "Helvetica Rounded", sans-serif;
+  --tartan-panel: #ffffff;
+  --tartan-panel-soft: #ffffff;
+  --tartan-panel-border: rgba(28, 25, 23, 0.08);
+  --tartan-ink: #1c1917;
+  --tartan-ink-muted: rgba(28, 25, 23, 0.58);
+  --tartan-surface-glass: rgba(255, 255, 255, 0.72);
+  --tartan-surface-glass-strong: rgba(255, 255, 255, 0.92);
+  --tartan-shadow: rgba(28, 25, 23, 0.08);
+  --font-display: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 
+  --app-bg: #f6f3ee;
+  --app-surface: #ffffff;
+  --app-sidebar: #f3efe8;
+  --app-border: #e6e1d8;
+  --app-text: #1c1917;
+  --app-text-secondary: #5c564f;
+  --app-text-muted: #8a847c;
+  --app-hover: rgba(28, 25, 23, 0.05);
+  --app-accent-soft: rgba(156, 39, 51, 0.08);
+
   /* Workspace (NotebookLM-style) tokens — 8px base unit */
-  --ws-bg: #f7f6f4;
+  --ws-bg: #f6f3ee;
   --ws-surface: #ffffff;
-  --ws-surface-hover: #f3f2ef;
-  --ws-border: #e5e2dc;
-  --ws-border-strong: #d4d0c8;
-  --ws-text: #1a1614;
-  --ws-text-secondary: #4a4540;
+  --ws-surface-hover: #f3f0ea;
+  --ws-border: #e6e1d8;
+  --ws-border-strong: #d4cfc6;
+  --ws-text: #1c1917;
+  --ws-text-secondary: #5c564f;
   --ws-text-muted: #8a847c;
   --ws-pane-sources: 280px;
   --ws-pane-studio: 300px;
   --ws-pane-rail: 48px;
-  --ws-radius: 8px;
-  --ws-radius-lg: 12px;
+  --ws-radius: 10px;
+  --ws-radius-lg: 14px;
   --ws-space-1: 8px;
   --ws-space-2: 16px;
   --ws-space-3: 24px;
 }
 
-.scotty-pattern {
-  position: absolute;
-  inset: 0;
-  background-color: var(--tartan-maroon);
-  background-image: url("./assets/scotty-pattern-tile.png");
-  background-size: 180px 180px;
-  background-repeat: repeat;
-  pointer-events: none;
-}
-
-@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
-  .scotty-pattern {
-    background-image: url("./assets/scotty-pattern-tile@2x.png");
-  }
-}
-
 .brand-display {
-  font-family: var(--font-display);
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  color: var(--tartan-white);
-  -webkit-text-stroke: 1px var(--tartan-maroon-dark);
-  paint-order: stroke fill;
+  font-family: var(--font-body);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--app-text);
 }
 
 .tartan-btn {
   appearance: none;
   border: none;
-  border-radius: var(--ws-radius);
+  border-radius: 8px;
   padding: 0.5rem 1rem;
   background: var(--tartan-maroon);
   color: var(--tartan-white);
@@ -76,22 +68,17 @@
   font-weight: 600;
   line-height: 1.2;
   cursor: pointer;
-  transition:
-    transform 0.15s ease,
-    box-shadow 0.15s ease,
-    background 0.15s ease;
+  transition: background 0.15s ease;
 }
 
 .tartan-btn:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(156, 39, 51, 0.25);
   background: var(--tartan-maroon-dark);
 }
 
 .btn-secondary {
   appearance: none;
   border: 1px solid var(--ws-border);
-  border-radius: var(--ws-radius);
+  border-radius: 8px;
   padding: 0.5rem 0.875rem;
   background: transparent;
   color: var(--ws-text-secondary);
@@ -120,12 +107,12 @@
 }
 
 .tartan-btn--ghost {
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--tartan-text-on-dark);
-  border-color: rgba(255, 255, 255, 0.28);
+  background: transparent;
+  color: var(--app-text-secondary);
+  border: 1px solid var(--app-border);
 }
 
 .tartan-btn--ghost:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.18);
-  color: var(--tartan-white);
+  background: var(--app-hover);
+  color: var(--app-text);
 }

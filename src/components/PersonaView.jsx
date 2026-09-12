@@ -2,9 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import ScottyAvatar from "./ScottyAvatar";
 import MessageContent from "./MessageContent";
 import PersonaMicControls from "./PersonaMicControls";
-import PersonaCaption from "./PersonaCaption";
 import { useMicInput } from "../hooks/useMicInput";
-import { useAvatarZoom } from "../hooks/useAvatarZoom";
 import { MenuIcon, ShareIcon, DownloadIcon, VolumeIcon, ChevronIcon } from "./Icons";
 import SettingsButton from "./SettingsButton";
 import "./PersonaView.css";
@@ -34,7 +32,6 @@ function PersonaView({
   const messagesContainerRef = useRef(null);
   const isNearBottomRef = useRef(true);
   const [showScrollDown, setShowScrollDown] = useState(false);
-  const { avatarStyle } = useAvatarZoom();
   const hasMessages = messages.length > 0;
   const hasUserMessages = messages.some((message) => message.role === "user");
   const showChatHistory = hasUserMessages;
@@ -149,9 +146,15 @@ function PersonaView({
             <MenuIcon />
           </button>
         )}
-        {!isDesktop && (
-          <span className="pv-brand__name brand-display">MyTartan</span>
-        )}
+        <div className="pv-header__identity">
+          <div className="pv-header__avatar" aria-hidden="true">
+            <ScottyAvatar persona avatarState={avatarState} />
+          </div>
+          <div className="pv-header__copy">
+            <p className="pv-header__name">Scotty</p>
+            <p className="pv-header__role">Your CMU-Q classmate · MyTartan</p>
+          </div>
+        </div>
         <div className="pv-header__actions">
           <button
             type="button"
@@ -207,7 +210,7 @@ function PersonaView({
                     key={msgId}
                     className={`msg-row${isUser ? " msg-row--user" : " msg-row--assistant"}`}
                   >
-                    <div className={`msg-bubble msg-bubble--on-pattern${isUser ? " msg-bubble--user" : " msg-bubble--assistant"}`}>
+                    <div className={`msg-bubble${isUser ? " msg-bubble--user" : " msg-bubble--assistant"}`}>
                       <MessageContent content={message.content} />
                       {!isUser && message.confidence?.message && (
                         <p className="msg-confidence" title={message.confidence.message}>
@@ -230,13 +233,13 @@ function PersonaView({
               {isLoading && (
                 <div className="msg-row msg-row--assistant">
                   <div
-                    className="msg-bubble msg-bubble--assistant msg-bubble--on-pattern typing-indicator"
+                    className="msg-bubble msg-bubble--assistant typing-indicator"
                     aria-label="thinking"
                   >
                     <span className="typing-label">thinking</span>
-                    <span className="typing-dot typing-dot--on-pattern" />
-                    <span className="typing-dot typing-dot--on-pattern" />
-                    <span className="typing-dot typing-dot--on-pattern" />
+                    <span className="typing-dot" />
+                    <span className="typing-dot" />
+                    <span className="typing-dot" />
                   </div>
                 </div>
               )}
@@ -255,34 +258,23 @@ function PersonaView({
           </div>
         )}
 
-        <div className={`pv-stage${!showChatHistory ? " pv-stage--persona-main" : ""}`}>
-          <div
-            className={`pv-avatar-frame pv-avatar-frame--${avatarState}`}
-            style={avatarStyle}
-          >
-            <ScottyAvatar ref={avatarRef} persona avatarState={avatarState} />
-          </div>
-
-          {!showChatHistory && (
-            <div className="pv-identity">
-              <p className="pv-identity__name brand-display">Hey, I&apos;m Scotty</p>
-              <p className="pv-identity__role">
-                <span className="pv-identity__dot" />
-                Your CMU-Q classmate
-              </p>
+        {!showChatHistory && (
+          <div className="pv-empty">
+            <div className={`pv-empty__mark pv-empty__mark--${avatarState}`}>
+              <ScottyAvatar ref={avatarRef} persona avatarState={avatarState} />
             </div>
-          )}
-
-          {isThinking ? (
-            <PersonaCaption text="thinking" typing />
-          ) : isSpeaking && speechCaption ? (
-            <PersonaCaption text={speechCaption} />
-          ) : showIdleHint ? (
-            <PersonaCaption text="Hey. What's going on?" />
-          ) : (
-            !showChatHistory && lastAssistantReply && <PersonaCaption text={lastAssistantReply} />
-          )}
-        </div>
+            <h1 className="pv-empty__title">Hey, I&apos;m Scotty</h1>
+            <p className="pv-empty__lede">
+              {isThinking
+                ? "Thinking…"
+                : isSpeaking && speechCaption
+                  ? speechCaption
+                  : showIdleHint
+                    ? "What's going on?"
+                    : lastAssistantReply || "What's going on?"}
+            </p>
+          </div>
+        )}
       </main>
 
       <footer className="pv-footer">
@@ -294,8 +286,11 @@ function PersonaView({
           onMicClick={handleMicClick}
           onSend={onSend}
           voiceModeRef={voiceModeRef}
-          placeholder="or type here"
+          placeholder="Message Scotty"
+          inputOnly
+          showComposerMic
         />
+        <p className="pv-footer__hint">Scotty can get things wrong. Check campus sources.</p>
       </footer>
     </div>
   );

@@ -1,5 +1,4 @@
 import { useState } from "react";
-import ScottyPattern from "../ScottyPattern";
 import ScottyMascot from "../ScottyMascot";
 import { useAuth } from "../../context/AuthContext";
 import "./LoginSignup.css";
@@ -70,14 +69,12 @@ function LoginSignup() {
 
   return (
     <div className="auth-page">
-      <ScottyPattern />
-
       <div className="auth-page__content">
         <header className="auth-page__intro">
           <ScottyMascot className="auth-page__mascot" />
-          <h1 className="auth-page__greeting brand-display">Hey, I&apos;m Scotty</h1>
-          <p className="auth-page__tagline">Your CMU-Q classmate</p>
           <p className="auth-page__app-name">MyTartan</p>
+          <h1 className="auth-page__greeting">Hey, I&apos;m Scotty</h1>
+          <p className="auth-page__tagline">Your CMU-Q classmate</p>
         </header>
 
         <main className="auth-page__main">

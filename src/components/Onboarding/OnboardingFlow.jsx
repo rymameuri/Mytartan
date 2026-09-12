@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import ScottyPattern from "../ScottyPattern";
 import { useAuth } from "../../context/AuthContext";
 import { CMUQ_MAJORS } from "../../data/cmuqMajors";
 import "./OnboardingFlow.css";
@@ -102,8 +101,6 @@ function OnboardingFlow() {
 
   return (
     <div className="onboarding">
-      <ScottyPattern />
-
       <div className="onboarding__content">
         <header className="onboarding__header">
           <p className="onboarding__step">Step {step} of {TOTAL_STEPS}</p>

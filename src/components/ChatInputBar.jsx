@@ -7,7 +7,7 @@ function ChatInputBar({
   isLoading,
   voiceModeRef,
   compact,
-  placeholder = "or type here",
+  placeholder = "Message Scotty",
   onMicClick,
   micActive = false,
   showMic = false,

@@ -3,20 +3,18 @@
   width: min(540px, 92vw);
   min-height: 1.45em;
   font-size: 0.9375rem;
-  font-weight: 500;
-  line-height: 1.45;
-  letter-spacing: 0.01em;
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: 0;
   text-align: center;
-  color: var(--tartan-text-on-dark);
+  color: var(--app-text-secondary);
   white-space: normal;
   overflow: visible;
-  animation: persona-caption-swap 0.22s ease;
 }
 
 .persona-caption--thinking {
   font-style: italic;
-  letter-spacing: 0.06em;
-  color: rgba(255, 255, 255, 0.82);
+  color: var(--app-text-muted);
 }
 
 .persona-caption__caret {
@@ -29,26 +27,8 @@
   animation: persona-caret 0.8s steps(1) infinite;
 }
 
-@keyframes persona-caption-swap {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 @keyframes persona-caret {
   50% {
     opacity: 0;
-  }
-}
-
-@media (max-width: 480px) {
-  .persona-caption {
-    width: min(100%, 92vw);
-    font-size: 0.875rem;
   }
 }
