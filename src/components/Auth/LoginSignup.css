@@ -12,14 +12,15 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   min-height: 100vh;
   min-height: 100dvh;
-  padding: clamp(2rem, 6vh, 4.5rem) 1.25rem 1.5rem;
+  padding: 3rem 1.25rem 4.5rem;
 }
 
 .auth-page__intro {
   text-align: center;
+  margin-bottom: 28px;
 }
 
 .auth-page__mascot {
@@ -60,9 +61,8 @@
   align-items: center;
   width: 100%;
   max-width: 400px;
-  flex: 1;
-  justify-content: center;
-  padding: 32px 0;
+  flex: 0 0 auto;
+  padding: 0;
 }
 
 .auth-page__card {
@@ -212,6 +212,11 @@
 }
 
 .auth-page__footer {
+  position: absolute;
+  left: 50%;
+  bottom: 1.25rem;
+  transform: translateX(-50%);
+  width: calc(100% - 2rem);
   text-align: center;
   max-width: 20rem;
   font-size: 0.6875rem;
@@ -222,9 +227,16 @@
 }
 
 @media (max-width: 480px) {
+  .auth-page__content {
+    padding: 2rem 1rem 4rem;
+  }
+
+  .auth-page__intro {
+    margin-bottom: 22px;
+  }
+
   .auth-page__main {
     max-width: 100%;
-    padding: 20px 0;
   }
 
   .auth-page__card {
