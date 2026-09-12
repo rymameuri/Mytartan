@@ -12,7 +12,7 @@ describe("ChatInterface layout", () => {
   test("shows the hero bubble when showHero is true", () => {
     render(<ChatInterface messages={[]} isLoading={false} showHero={true} />);
     expect(screen.getByText(/hi, i'm scotty/i)).toBeInTheDocument();
-    expect(screen.getByText(/mytartan/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/mytartan/i).length).toBeGreaterThan(0);
   });
 
   test("hides the hero bubble when showHero is false", () => {
