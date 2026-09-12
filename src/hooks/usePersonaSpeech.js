@@ -7,11 +7,13 @@ import {
   msPerSpeechWord,
   captionForCharIndex,
   captionForWordIndex,
+  captionForPlaybackProgress,
 } from "../utils/speechCaption";
+import { toSpokenText } from "../utils/spokenText";
 
 export const MUTE_STORAGE_KEY = "mytartan-persona-muted";
 
-const BROWSER_TTS_RATE = 0.92;
+const BROWSER_TTS_RATE = 1.05;
 
 export function readMutedPreference(userId) {
   try {
@@ -37,6 +39,7 @@ export function armSpeechSynthesis() {
 
 export function usePersonaSpeech(avatarRef) {
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isPreparingSpeech, setIsPreparingSpeech] = useState(false);
   const [caption, setCaption] = useState("");
   const speakTimerRef = useRef(null);
   const revealTimerRef = useRef(null);
@@ -89,6 +92,7 @@ export function usePersonaSpeech(avatarRef) {
     clearTimeout(speakTimerRef.current);
     speakTimerRef.current = null;
     clearRevealTimers();
+    setIsPreparingSpeech(false);
     setIsSpeaking(false);
     clearCaption();
   }, [clearRevealTimers, clearCaption]);
@@ -156,18 +160,38 @@ export function usePersonaSpeech(avatarRef) {
       clearRevealTimers();
       clearCaption();
 
-      const normalized = normalizeSpeechCaption(text);
+      const normalized = normalizeSpeechCaption(toSpokenText(text));
       if (!normalized) return;
 
       fullTextRef.current = normalized;
 
       if (avatarRef?.current) {
         try {
-          setIsSpeaking(true);
-          updateCaptionForWord(normalized, 0);
-          const msPerWord = 450;
-          startTimedReveal(normalized, msPerWord);
-          await avatarRef.current.speak(normalized);
+          setIsPreparingSpeech(true);
+          await avatarRef.current.speak(normalized, {
+            onStart: () => {
+              setIsPreparingSpeech(false);
+              setIsSpeaking(true);
+              updateCaptionForWord(normalized, 0);
+              fallbackTimerRef.current = setTimeout(() => {
+                if (!revealTimerRef.current) {
+                  startTimedReveal(normalized, 450);
+                }
+              }, 400);
+            },
+            onTimeUpdate: (currentTime, duration) => {
+              if (!Number.isFinite(duration) || duration <= 0) return;
+              if (fallbackTimerRef.current) {
+                clearTimeout(fallbackTimerRef.current);
+                fallbackTimerRef.current = null;
+              }
+              if (revealTimerRef.current) {
+                clearInterval(revealTimerRef.current);
+                revealTimerRef.current = null;
+              }
+              setCaption(captionForPlaybackProgress(normalized, currentTime, duration));
+            },
+          });
           finishSpeaking();
           return;
         } catch (err) {
@@ -195,6 +219,7 @@ export function usePersonaSpeech(avatarRef) {
     clearRevealTimers();
     window.speechSynthesis?.cancel();
     avatarRef?.current?.stop?.();
+    setIsPreparingSpeech(false);
     setIsSpeaking(false);
     clearCaption();
   }, [avatarRef, clearRevealTimers, clearCaption]);
@@ -208,7 +233,7 @@ export function usePersonaSpeech(avatarRef) {
     [clearRevealTimers]
   );
 
-  return { isSpeaking, speak, stop, caption };
+  return { isSpeaking, isPreparingSpeech, speak, stop, caption };
 }
 
 /**

@@ -16,3 +16,10 @@ test('renders login form when not authenticated', () => {
 test('renders without crashing', () => {
   expect(() => render(<App />)).not.toThrow();
 });
+
+test('renders the face editor from ?facialAlign', () => {
+  window.history.pushState({}, '', '/?facialAlign');
+  render(<App />);
+  expect(screen.getByRole('heading', { name: /scotty face editor/i })).toBeInTheDocument();
+  window.history.pushState({}, '', '/');
+});

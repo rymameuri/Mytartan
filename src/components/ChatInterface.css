@@ -165,6 +165,14 @@
   align-items: flex-start;
 }
 
+.msg-text {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .speak-btn {
   display: inline-flex;
   align-items: center;
@@ -194,6 +202,26 @@
   background: rgba(156, 39, 51, 0.08);
 }
 
+.msg-link {
+  color: var(--tartan-maroon);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  word-break: break-word;
+}
+
+.msg-link:hover {
+  color: var(--tartan-maroon-dark, #7a1c28);
+}
+
+.pv-messages .msg-link {
+  color: #ffe3e8;
+}
+
+.pv-messages .msg-link:hover {
+  color: #fff;
+}
+
 .msg-confidence {
   margin: 10px 0 0;
   padding-top: 8px;
@@ -210,6 +238,16 @@
   gap: 5px;
   min-width: 52px;
   padding: 14px 16px !important;
+}
+
+.typing-label {
+  margin-right: 4px;
+  font-size: 0.8125rem;
+  font-style: italic;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  color: inherit;
+  opacity: 0.78;
 }
 
 .typing-dot {

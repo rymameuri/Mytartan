@@ -30,6 +30,9 @@ const {
   LOW_CONFIDENCE_THRESHOLD,
   LOW_CONFIDENCE_REPLY,
   isSmallTalk,
+  getSmallTalkReply,
+  buildSystemPrompt,
+  isCampusFactQuery,
 } = require("./server");
 
 // ─── GET / ────────────────────────────────────────────────────────────────────
@@ -117,9 +120,33 @@ describe("POST /api/chat — input validation", () => {
     expect(res.body.reply).toMatch(/Scotty/i);
   });
 
+  test("answers how are you as a check-in instead of a knowledge-base miss", async () => {
+    const res = await request(app)
+      .post("/api/chat")
+      .send({ messages: [{ role: "user", content: "hi sorry how are you" }], mode: "qa" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.reply).toMatch(/i'm good|what's going on|scotty here/i);
+    expect(res.body.reply).not.toMatch(/don't have that one|student affairs/i);
+  });
+
+  test("answers a plain how are you as a check-in instead of a knowledge-base miss", async () => {
+    const res = await request(app)
+      .post("/api/chat")
+      .send({ messages: [{ role: "user", content: "how are you" }], mode: "qa" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.reply).toMatch(/i'm good|what's going on/i);
+    expect(res.body.reply).not.toMatch(/don't have that information|relevant information|knowledge base/i);
+    expect(res.body.reply).not.toMatch(/mycmuq-student-affairs/i);
+  });
+
   test("small talk skips KB pipeline and avoids low-confidence fallback", async () => {
     for (const content of [
+      "how are you",
+      "hi sorry how are you",
       "hello how are you",
+      "how's it going",
       "thanks",
       "thank you so much for all your support",
       "good morning",
@@ -144,7 +171,7 @@ describe("POST /api/chat — input validation", () => {
       .send({ messages: [{ role: "user", content: "deadlines?" }], mode: "qa" });
 
     expect(res.status).toBe(200);
-    expect(res.body.reply).not.toMatch(/^Hey! I'm Scotty/);
+    expect(res.body.reply).not.toMatch(/^Hey — Scotty here/);
   });
 
   test("returns confidence metadata for KB-grounded replies", async () => {
@@ -160,18 +187,33 @@ describe("POST /api/chat — input validation", () => {
     }
   });
 
-  test("tells user to check scotty.qatar.cmu.edu when KB has no match", async () => {
+  test("tells user to check myCMU-Q Student Affairs when a campus-fact query has no KB match", async () => {
     const res = await request(app)
       .post("/api/chat")
       .send({
-        messages: [{ role: "user", content: "xyzzy frobble quuxington nonsense" }],
+        messages: [{ role: "user", content: "heygen xyzzy quuxington" }],
         mode: "qa",
       });
 
     expect(res.status).toBe(200);
-    expect(res.body.reply).toMatch(/don't have that information/i);
-    expect(res.body.reply).toMatch(/scotty\.qatar\.cmu\.edu/i);
+    expect(res.body.reply).toMatch(/don't have that one/i);
+    expect(res.body.reply).toMatch(/mycmuq-student-affairs/i);
+    expect(res.body.reply).toMatch(/\nhttps:\/\/sites\.google\.com/);
     expect(res.body.confidence).toMatchObject({ sourceCount: 0, score: 0 });
+  });
+
+  test("does not treat casual non-campus chat as a knowledge-base miss", async () => {
+    const res = await request(app)
+      .post("/api/chat")
+      .send({
+        messages: [{ role: "user", content: "I'm so done with this week" }],
+        mode: "qa",
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.reply).toMatch(/what's going on|i'm here/i);
+    expect(res.body.reply).not.toMatch(/don't have that one/i);
+    expect(res.body.reply).not.toMatch(/mycmuq-student-affairs/i);
   });
 
   test("returns low-confidence reply when retrieval score is weak", async () => {
@@ -217,8 +259,36 @@ describe("POST /api/chat — input validation", () => {
 });
 
 describe("isSmallTalk", () => {
+  test("check-in replies stay conversational", () => {
+    expect(getSmallTalkReply("how are you")).toMatch(/i'm good|what's going on/i);
+    expect(getSmallTalkReply("how are you")).not.toMatch(/don't have|knowledge base|relevant information/i);
+  });
+
+  test("small-talk system prompt does not require a knowledge-base answer", () => {
+    const prompt = buildSystemPrompt("qa", [], { smallTalk: true });
+    expect(prompt).toMatch(/SMALL TALK/i);
+    expect(prompt).not.toMatch(/No matching knowledge base excerpts/i);
+    expect(prompt).not.toMatch(/You MUST tell the user you do not have that information/i);
+  });
+
+  test("chat mode with no excerpts stays conversational", () => {
+    const prompt = buildSystemPrompt("chat", []);
+    expect(prompt).toMatch(/just talk like a friend/i);
+    expect(prompt).not.toMatch(/Tell them casually that you do not have that one/i);
+  });
+
+  test("detects campus-fact queries vs hangout chat", () => {
+    expect(isCampusFactQuery("heygen xyzzy quuxington")).toBe(true);
+    expect(isCampusFactQuery("financial aid")).toBe(true);
+    expect(isCampusFactQuery("I'm so done with this week")).toBe(false);
+    expect(isCampusFactQuery("tell me a joke")).toBe(false);
+  });
+
   test("classifies greetings and pleasantries as small talk", () => {
+    expect(isSmallTalk("how are you")).toBe(true);
     expect(isSmallTalk("hello how are you")).toBe(true);
+    expect(isSmallTalk("hi sorry how are you")).toBe(true);
+    expect(isSmallTalk("how's it going")).toBe(true);
     expect(isSmallTalk("thanks")).toBe(true);
     expect(isSmallTalk("thank you so much for all your support")).toBe(true);
     expect(isSmallTalk("good morning")).toBe(true);
@@ -237,6 +307,7 @@ describe("isSmallTalk", () => {
     expect(isSmallTalk("financial aid?")).toBe(false);
     expect(isSmallTalk("where is the library")).toBe(false);
     expect(isSmallTalk("registration help")).toBe(false);
+    expect(isSmallTalk("how are you doing with registration")).toBe(false);
   });
 
   test("does not classify longer messages as small talk", () => {

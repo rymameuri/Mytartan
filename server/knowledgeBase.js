@@ -272,8 +272,19 @@ function getClaudeApiKey() {
   return process.env.CLAUDE_API_KEY?.trim() || "";
 }
 
+function resolveGatewayModelId(model) {
+  if (model.startsWith("claude-")) {
+    return `us.anthropic.${model}`;
+  }
+  return model;
+}
+
 function getAiModel() {
-  return process.env.AI_MODEL?.trim() || "claude-haiku-4-5-20251001-v1:0";
+  const model = process.env.AI_MODEL?.trim() || "claude-haiku-4-5-20251001-v1:0";
+  if (getAiGatewayBaseUrl()) {
+    return resolveGatewayModelId(model);
+  }
+  return model;
 }
 
 function isConfiguredKey(value) {
@@ -868,7 +879,7 @@ function buildContextBlock(docs) {
   if (!docs.length) return "";
 
   return docs
-    .map((doc) => `[Source: scotty.qatar.cmu.edu — ${doc.topic} (${doc.file})]\n${doc.body}`)
+    .map((doc) => `[Source: myCMU-Q — ${doc.topic} (${doc.file})]\n${doc.body}`)
     .join("\n\n");
 }
 

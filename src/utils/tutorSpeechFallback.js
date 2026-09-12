@@ -2,7 +2,7 @@ export function tutorSpeechFallback({ tutorActivity, lectureTopic, courseName } 
   const topic = lectureTopic?.trim() || "this topic";
 
   if (tutorActivity === "flashcards") {
-    return `I put together some flashcards on ${topic} — take a look and tell me if any of them trip you up.`;
+    return `I put together some flashcards on ${topic}. Take a look and tell me if any of them trip you up.`;
   }
   if (tutorActivity === "quiz") {
     return `I've built a quiz on ${topic} in Studio. Work through it at your own pace, and ask me when you want a hint.`;

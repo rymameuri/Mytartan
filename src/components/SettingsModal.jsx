@@ -31,6 +31,16 @@ function SettingsModal({ onClose, canvasConnection }) {
         </header>
 
         <section className="settings-modal__section">
+          <h3 className="settings-modal__section-title">Persona look</h3>
+          <p className="settings-modal__hint">
+            Move and scale Scotty's mouth and eyes until they sit on the face the way you want.
+          </p>
+          <a className="settings-modal__link" href="/?facialAlign">
+            Open face editor
+          </a>
+        </section>
+
+        <section className="settings-modal__section">
           <h3 className="settings-modal__section-title">Connect Canvas</h3>
           <CanvasConnect {...canvasConnection} />
         </section>

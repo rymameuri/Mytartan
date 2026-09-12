@@ -76,13 +76,16 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 const AI_MAX_TOKENS = 350;
 const AI_MAX_TOKENS_TUTOR = 512;
-const AI_TEMPERATURE = 0.35;
+const AI_TEMPERATURE = 0.55;
 
 // Tune after eval: scores below this skip full LLM generation (weak retrieval / hallucination risk).
 const LOW_CONFIDENCE_THRESHOLD = 40;
 
+const MYCMUQ_STUDENT_AFFAIRS_URL =
+  "https://sites.google.com/andrew.cmu.edu/mycmuq-student-affairs/home";
+
 const LOW_CONFIDENCE_REPLY =
-  "I'm not confident I have accurate information on this topic right now. For the most reliable answer, please check scotty.qatar.cmu.edu or contact the relevant CMU-Q office directly — Enrollment Services for registration and academic dates, Qatar Foundation Financial Aid for scholarships, or your academic advisor for degree-specific questions.";
+  `I'm not totally sure I have this right, so I don't want to guess. Best bet is the myCMU-Q Student Affairs site, or just ask the office that owns it. Enrollment Services for registration and dates, Qatar Foundation Financial Aid for scholarships, or your advisor for degree stuff.\n${MYCMUQ_STUDENT_AFFAIRS_URL}`;
 
 const PLACEHOLDER_KEYS = new Set([
   "",
@@ -104,8 +107,19 @@ function getAiGatewayBaseUrl() {
   return process.env.AI_GATEWAY_BASE_URL?.trim().replace(/\/$/, "") || "";
 }
 
+function resolveGatewayModelId(model) {
+  if (model.startsWith("claude-")) {
+    return `us.anthropic.${model}`;
+  }
+  return model;
+}
+
 function getAiModel() {
-  return process.env.AI_MODEL?.trim() || "claude-haiku-4-5-20251001-v1:0";
+  const model = process.env.AI_MODEL?.trim() || "claude-haiku-4-5-20251001-v1:0";
+  if (useAiGateway()) {
+    return resolveGatewayModelId(model);
+  }
+  return model;
 }
 
 function getAnthropicApiKey() {
@@ -200,28 +214,33 @@ function formatApiError(err, fallback = "Request failed") {
 }
 
 const NO_KB_MATCH_REPLY =
-  "I don't have that information in my knowledge base right now. For the most up-to-date details, please check scotty.qatar.cmu.edu or contact the relevant CMU-Q office.";
+  `Hmm, I don't have that one. Best bet is the myCMU-Q Student Affairs site, or just ask the relevant CMU-Q office.\n${MYCMUQ_STUDENT_AFFAIRS_URL}`;
+
+const CASUAL_NO_AI_REPLY = "I'm here. What's going on?";
 
 const KB_GROUNDING_RULES = `KNOWLEDGE BASE GROUNDING RULES
-Answer CMU-Q questions using ONLY the official knowledge base excerpts and authoritative key facts provided below.
+For official CMU-Q facts, use ONLY the official knowledge base excerpts and authoritative key facts provided below.
 
 CRITICAL RULES:
 - NEVER invent names, roles, emails, dates, policies, dollar amounts, or contacts.
-- If the knowledge base does not contain the answer — or the excerpts do not actually address what the user asked — you MUST say clearly that you do not have that information. Do not guess, infer, or fill gaps from general knowledge.
+- If they are venting, chatting, asking for study advice, or making small talk, just talk. That is not a knowledge-base miss.
+- If the excerpts actually answer a campus-fact question, say the answer. Do not hedge.
+- If the excerpts do not cover an official campus fact, say so once, casually. Do not guess those details from general knowledge. Then still help — who to ask, what to check next.
+- When you cannot answer an official campus fact, include the myCMU-Q Student Affairs URL on its own line (${MYCMUQ_STUDENT_AFFAIRS_URL}). Mention the relevant CMU-Q office when appropriate. Do not put the URL in parentheses or spell it out.
 - When authoritative key facts are provided, prefer their exact values over conflicting prose excerpts on the same topic.
-- When you do not have the answer, always direct the user to scotty.qatar.cmu.edu for official CMU-Q resources, and mention the relevant CMU-Q office when appropriate.
 - At CMU-Q, "StuCo" means the Student College (student-taught courses), NOT a generic student council or student government. Do not make up StuCo officer titles or members.
 - Briefly name the human-readable source when answering from context (for example "according to the Financial Aid page" or "based on the Cross Registration page"). Do NOT include [Source:] labels, file names, or file paths.
 - If a question is ambiguous (e.g. "measure" likely means "major/degree", "stucco" means "StuCo"), interpret it charitably in the CMU-Q academic context before answering.
 
 RESPONSE STYLE:
+- Keep it very casual — contractions, short sentences, like a classmate, not an official notice.
 - Lead with the direct answer in the first sentence.
 - Never open with stiff phrases like "According to the official knowledge base" or "Here's how it works:"
 - Do not number every step unless the user is explicitly asking for a process in order.
 - Avoid bullet points for simple answers — weave the info into natural sentences.
 - Skip filler affirmations like "Great question!" Do not repeat the question back or use formulaic greetings.
 - If there are important caveats, mention them naturally at the end, not as a separate bulleted list.
-- If you do not know, say so plainly in one sentence, then tell the user to check scotty.qatar.cmu.edu for official information.`;
+- Do not turn every reply into I don't know.`;
 
 const CANVAS_DUE_TODAY_RULE = `CANVAS ASSIGNMENT RULES
 You HAVE access to this student's live Canvas assignment data (provided below). NEVER say you lack access to their calendar, deadlines, or course assignments when this data is present.
@@ -249,9 +268,9 @@ function isCanvasRelatedQuery(query) {
 }
 
 const SYSTEM_PROMPTS = {
-  qa: `${KB_GROUNDING_RULES} Be accurate, concise, and helpful about academics, registration, student life, policies, and CMU-Q resources.`,
-  campus: `${KB_GROUNDING_RULES} Help students navigate CMU-Q campus life, resources, and student services.`,
-  chat: `${KB_GROUNDING_RULES} Be a warm, approachable companion while staying factual about CMU-Q.`,
+  qa: `${KB_GROUNDING_RULES} Be accurate and casual about academics, registration, student life, policies, and CMU-Q resources.`,
+  campus: `${KB_GROUNDING_RULES} Help students navigate CMU-Q campus life, resources, and student services — like a classmate, not a kiosk.`,
+  chat: `Talk like a friend. Everyday chat, studying, stress, plans, jokes — just be good company. If they ask a CMU-Q fact (policies, offices, deadlines, money, visas), use any knowledge-base excerpts provided and do not invent those details. Stay casual either way.`,
 };
 
 const KB_MODES = new Set(["qa", "campus", "chat"]);
@@ -263,9 +282,9 @@ const SMALL_TALK_PATTERNS = [
   /^good\s+(morning|afternoon|evening)(\s+scotty)?[\s!.?]*$/i,
   /^(thanks|thank\s+you|thx|ty)[\s!.?]*$/i,
   /^(bye|goodbye|see\s+ya|see\s+you|that'?s\s+all|thats\s+all)[\s!.?]*$/i,
-  /^(how\s+are\s+you|what'?s\s+up|whats\s+up|wassup)[\s?!.]*$/i,
+  /^(how\s+are\s+you|how\s+are\s+ya|how\s+r\s+(you|u)|how'?s\s+it\s+going|how\s+is\s+it\s+going|how\s+you\s+doing|how\s+are\s+you\s+doing|what'?s\s+up|whats\s+up|wassup)[\s?!.]*$/i,
   /^(ok|okay|cool|nice|lol|haha|awesome|great|perfect|sure|got\s+it|sounds\s+good)[\s!.?]*$/i,
-  /^(hi|hello|hey)[\s,!.]*(how\s+are\s+you|what'?s\s+up|whats\s+up)[\s?!.]*$/i,
+  /^(hi|hello|hey)(?:[\s,!.]+(?:sorry|oops|um+|uh+|just|scotty))*[\s,!.]*(how\s+are\s+you|how'?s\s+it\s+going|what'?s\s+up|whats\s+up)[\s?!.]*$/i,
   /^good\s+(morning|afternoon|evening)[\s,!.]*(how\s+are\s+you|scotty)?[\s?!.]*$/i,
 ];
 
@@ -282,6 +301,14 @@ const SMALL_TALK_FILLER = new Set([
   "too",
   "very",
   "much",
+  "sorry",
+  "oops",
+  "um",
+  "uh",
+  "ah",
+  "oh",
+  "my",
+  "bad",
 ]);
 
 const SMALL_TALK_VOCAB = new Set([
@@ -309,6 +336,12 @@ const SMALL_TALK_VOCAB = new Set([
   "doing",
   "going",
   "today",
+  "have",
+  "been",
+  "feeling",
+  "yourself",
+  "things",
+  "alright",
   "thanks",
   "thank",
   "thx",
@@ -338,10 +371,17 @@ const SMALL_TALK_VOCAB = new Set([
   "fine",
   "not",
   "bad",
+  "sorry",
+  "oops",
+  "um",
+  "uh",
 ]);
 
 const GRATITUDE_PREFIX =
   /^(thanks|thank\s+you|thx|ty|i\s+appreciate(?:\s+(?:it|that|this|you|your\s+help))?|much\s+appreciated)\b/i;
+
+const CHECK_IN_PATTERN =
+  /\b(how\s+are\s+you|how\s+are\s+ya|how\s+r\s+(you|u)|how'?s\s+it\s+going|how\s+is\s+it\s+going|how\s+you\s+doing|how\s+are\s+you\s+doing|what'?s\s+up|whats\s+up|wassup)\b/i;
 
 function isGratitudeMessage(normalized) {
   if (!GRATITUDE_PREFIX.test(normalized)) return false;
@@ -362,6 +402,10 @@ function isSmallTalk(message) {
     return true;
   }
 
+  if (CHECK_IN_PATTERN.test(normalized)) {
+    return true;
+  }
+
   const tokens = normalized
     .toLowerCase()
     .replace(/[,!.?]+/g, " ")
@@ -372,11 +416,32 @@ function isSmallTalk(message) {
   return tokens.every((token) => SMALL_TALK_VOCAB.has(token.replace(/'s$/, "")));
 }
 
+const FAREWELL_PATTERN =
+  /^(bye|goodbye|see\s+ya|see\s+you|that'?s\s+all|thats\s+all|later|cya)\b/i;
+
+function getSmallTalkReply(message) {
+  const normalized = String(message || "").trim().replace(/\s+/g, " ");
+  if (isGratitudeMessage(normalized)) {
+    return "Anytime. Hit me up if you need anything else.";
+  }
+  if (FAREWELL_PATTERN.test(normalized)) {
+    return "Later! I'll be around.";
+  }
+  if (CHECK_IN_PATTERN.test(normalized)) {
+    return "I'm good! What's going on?";
+  }
+  return "Hey, Scotty here. What's up?";
+}
+
 function getAiGenerationOptions(mode) {
   return {
     maxTokens: mode === "tutor" ? AI_MAX_TOKENS_TUTOR : AI_MAX_TOKENS,
-    temperature: AI_TEMPERATURE,
+    temperature: mode === "tutor" ? 0.4 : AI_TEMPERATURE,
   };
+}
+
+function isCampusFactQuery(query) {
+  return hasContentKeywords(query);
 }
 
 async function retrieveForQuery(mode, userQuery, recentMessages = []) {
@@ -389,8 +454,8 @@ async function retrieveForQuery(mode, userQuery, recentMessages = []) {
   return { docs, confidence };
 }
 
-function assembleSystemPrompt(appMode, studentContext, body) {
-  const parts = [buildPersonaPrompt(resolvePersonaMode(appMode))];
+function assembleSystemPrompt(appMode, studentContext, body, { smallTalk = false } = {}) {
+  const parts = [buildPersonaPrompt(resolvePersonaMode(appMode), { smallTalk })];
   if (studentContext?.trim()) parts.push(studentContext.trim());
   if (body?.trim()) parts.push(body.trim());
   return parts.join("\n\n");
@@ -449,7 +514,8 @@ function buildSystemPrompt(
     return assembleSystemPrompt(
       mode,
       studentContext,
-      "The user is greeting you, expressing thanks, or making casual small talk. Reply warmly in one or two short sentences. If they thanked you, acknowledge it graciously — do not say you lack information or redirect them to offices."
+      "The user is greeting you, expressing thanks, or making casual small talk. Reply like a friend in one or two short sentences as Scotty. It is fine to say you are doing well and ready to help. Never say you lack information, do not have relevant information, or redirect them to an office or website.",
+      { smallTalk: true }
     );
   }
 
@@ -466,9 +532,12 @@ function buildSystemPrompt(
   }
   if (contextSections.length) {
     prompt += `\n\n${contextSections.join("\n\n")}`;
+  } else if (mode === "chat") {
+    prompt +=
+      "\n\nNo campus excerpts matched this message. Just talk like a friend. Do not invent CMU-Q-specific facts, names, dates, or policies. If they asked for an official campus detail you do not have, say so in one casual sentence, point them to Student Affairs, and keep the conversation going.";
   } else {
     prompt +=
-      "\n\nNo matching knowledge base excerpts were found for this question. You MUST tell the user you do not have that information. Do not guess or invent CMU-Q-specific facts. Direct them to scotty.qatar.cmu.edu for official resources.";
+      `\n\nNo matching knowledge base excerpts were found. If this is an official campus-fact question, tell them casually that you do not have that one and put the myCMU-Q Student Affairs URL on its own line (${MYCMUQ_STUDENT_AFFAIRS_URL}). If they are just talking, talk back — do not say you lack information. Do not guess or invent CMU-Q-specific facts.`;
   }
 
   return assembleSystemPrompt(mode, studentContext, prompt);
@@ -481,7 +550,7 @@ function answerFromKnowledgeBase(userQuery) {
   }
 
   const blocks = docs.map((doc) => `**${doc.topic}**\n${doc.body.trim()}`);
-  const reply = `${blocks.join("\n\n---\n\n")}\n\n— From CMU-Q official resources (scotty.qatar.cmu.edu). For more details, visit the relevant page on the Scotty portal.`;
+  const reply = `${blocks.join("\n\n---\n\n")}\n\nFrom the official myCMU-Q stuff if you want more:\n${MYCMUQ_STUDENT_AFFAIRS_URL}`;
 
   return { reply, confidence: computeConfidence(docs) };
 }
@@ -1073,6 +1142,13 @@ async function handleChatRequest(req, res, { stream = false } = {}) {
   const canvasConnection = req.user?.id ? getConnection(req.user.id) : null;
   const canvasRelated = KB_MODES.has(mode) && isCanvasRelatedQuery(userQuery);
 
+  if (smallTalk) {
+    return sendChatReply(res, getSmallTalkReply(userQuery), {
+      stream,
+      replyMeta: buildReplyMeta({ mode, userQuery }),
+    });
+  }
+
   if (KB_MODES.has(mode) && isProfessorNuiQuery(userQuery)) {
     const reply = getProfessorNuiReply();
     const professorNuiConfidence = computeConfidence([{ score: 999, method: "keyword" }]);
@@ -1088,7 +1164,7 @@ async function handleChatRequest(req, res, { stream = false } = {}) {
 
   if (KB_MODES.has(mode) && isCanvasConnectionStatusQuery(userQuery)) {
     const reply = canvasConnection
-      ? `Yes — I'm connected to your Canvas at ${canvasConnection.canvasUrl}. Ask me what's due today or this week and I'll pull it from your assignments.`
+      ? `Yes, I'm connected to your Canvas at ${canvasConnection.canvasUrl}. Ask me what's due today or this week and I'll pull it from your assignments.`
       : "Not yet. Click the gear icon in the top right, open Settings, and connect Canvas with your API token. Once linked, I can tell you about assignments and due dates.";
     const canvasStatusConfidence = computeConfidence([{ score: 999, method: "canvas" }]);
     return sendChatReply(res, reply, {
@@ -1102,14 +1178,12 @@ async function handleChatRequest(req, res, { stream = false } = {}) {
   }
 
   const recentMessages = messages.slice(-5);
-  const { docs, confidence } = smallTalk
-    ? { docs: [], confidence: null }
-    : await retrieveForQuery(mode, userQuery, recentMessages);
-  const keyFacts = KB_MODES.has(mode) && !smallTalk ? checkKeyFacts(userQuery) : [];
+  const { docs, confidence } = await retrieveForQuery(mode, userQuery, recentMessages);
+  const keyFacts = KB_MODES.has(mode) ? checkKeyFacts(userQuery) : [];
   const studentContext = buildStudentContext(req.user?.profile);
   const canvasContext = req.user?.id ? await getCanvasContext(req.user.id) : null;
   const systemPrompt = buildSystemPrompt(mode, docs, {
-    smallTalk,
+    smallTalk: false,
     courseContext,
     tutorActivity,
     lectureTopic,
@@ -1127,7 +1201,11 @@ async function handleChatRequest(req, res, { stream = false } = {}) {
 
   const replyMeta = buildReplyMeta({ mode, userQuery, confidence, keyFacts });
 
-  if (KB_MODES.has(mode) && !smallTalk && docs.length === 0 && !canvasRelated && !canvasConnection) {
+  const campusFactQuery = isCampusFactQuery(userQuery);
+  const requireKbAnswer =
+    KB_MODES.has(mode) && mode !== "chat" && campusFactQuery;
+
+  if (requireKbAnswer && docs.length === 0 && !canvasRelated && !canvasConnection) {
     const reply = NO_KB_MATCH_REPLY;
     const noMatchConfidence = computeConfidence([]);
     return sendChatReply(res, reply, {
@@ -1137,8 +1215,7 @@ async function handleChatRequest(req, res, { stream = false } = {}) {
   }
 
   if (
-    KB_MODES.has(mode) &&
-    !smallTalk &&
+    requireKbAnswer &&
     confidence &&
     confidence.score < LOW_CONFIDENCE_THRESHOLD &&
     confidence.sourceCount > 0 &&
@@ -1149,13 +1226,18 @@ async function handleChatRequest(req, res, { stream = false } = {}) {
   }
 
   if (!hasAiKey()) {
-    if (smallTalk) {
-      const reply =
-        "Hey! I'm Scotty, your CMU-Q assistant. Ask me anything about registration, campus life, policies, or student resources.";
-      return sendChatReply(res, reply, { stream });
-    }
-
     if (KB_MODES.has(mode)) {
+      if (!campusFactQuery) {
+        return sendChatReply(res, CASUAL_NO_AI_REPLY, {
+          stream,
+          replyMeta: buildReplyMeta({
+            mode,
+            userQuery,
+            confidence: computeConfidence([]),
+            keyFacts,
+          }),
+        });
+      }
       const { reply, confidence: kbConfidence } = answerFromKnowledgeBase(userQuery);
       const kbKeyFacts = checkKeyFacts(userQuery);
       return sendChatReply(res, reply, {
@@ -1399,6 +1481,22 @@ async function createLiveAvatarToken(_req, res) {
 app.post("/api/liveavatar-token", createLiveAvatarToken);
 app.post("/api/heygen-token", createLiveAvatarToken);
 
+function flattenTtsPauses(text) {
+  if (!text) return "";
+  return text
+    .replace(/(\d+)\s*[–—]\s*(\d+)/g, "$1 to $2")
+    .replace(/\u2026/g, ".")
+    .replace(/\.{3,}/g, ".")
+    .replace(/\s*[—–]\s*/g, ", ")
+    .replace(/\s+--\s+/g, ", ")
+    .replace(/[ \t]*;[ \t]*/g, ", ")
+    .replace(/([A-Za-z])\s*:\s+([A-Za-z])/g, "$1, $2")
+    .replace(/(,\s*){2,}/g, ", ")
+    .replace(/\s+([,.!?])/g, "$1")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 app.post("/api/tts", async (req, res) => {
   const apiKey = process.env.ELEVENLABS_API_KEY?.trim();
   const voiceId = process.env.ELEVENLABS_VOICE_ID?.trim();
@@ -1410,7 +1508,7 @@ app.post("/api/tts", async (req, res) => {
     });
   }
 
-  const text = String(req.body?.text || "").trim();
+  const text = flattenTtsPauses(String(req.body?.text || "").trim());
   if (!text) {
     return res.status(400).json({ error: "text is required" });
   }
@@ -1424,9 +1522,9 @@ app.post("/api/tts", async (req, res) => {
         text,
         model_id: modelId,
         voice_settings: {
-          stability: 0.5,
+          stability: 0.72,
           similarity_boost: 0.75,
-          style: 0.35,
+          style: 0,
           use_speaker_boost: true,
         },
       },
@@ -1480,5 +1578,8 @@ module.exports.hasAiKey = hasAiKey;
 module.exports.LOW_CONFIDENCE_THRESHOLD = LOW_CONFIDENCE_THRESHOLD;
 module.exports.LOW_CONFIDENCE_REPLY = LOW_CONFIDENCE_REPLY;
 module.exports.isSmallTalk = isSmallTalk;
+module.exports.getSmallTalkReply = getSmallTalkReply;
+module.exports.isCampusFactQuery = isCampusFactQuery;
+module.exports.CASUAL_NO_AI_REPLY = CASUAL_NO_AI_REPLY;
 module.exports.isCanvasConnectionStatusQuery = isCanvasConnectionStatusQuery;
 module.exports.isCanvasRelatedQuery = isCanvasRelatedQuery;

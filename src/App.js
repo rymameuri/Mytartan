@@ -26,6 +26,7 @@ import FacialAlignTool from "./components/FacialAlignTool";
 import { buildTutorWelcomeMessage } from "./utils/tutorWelcome";
 import { refreshCourse } from "./utils/courseApi";
 import { stripMarkdownFormatting } from "./utils/stripMarkdown";
+import { toSpokenText } from "./utils/spokenText";
 import { readSidebarCollapsed, writeSidebarCollapsed } from "./utils/sidebarPreference";
 import "./App.css";
 
@@ -107,7 +108,7 @@ function AppShell() {
   const avatarRef = useRef(null);
   const abortControllerRef = useRef(null);
   const isDesktop = useIsDesktop();
-  const { isSpeaking, speak, stop, caption } = usePersonaSpeech(avatarRef);
+  const { isSpeaking, isPreparingSpeech, speak, stop, caption } = usePersonaSpeech(avatarRef);
   const { isMuted, toggleMute } = useMutedPreference(stop, userId);
   const canvasConnection = useCanvasConnection(userId, token);
 
@@ -135,7 +136,7 @@ function AppShell() {
   }, [messages, mode, courseContext, savedCourseId, persistCurrent]);
 
   const speakFormatted = useCallback(
-    (text) => speak(stripMarkdownFormatting(text)),
+    (text) => speak(toSpokenText(stripMarkdownFormatting(text))),
     [speak]
   );
 
@@ -593,12 +594,12 @@ function AppShell() {
         ? "speaking"
         : tutorListening
           ? "listening"
-          : isLoading
+          : isLoading || isPreparingSpeech
             ? "thinking"
             : "idle"
       : isSpeaking
         ? "speaking"
-        : isLoading
+        : isLoading || isPreparingSpeech
           ? "thinking"
           : "idle";
 
@@ -666,6 +667,7 @@ function AppShell() {
               isDesktop={isDesktop}
               voiceModeRef={voiceModeRef}
               isSpeaking={isSpeaking}
+              isPreparingSpeech={isPreparingSpeech}
               stopSpeech={stop}
               isMuted={isMuted}
               onToggleMute={toggleMute}
@@ -696,6 +698,7 @@ function AppShell() {
               onSwitchMode={handleSwitchMode}
               isDesktop={isDesktop}
               isSpeaking={isSpeaking}
+              isPreparingSpeech={isPreparingSpeech}
               stopSpeech={stop}
               isMuted={isMuted}
               onToggleMute={toggleMute}

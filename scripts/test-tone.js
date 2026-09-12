@@ -187,7 +187,7 @@ async function runSmallTalkRegressionChecks() {
   console.log(`\n${"=".repeat(60)}`);
   console.log("Small talk regression (hallucination guardrail bypass)");
 
-  const smallTalkCases = ["hello how are you", "thanks", "good morning"];
+  const smallTalkCases = ["how are you", "hello how are you", "how's it going", "thanks", "good morning"];
   for (const query of smallTalkCases) {
     const classified = isSmallTalk(query);
     console.log(`\nQuery: ${query}`);
@@ -208,7 +208,7 @@ async function runSmallTalkRegressionChecks() {
   }
 
   const apiBase = process.env.TEST_API_BASE || "http://localhost:3001";
-  const unanswerableQuery = "xyzzy frobble quuxington nonsense campus policy";
+  const unanswerableQuery = "heygen xyzzy quuxington";
 
   for (const query of smallTalkCases) {
     try {
@@ -244,7 +244,7 @@ async function runSmallTalkRegressionChecks() {
     });
     const data = await res.json();
     const pass =
-      res.ok && /don't have that information|not confident I have accurate information/i.test(
+      res.ok && /don't have that one|not totally sure I have this right/i.test(
         data.reply || ""
       );
     console.log(`\nAPI unanswerable campus query: ${pass ? "PASS" : "FAIL"} — fallback triggered`);

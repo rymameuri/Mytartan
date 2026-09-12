@@ -56,6 +56,7 @@ describe("Displaying messages", () => {
   test("shows typing indicator when loading", () => {
     render(<ChatInterface messages={messages} isLoading={true} showHero={false} />);
     expect(document.querySelector(".typing-indicator")).toBeInTheDocument();
+    expect(screen.getByText("thinking")).toBeInTheDocument();
   });
 
   test("hides typing indicator when not loading", () => {

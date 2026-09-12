@@ -13,6 +13,22 @@
   animation: persona-caption-swap 0.22s ease;
 }
 
+.persona-caption--thinking {
+  font-style: italic;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.persona-caption__caret {
+  display: inline-block;
+  width: 0.08em;
+  height: 0.95em;
+  margin-left: 0.12em;
+  background: currentColor;
+  vertical-align: -0.12em;
+  animation: persona-caret 0.8s steps(1) infinite;
+}
+
 @keyframes persona-caption-swap {
   from {
     opacity: 0;
@@ -21,6 +37,12 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes persona-caret {
+  50% {
+    opacity: 0;
   }
 }
 

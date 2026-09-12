@@ -17,7 +17,7 @@ function PersonaMicControls({
   const label =
     micLabel ??
     (isLoading
-      ? "Processing…"
+      ? "Thinking…"
       : listening
         ? "Listening…"
         : isSpeaking

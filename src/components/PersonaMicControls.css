@@ -21,6 +21,7 @@
   border-radius: 50%;
   border: 1.5px solid rgba(255, 255, 255, 0.55);
   opacity: 0;
+  pointer-events: none;
   animation: pmc-sonar 1.8s ease-out infinite;
 }
 

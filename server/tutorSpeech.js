@@ -61,6 +61,7 @@ RULES:
 - Use a different example or framing than what is shown on screen
 - End with one Socratic check-in question that nudges the student to articulate the idea in their own words
 - Plain English only. No markdown, no lists, no "Great question!", no Scottish slang
+- Never use em dashes, en dashes, or ellipses. Use a comma or a period so the voice does not hitch.
 - Do NOT read the on-screen tutoring response verbatim — distill it into natural speech
 
 Context: ${course}, topic "${topic}".
@@ -96,6 +97,7 @@ RULES:
 - Teach and orient: name the topic, highlight one key idea, invite the student to engage
 - ${activityHint}
 - Plain English only. No markdown, no "Great question!", no Scottish slang
+- Never use em dashes, en dashes, or ellipses. Use a comma or a period so the voice does not hitch.
 - Do NOT repeat the full tutoring response verbatim
 
 Context: ${course}, topic "${topic}".`;
@@ -132,7 +134,7 @@ function fallbackIntroductionScript({ tutorActivity, lectureTopic, courseName })
   const topic = lectureTopic?.trim() || "this topic";
 
   if (tutorActivity === "flashcards") {
-    return `I put together some flashcards on ${topic} — take a look and tell me if any of them trip you up.`;
+    return `I put together some flashcards on ${topic}. Take a look and tell me if any of them trip you up.`;
   }
   if (tutorActivity === "quiz") {
     return `I've built a quiz on ${topic} in Studio. Work through it at your own pace, and ask me when you want a hint.`;
@@ -140,16 +142,16 @@ function fallbackIntroductionScript({ tutorActivity, lectureTopic, courseName })
   if (tutorActivity === "whiteboard") {
     return `I've mapped the big ideas for ${topic} on the whiteboard. Scan the clusters and tell me what you'd explore first.`;
   }
-  return `Your study materials on ${topic} are ready in Studio — dive in and let me know where you'd like help.`;
+  return `Your study materials on ${topic} are ready in Studio. Dive in and let me know where you'd like help.`;
 }
 
 function fallbackLectureScript({ lectureTopic, studioItemContext }) {
   const topic = lectureTopic?.trim() || studioItemContext?.topic?.trim() || "this topic";
   const concept = studioItemContext?.concept?.trim();
   if (concept) {
-    return `Let's unpack ${concept} — it's really about how the pieces fit together in ${topic}. Can you walk me through what you think is happening here in your own words?`;
+    return `Let's unpack ${concept}. It's really about how the pieces fit together in ${topic}. Can you walk me through what you think is happening here in your own words?`;
   }
-  return `Let's work through this ${topic} idea together — I'll explain the concept behind what you're looking at. What part feels unclear so far?`;
+  return `Let's work through this ${topic} idea together. I'll explain the concept behind what you're looking at. What part feels unclear so far?`;
 }
 
 function fallbackSpeechScript({ tutorActivity, lectureTopic, courseName }) {

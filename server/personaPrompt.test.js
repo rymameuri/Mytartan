@@ -34,8 +34,26 @@ describe("personaPrompt", () => {
   test("buildPersonaPrompt includes few-shot examples", () => {
     const prompt = buildPersonaPrompt("tutor");
     expect(prompt).toMatch(/Playful casual:/);
+    expect(prompt).toMatch(/Casual greeting:/);
+    expect(prompt).toMatch(/Just chatting:/);
     expect(prompt).toMatch(/Serious financial aid:/);
     expect(prompt).toMatch(/Socratic tutor:/);
+  });
+
+  test("tone rules tell Scotty not to hedge every reply", () => {
+    const prompt = buildPersonaPrompt("qa");
+    expect(prompt).toMatch(/last resort/i);
+    expect(prompt).toMatch(/Never stack I-don't-knows/i);
+    expect(prompt).toMatch(/zero help-desk energy/i);
+    expect(prompt).toMatch(/Never use em dashes/i);
+  });
+
+  test("small-talk persona prompt skips knowledge-base grounding", () => {
+    const prompt = buildPersonaPrompt("qa", { smallTalk: true });
+    expect(prompt).toMatch(/You are Scotty/i);
+    expect(prompt).toMatch(/SMALL TALK/i);
+    expect(prompt).not.toMatch(/Only answer using the provided context/i);
+    expect(prompt).not.toMatch(/must tell the user you do not have/i);
   });
 
   test("buildPersonaPrompt falls back to qa for unknown modes", () => {

@@ -1,4 +1,12 @@
 .scotty-avatar {
+  --scotty-eye-top: 37%;
+  --scotty-eye-left: 34.7%;
+  --scotty-eye-right: 31.9%;
+  --scotty-eye-width: 7.6%;
+  --scotty-mouth-left: 51.3%;
+  --scotty-mouth-top: 62.4%;
+  --scotty-mouth-width: 11.6%;
+  --scotty-mouth-height: 7.5%;
   position: relative;
   width: 100%;
   height: 100%;
@@ -116,8 +124,8 @@
 
 .scotty-avatar__eye {
   position: absolute;
-  top: 37%;
-  width: 7.6%;
+  top: var(--scotty-eye-top);
+  width: var(--scotty-eye-width);
   aspect-ratio: 1;
   border-radius: 50%;
   background: #11131a;
@@ -128,11 +136,11 @@
 }
 
 .scotty-avatar__eye--left {
-  left: 34.7%;
+  left: var(--scotty-eye-left);
 }
 
 .scotty-avatar__eye--right {
-  right: 31.9%;
+  right: var(--scotty-eye-right);
   animation-delay: 0.08s;
 }
 
@@ -165,17 +173,17 @@
 
 .scotty-avatar__mouth-state {
   position: absolute;
-  left: 50%;
-  top: 64.2%;
-  width: 10.5%;
-  height: 4.2%;
+  left: var(--scotty-mouth-left);
+  top: var(--scotty-mouth-top);
+  width: var(--scotty-mouth-width);
+  height: var(--scotty-mouth-height);
   opacity: 0;
   transform: translate(-50%, -50%);
   transform-origin: center;
 }
 
 .scotty-avatar__mouth-state--closed {
-  opacity: 1;
+  opacity: 0;
 }
 
 .scotty-avatar__mouth-state--closed::after {
@@ -230,8 +238,8 @@
 .shb--speaking .scotty-avatar__mouth-state--small,
 .pv-avatar-frame--speaking .scotty-avatar__mouth-state--small,
 .sp-avatar-frame--speaking .scotty-avatar__mouth-state--small {
-  width: 11.5%;
-  height: 4.9%;
+  width: calc(var(--scotty-mouth-width) * 1.095);
+  height: calc(var(--scotty-mouth-height) * 1.167);
   animation: scotty-mouth-small-cycle 1.08s steps(1, end) infinite;
 }
 
@@ -239,8 +247,8 @@
 .shb--speaking .scotty-avatar__mouth-state--wide,
 .pv-avatar-frame--speaking .scotty-avatar__mouth-state--wide,
 .sp-avatar-frame--speaking .scotty-avatar__mouth-state--wide {
-  width: 14%;
-  height: 6.4%;
+  width: calc(var(--scotty-mouth-width) * 1.333);
+  height: calc(var(--scotty-mouth-height) * 1.524);
   animation: scotty-mouth-wide-cycle 1.08s steps(1, end) infinite;
 }
 

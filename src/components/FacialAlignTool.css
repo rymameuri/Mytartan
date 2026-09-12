@@ -19,6 +19,12 @@
   font-size: 1.4rem;
 }
 
+.fat-avatar--closed .scotty-avatar__mouth-state--closed,
+.fat-avatar--small .scotty-avatar__mouth-state--small,
+.fat-avatar--wide .scotty-avatar__mouth-state--wide {
+  opacity: 1;
+}
+
 .fat-header p {
   margin: 0;
   color: rgba(244, 241, 234, 0.72);
@@ -159,7 +165,24 @@
   font-size: 0.92rem;
 }
 
-.fat-values h2,
+.fat-preview-modes {
+  margin: 4px 0 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  display: grid;
+  gap: 6px;
+}
+
+.fat-preview-modes legend {
+  padding: 0 4px;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(244, 241, 234, 0.65);
+}
+
+.fat-sliders h2,
 .fat-nudge h2 {
   margin: 0 0 8px;
   font-size: 0.85rem;
@@ -168,28 +191,21 @@
   color: rgba(244, 241, 234, 0.65);
 }
 
-.fat-values dl {
-  margin: 0;
+.fat-slider {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: 4px;
+  margin-bottom: 10px;
 }
 
-.fat-values dl > div {
-  background: rgba(255, 255, 255, 0.04);
-  border-radius: 10px;
-  padding: 8px 10px;
+.fat-slider__meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.82rem;
 }
 
-.fat-values dt {
-  font-size: 0.72rem;
-  color: rgba(244, 241, 234, 0.55);
-}
-
-.fat-values dd {
-  margin: 2px 0 0;
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
+.fat-slider input[type="range"] {
+  width: 100%;
+  accent-color: #9c2733;
 }
 
 .fat-nudge-grid {

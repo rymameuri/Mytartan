@@ -1,23 +1,22 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import tartanScottyFacialBase from "../assets/tartan-scotty-facial-base.png";
-import scottyMouthClosed from "../assets/scotty-mouth-closed.png";
-import scottyMouthSmallOpen from "../assets/scotty-mouth-small-open.png";
-import scottyMouthWideOpen from "../assets/scotty-mouth-wide-open.png";
+import {
+  DEFAULT_FACIAL_COORDS,
+  buildFacialCss,
+  clearFacialCoords,
+  facialCoordsToStyle,
+  loadFacialCoords,
+  saveFacialCoords,
+} from "../utils/facialCoords";
 import "./ScottyAvatar.css";
 import "./FacialAlignTool.css";
 
-const STORAGE_KEY = "scotty-facial-align-v1";
-
-const DEFAULTS = {
-  eyeTop: 36.5,
-  eyeLeft: 34.7,
-  eyeRight: 34.7,
-  eyeWidth: 7.6,
-  mouthTop: 60.8,
-  mouthLeft: 50,
-  mouthWidth: 31,
-  mouthHeight: 31,
-};
+const MOUTH_PREVIEWS = [
+  { id: "small", label: "Small open" },
+  { id: "wide", label: "Wide open" },
+  { id: "closed", label: "Closed" },
+  { id: "speaking", label: "Speaking" },
+];
 
 function round1(n) {
   return Math.round(n * 10) / 10;
@@ -27,53 +26,43 @@ function clamp(n, min, max) {
   return Math.min(max, Math.max(min, n));
 }
 
-function loadSaved() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { ...DEFAULTS };
-    return { ...DEFAULTS, ...JSON.parse(raw) };
-  } catch {
-    return { ...DEFAULTS };
-  }
-}
-
-function buildCss(coords) {
-  return `/* Locked facial coordinates — paste into ScottyAvatar.css */
-.scotty-avatar__eye {
-  top: ${coords.eyeTop}%;
-  width: ${coords.eyeWidth}%;
-}
-
-.scotty-avatar__eye--left {
-  left: ${coords.eyeLeft}%;
-}
-
-.scotty-avatar__eye--right {
-  right: ${coords.eyeRight}%;
-}
-
-.scotty-avatar__mouth-shape {
-  left: ${coords.mouthLeft}%;
-  top: ${coords.mouthTop}%;
-  width: ${coords.mouthWidth}%;
-  height: ${coords.mouthHeight}%;
-}`;
+function SliderRow({ id, label, value, min, max, step, onChange }) {
+  return (
+    <label className="fat-slider" htmlFor={id}>
+      <span className="fat-slider__meta">
+        <span>{label}</span>
+        <span>{value}%</span>
+      </span>
+      <input
+        id={id}
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(event) => onChange(Number(event.target.value))}
+      />
+    </label>
+  );
 }
 
 function FacialAlignTool() {
   const stageRef = useRef(null);
   const dragRef = useRef(null);
-  const [coords, setCoords] = useState(loadSaved);
+  const coordsRef = useRef(null);
+  const [coords, setCoords] = useState(loadFacialCoords);
   const [selected, setSelected] = useState("mouth");
-  const [speaking, setSpeaking] = useState(false);
+  const [mouthPreview, setMouthPreview] = useState("small");
   const [freezeMotion, setFreezeMotion] = useState(true);
   const [copied, setCopied] = useState(false);
-  const [lockedNote, setLockedNote] = useState("");
+  const [savedNote, setSavedNote] = useState("");
 
-  const cssSnippet = useMemo(() => buildCss(coords), [coords]);
+  coordsRef.current = coords;
+  const cssSnippet = useMemo(() => buildFacialCss(coords), [coords]);
+  const speaking = mouthPreview === "speaking";
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(coords));
+    saveFacialCoords(coords);
   }, [coords]);
 
   const updateFromPointer = useCallback((clientX, clientY) => {
@@ -97,13 +86,13 @@ function FacialAlignTool() {
         next.eyeTop = round1(clamp(yPct - prev.eyeWidth / 2, 0, 100));
         next.eyeRight = round1(clamp(100 - (xPct + prev.eyeWidth / 2), 0, 100));
       } else if (drag.target === "mouth") {
-        next.mouthLeft = round1(clamp(xPct, 0, 100));
-        next.mouthTop = round1(clamp(yPct, 0, 100));
+        next.mouthLeft = round1(clamp(xPct - drag.offsetX, 0, 100));
+        next.mouthTop = round1(clamp(yPct - drag.offsetY, 0, 100));
       } else if (drag.target === "mouth-resize") {
         const halfW = Math.abs(xPct - prev.mouthLeft);
         const halfH = Math.abs(yPct - prev.mouthTop);
-        next.mouthWidth = round1(clamp(halfW * 2, 8, 80));
-        next.mouthHeight = round1(clamp(halfH * 2, 8, 80));
+        next.mouthWidth = round1(clamp(halfW * 2, 3, 40));
+        next.mouthHeight = round1(clamp(halfH * 2, 1.5, 30));
       }
 
       return next;
@@ -139,15 +128,40 @@ function FacialAlignTool() {
     event.stopPropagation();
     setSelected(target.startsWith("mouth") ? "mouth" : target);
     const point = event.touches ? event.touches[0] : event;
-    dragRef.current = { target };
-    updateFromPointer(point.clientX, point.clientY);
+    const stage = stageRef.current;
+    const current = coordsRef.current;
+    let offsetX = 0;
+    let offsetY = 0;
+
+    if (target === "mouth" && stage && current) {
+      const rect = stage.getBoundingClientRect();
+      if (rect.width && rect.height) {
+        const xPct = ((point.clientX - rect.left) / rect.width) * 100;
+        const yPct = ((point.clientY - rect.top) / rect.height) * 100;
+        offsetX = xPct - current.mouthLeft;
+        offsetY = yPct - current.mouthTop;
+      }
+    }
+
+    dragRef.current = { target, offsetX, offsetY };
+  }
+
+  function setCoord(key, value) {
+    setCoords((prev) => ({ ...prev, [key]: value }));
+    if (key.startsWith("mouth")) setSelected("mouth");
+    if (key.startsWith("eye")) setSelected(key === "eyeRight" ? "eye-right" : "eye-left");
   }
 
   function nudge(key, delta) {
-    setCoords((prev) => ({
-      ...prev,
-      [key]: round1(clamp(prev[key] + delta, 0, 100)),
-    }));
+    setCoords((prev) => {
+      const bounds = key.includes("Width") || key.includes("Height") || key === "eyeWidth"
+        ? [1.5, 40]
+        : [0, 100];
+      return {
+        ...prev,
+        [key]: round1(clamp(prev[key] + delta, bounds[0], bounds[1])),
+      };
+    });
   }
 
   async function copyCss() {
@@ -160,17 +174,16 @@ function FacialAlignTool() {
     }
   }
 
-  function lockForAgent() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(coords));
-    setLockedNote(
-      "Coordinates saved. Tell the agent: “lock the facial coordinates from FacialAlignTool”"
-    );
+  function saveLook() {
+    saveFacialCoords(coords);
+    setSavedNote("Saved. Open the app and Scotty will use this mouth position and size.");
     copyCss();
   }
 
   function resetDefaults() {
-    setCoords({ ...DEFAULTS });
-    setLockedNote("");
+    clearFacialCoords();
+    setCoords({ ...DEFAULT_FACIAL_COORDS });
+    setSavedNote("Reset to the default face.");
   }
 
   const stageClass = [
@@ -186,10 +199,10 @@ function FacialAlignTool() {
     <div className="fat">
       <header className="fat-header">
         <div>
-          <h1>Scotty facial align</h1>
+          <h1>Scotty face editor</h1>
           <p>
-            Same square frame as the app. Eyes/mouth are constrained inside the avatar
-            group — drag, then Lock.
+            Drag the mouth, pull the red handle to scale it, or use the sliders.
+            Changes save automatically and show up in the persona view.
           </p>
         </div>
         <a className="fat-link" href="/">
@@ -200,7 +213,10 @@ function FacialAlignTool() {
       <div className="fat-layout">
         <div className="fat-preview">
           <div className={stageClass}>
-            <div className="scotty-avatar scotty-avatar--persona fat-avatar">
+            <div
+              className={`scotty-avatar scotty-avatar--persona fat-avatar fat-avatar--${mouthPreview}`}
+              style={facialCoordsToStyle(coords)}
+            >
               <div className="scotty-avatar__mascot-stage" aria-hidden="true">
                 <div className="scotty-avatar__figure">
                   <img
@@ -215,12 +231,7 @@ function FacialAlignTool() {
                         className={`scotty-avatar__eye scotty-avatar__eye--left fat-handle${
                           selected === "eye-left" ? " fat-handle--active" : ""
                         }`}
-                        style={{
-                          top: `${coords.eyeTop}%`,
-                          left: `${coords.eyeLeft}%`,
-                          width: `${coords.eyeWidth}%`,
-                          animation: "none",
-                        }}
+                        style={{ animation: "none" }}
                         onPointerDown={(e) => startDrag("eye-left", e)}
                       >
                         <span className="scotty-avatar__pupil" />
@@ -230,12 +241,7 @@ function FacialAlignTool() {
                         className={`scotty-avatar__eye scotty-avatar__eye--right fat-handle${
                           selected === "eye-right" ? " fat-handle--active" : ""
                         }`}
-                        style={{
-                          top: `${coords.eyeTop}%`,
-                          right: `${coords.eyeRight}%`,
-                          width: `${coords.eyeWidth}%`,
-                          animation: "none",
-                        }}
+                        style={{ animation: "none" }}
                         onPointerDown={(e) => startDrag("eye-right", e)}
                       >
                         <span className="scotty-avatar__pupil" />
@@ -244,40 +250,15 @@ function FacialAlignTool() {
                     </div>
 
                     <span className="scotty-avatar__mouth">
-                      <img
-                        className="scotty-avatar__mouth-shape scotty-avatar__mouth-shape--closed"
-                        src={scottyMouthClosed}
-                        alt=""
-                        style={{
-                          left: `${coords.mouthLeft}%`,
-                          top: `${coords.mouthTop}%`,
-                          width: `${coords.mouthWidth}%`,
-                          height: `${coords.mouthHeight}%`,
-                          opacity: speaking ? undefined : 1,
-                        }}
-                      />
-                      <img
-                        className="scotty-avatar__mouth-shape scotty-avatar__mouth-shape--small"
-                        src={scottyMouthSmallOpen}
-                        alt=""
-                        style={{
-                          left: `${coords.mouthLeft}%`,
-                          top: `${coords.mouthTop}%`,
-                          width: `${coords.mouthWidth}%`,
-                          height: `${coords.mouthHeight}%`,
-                        }}
-                      />
-                      <img
-                        className="scotty-avatar__mouth-shape scotty-avatar__mouth-shape--wide"
-                        src={scottyMouthWideOpen}
-                        alt=""
-                        style={{
-                          left: `${coords.mouthLeft}%`,
-                          top: `${coords.mouthTop}%`,
-                          width: `${coords.mouthWidth}%`,
-                          height: `${coords.mouthHeight}%`,
-                        }}
-                      />
+                      <span className="scotty-avatar__mouth-state scotty-avatar__mouth-state--closed" />
+                      <span className="scotty-avatar__mouth-state scotty-avatar__mouth-state--small">
+                        <span className="scotty-avatar__mouth-opening" />
+                        <span className="scotty-avatar__tongue" />
+                      </span>
+                      <span className="scotty-avatar__mouth-state scotty-avatar__mouth-state--wide">
+                        <span className="scotty-avatar__mouth-opening" />
+                        <span className="scotty-avatar__tongue" />
+                      </span>
                       <button
                         type="button"
                         className={`fat-mouth-hit fat-handle${
@@ -322,88 +303,140 @@ function FacialAlignTool() {
               />
               Freeze body motion
             </label>
-            <label>
-              <input
-                type="checkbox"
-                checked={speaking}
-                onChange={(e) => setSpeaking(e.target.checked)}
-              />
-              Preview speaking mouth
-            </label>
+            <fieldset className="fat-preview-modes">
+              <legend>Mouth preview</legend>
+              {MOUTH_PREVIEWS.map((option) => (
+                <label key={option.id}>
+                  <input
+                    type="radio"
+                    name="mouth-preview"
+                    checked={mouthPreview === option.id}
+                    onChange={() => setMouthPreview(option.id)}
+                  />
+                  {option.label}
+                </label>
+              ))}
+            </fieldset>
           </div>
 
-          <div className="fat-values">
-            <h2>Coordinates</h2>
-            <dl>
-              <div>
-                <dt>eye top</dt>
-                <dd>{coords.eyeTop}%</dd>
-              </div>
-              <div>
-                <dt>eye left</dt>
-                <dd>{coords.eyeLeft}%</dd>
-              </div>
-              <div>
-                <dt>eye right</dt>
-                <dd>{coords.eyeRight}%</dd>
-              </div>
-              <div>
-                <dt>eye width</dt>
-                <dd>{coords.eyeWidth}%</dd>
-              </div>
-              <div>
-                <dt>mouth left</dt>
-                <dd>{coords.mouthLeft}%</dd>
-              </div>
-              <div>
-                <dt>mouth top</dt>
-                <dd>{coords.mouthTop}%</dd>
-              </div>
-              <div>
-                <dt>mouth width</dt>
-                <dd>{coords.mouthWidth}%</dd>
-              </div>
-              <div>
-                <dt>mouth height</dt>
-                <dd>{coords.mouthHeight}%</dd>
-              </div>
-            </dl>
+          <div className="fat-sliders">
+            <h2>Mouth</h2>
+            <SliderRow
+              id="mouth-left"
+              label="Move left / right"
+              value={coords.mouthLeft}
+              min={20}
+              max={80}
+              step={0.1}
+              onChange={(value) => setCoord("mouthLeft", value)}
+            />
+            <SliderRow
+              id="mouth-top"
+              label="Move up / down"
+              value={coords.mouthTop}
+              min={45}
+              max={80}
+              step={0.1}
+              onChange={(value) => setCoord("mouthTop", value)}
+            />
+            <SliderRow
+              id="mouth-width"
+              label="Width"
+              value={coords.mouthWidth}
+              min={3}
+              max={40}
+              step={0.1}
+              onChange={(value) => setCoord("mouthWidth", value)}
+            />
+            <SliderRow
+              id="mouth-height"
+              label="Height"
+              value={coords.mouthHeight}
+              min={1.5}
+              max={30}
+              step={0.1}
+              onChange={(value) => setCoord("mouthHeight", value)}
+            />
+          </div>
+
+          <div className="fat-sliders">
+            <h2>Eyes</h2>
+            <SliderRow
+              id="eye-top"
+              label="Move up / down"
+              value={coords.eyeTop}
+              min={20}
+              max={55}
+              step={0.1}
+              onChange={(value) => setCoord("eyeTop", value)}
+            />
+            <SliderRow
+              id="eye-width"
+              label="Size"
+              value={coords.eyeWidth}
+              min={3}
+              max={14}
+              step={0.1}
+              onChange={(value) => setCoord("eyeWidth", value)}
+            />
           </div>
 
           <div className="fat-nudge">
             <h2>Nudge selected ({selected})</h2>
             <div className="fat-nudge-grid">
-              <button type="button" onClick={() => {
-                if (selected === "eye-left") nudge("eyeLeft", -0.2);
-                if (selected === "eye-right") nudge("eyeRight", 0.2);
-                if (selected === "mouth") nudge("mouthLeft", -0.2);
-              }}>←</button>
-              <button type="button" onClick={() => {
-                if (selected === "eye-left" || selected === "eye-right") nudge("eyeTop", -0.2);
-                if (selected === "mouth") nudge("mouthTop", -0.2);
-              }}>↑</button>
-              <button type="button" onClick={() => {
-                if (selected === "eye-left") nudge("eyeLeft", 0.2);
-                if (selected === "eye-right") nudge("eyeRight", -0.2);
-                if (selected === "mouth") nudge("mouthLeft", 0.2);
-              }}>→</button>
-              <button type="button" onClick={() => {
-                if (selected === "eye-left" || selected === "eye-right") nudge("eyeTop", 0.2);
-                if (selected === "mouth") nudge("mouthTop", 0.2);
-              }}>↓</button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (selected === "eye-left") nudge("eyeLeft", -0.2);
+                  if (selected === "eye-right") nudge("eyeRight", 0.2);
+                  if (selected === "mouth") nudge("mouthLeft", -0.2);
+                }}
+              >
+                ←
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (selected === "eye-left" || selected === "eye-right") nudge("eyeTop", -0.2);
+                  if (selected === "mouth") nudge("mouthTop", -0.2);
+                }}
+              >
+                ↑
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (selected === "eye-left") nudge("eyeLeft", 0.2);
+                  if (selected === "eye-right") nudge("eyeRight", -0.2);
+                  if (selected === "mouth") nudge("mouthLeft", 0.2);
+                }}
+              >
+                →
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (selected === "eye-left" || selected === "eye-right") nudge("eyeTop", 0.2);
+                  if (selected === "mouth") nudge("mouthTop", 0.2);
+                }}
+              >
+                ↓
+              </button>
             </div>
             {selected === "mouth" && (
               <div className="fat-size-row">
-                <button type="button" onClick={() => nudge("mouthWidth", -0.5)}>Mouth −W</button>
-                <button type="button" onClick={() => nudge("mouthWidth", 0.5)}>Mouth +W</button>
-                <button type="button" onClick={() => nudge("mouthHeight", -0.5)}>Mouth −H</button>
-                <button type="button" onClick={() => nudge("mouthHeight", 0.5)}>Mouth +H</button>
-              </div>
-            )}
-            {(selected === "eye-left" || selected === "eye-right") && (
-              <div className="fat-size-row">
-                <button type="button" onClick={() => nudge("eyeWidth", -0.2)}>Eyes −</button>
-                <button type="button" onClick={() => nudge("eyeWidth", 0.2)}>Eyes +</button>
+                <button type="button" onClick={() => nudge("mouthWidth", -0.5)}>
+                  Mouth −W
+                </button>
+                <button type="button" onClick={() => nudge("mouthWidth", 0.5)}>
+                  Mouth +W
+                </button>
+                <button type="button" onClick={() => nudge("mouthHeight", -0.5)}>
+                  Mouth −H
+                </button>
+                <button type="button" onClick={() => nudge("mouthHeight", 0.5)}>
+                  Mouth +H
+                </button>
               </div>
             )}
           </div>
@@ -414,15 +447,15 @@ function FacialAlignTool() {
             <button type="button" className="fat-btn" onClick={copyCss}>
               {copied ? "Copied" : "Copy CSS"}
             </button>
-            <button type="button" className="fat-btn fat-btn--primary" onClick={lockForAgent}>
-              Lock coordinates
+            <button type="button" className="fat-btn fat-btn--primary" onClick={saveLook}>
+              Save look
             </button>
             <button type="button" className="fat-btn fat-btn--ghost" onClick={resetDefaults}>
               Reset
             </button>
           </div>
 
-          {lockedNote && <p className="fat-note">{lockedNote}</p>}
+          {savedNote && <p className="fat-note">{savedNote}</p>}
         </aside>
       </div>
     </div>

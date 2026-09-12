@@ -120,6 +120,7 @@ function ClassWorkspace({
   isDesktop,
   voiceModeRef,
   isSpeaking = false,
+  isPreparingSpeech = false,
   stopSpeech,
   isMuted = false,
   onToggleMute,
@@ -356,7 +357,7 @@ function ClassWorkspace({
     [stopSpeech, voiceModeRef, sendTutorMessage]
   );
 
-  const { listening, toggle: toggleMic, stop: stopMic } = useMicInput({
+  const { listening, isFinalizing, toggle: toggleMic, stop: stopMic } = useMicInput({
     onResult: handleVoiceResult,
   });
 
@@ -370,13 +371,13 @@ function ClassWorkspace({
   }, [listening, onListeningChange]);
 
   const handleMicClick = useCallback(() => {
-    if (isLoading) return;
+    if (isLoading || isPreparingSpeech || isFinalizing) return;
     if (isSpeaking) {
       stopSpeech?.();
       return;
     }
     toggleMic();
-  }, [isLoading, isSpeaking, stopSpeech, toggleMic]);
+  }, [isLoading, isPreparingSpeech, isFinalizing, isSpeaking, stopSpeech, toggleMic]);
 
   const hasUserMessages = messages.some(
     (message) => message.role === "user" && !message.studio
@@ -406,20 +407,22 @@ function ClassWorkspace({
   const suggestedQuestions = buildSuggestedQuestions(courseContext, selectedMaterials);
   const showSuggestions =
     !isLoading &&
+    !isPreparingSpeech &&
+    !isFinalizing &&
     suggestedQuestions.length > 0 &&
     (interactionMode === "persona" ? !isSpeaking : !hasUserMessages);
   const resolvedAvatarState = listening
     ? "listening"
     : isSpeaking
       ? "speaking"
-      : isLoading
+      : isLoading || isPreparingSpeech || isFinalizing
         ? "thinking"
         : avatarState || "idle";
 
-  const micLabel = isLoading
-    ? "Processing…"
+  const micLabel = isLoading || isPreparingSpeech || isFinalizing
+    ? "Thinking…"
     : listening
-      ? "Listening…"
+      ? "Tap when you're done"
       : isSpeaking
         ? "Tap to stop"
         : "Tap to speak";
@@ -1108,7 +1111,11 @@ function ClassWorkspace({
                 })}
                 {isLoading && !isStudioLoading && (
                   <div className="msg-row msg-row--assistant">
-                    <div className="msg-bubble msg-bubble--assistant msg-bubble--on-pattern typing-indicator">
+                    <div
+                      className="msg-bubble msg-bubble--assistant msg-bubble--on-pattern typing-indicator"
+                      aria-label="thinking"
+                    >
+                      <span className="typing-label">thinking</span>
                       <span className="typing-dot typing-dot--on-pattern" />
                       <span className="typing-dot typing-dot--on-pattern" />
                       <span className="typing-dot typing-dot--on-pattern" />
@@ -1149,20 +1156,25 @@ function ClassWorkspace({
               </div>
             )}
 
-            {isSpeaking && speechCaption && (
+            {isSpeaking && speechCaption ? (
               <PersonaCaption text={speechCaption} />
+            ) : (
+              interactionMode === "persona" &&
+              !isSpeaking &&
+              (isLoading || isPreparingSpeech || isFinalizing) &&
+              !isStudioLoading && <PersonaCaption text="thinking" typing />
             )}
 
-            {showPersonaStage && !isLoading && !isSpeaking && (
+            {showPersonaStage &&
+              !isLoading &&
+              !isPreparingSpeech &&
+              !isFinalizing &&
+              !isSpeaking && (
               <p className="pv-idle-hint">
                 {interactionMode === "chat"
                   ? "Type or ask Scotty anything about your sources"
                   : "Tap the mic and talk with Scotty about your sources"}
               </p>
-            )}
-
-            {interactionMode === "persona" && isLoading && !isStudioLoading && (
-              <p className="pv-idle-hint pv-idle-hint--live">Scotty is thinking…</p>
             )}
 
             {showSuggestions && (
@@ -1186,7 +1198,7 @@ function ClassWorkspace({
           <p className="ws-chat__scope">{sourceCountLabel}</p>
           <PersonaMicControls
             listening={listening}
-            isLoading={isLoading}
+            isLoading={isLoading || isPreparingSpeech || isFinalizing}
             isSpeaking={isSpeaking}
             micLabel={micLabel}
             onMicClick={handleMicClick}

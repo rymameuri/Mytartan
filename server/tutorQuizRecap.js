@@ -36,9 +36,9 @@ SECTION 1 (before the delimiter): A written recap for the chat panel.
 
 SECTION 2 (after the delimiter): What Scotty says out loud.
 - 3–4 short sentences, max 65 words total
-- Conversational voice-only recap — highlight score, one strength, one gap, one next step
+- Conversational voice-only recap. Highlight score, one strength, one gap, one next step
 - Do NOT read every question aloud
-- Plain English only`;
+- Plain English only. No em dashes or ellipses.`;
 }
 
 function buildQuizRecapUserPrompt({ quizResults, lectureTopic }) {
@@ -83,7 +83,7 @@ function fallbackQuizRecap({ quizResults, lectureTopic, courseName } = {}) {
   } else if (pct >= 50) {
     tone = "You are on the right track, with a few concepts still worth revisiting.";
   } else {
-    tone = "This quiz shows where to focus next — that is exactly what practice is for.";
+    tone = "This quiz shows where to focus next. That is exactly what practice is for.";
   }
 
   const analysis = [
@@ -96,11 +96,11 @@ function fallbackQuizRecap({ quizResults, lectureTopic, courseName } = {}) {
 
   let speech = `You finished the quiz with ${score} out of ${total}. `;
   if (pct >= 80) {
-    speech += "Nice work — you clearly understand most of this material.";
+    speech += "Nice work. You clearly understand most of this material.";
   } else if (pct >= 50) {
     speech += "Good effort. Let's tighten up the ideas you missed.";
   } else {
-    speech += "Don't worry — let's review the tricky parts together.";
+    speech += "Don't worry. Let's review the tricky parts together.";
   }
   if (missed.length) {
     speech += ` Focus on the ${missed.length} question${missed.length === 1 ? "" : "s"} you missed, then we can go deeper.`;

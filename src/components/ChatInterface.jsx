@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback, useState } from "react";
 import ChatInputBar from "./ChatInputBar";
 import MessageContent from "./MessageContent";
 import { stripMarkdownFormatting } from "../utils/stripMarkdown";
+import { toSpokenText } from "../utils/spokenText";
 import { SpeakerIcon } from "./Icons";
 import "./ChatInterface.css";
 
@@ -46,7 +47,7 @@ function ChatInterface({ messages, isLoading, showHero, mascot, avatarRef, voice
   const { speakingId, speak, stop } = useSpeech(avatarRef);
 
   const speakReply = useCallback(async (text, msgId) => {
-    const plain = stripMarkdownFormatting(text);
+    const plain = toSpokenText(stripMarkdownFormatting(text));
     if (avatarRef?.current) {
       try { await avatarRef.current.speak(plain); return; }
       catch (err) { console.warn("[Chat] LiveAvatar speak failed:", err.message); }
@@ -132,7 +133,8 @@ function ChatInterface({ messages, isLoading, showHero, mascot, avatarRef, voice
             {isLoading && (
               <div className="msg-row msg-row--assistant">
                 <div className="msg-avatar"><span className="msg-avatar__dot" /></div>
-                <div className="msg-bubble msg-bubble--assistant typing-indicator">
+                <div className="msg-bubble msg-bubble--assistant typing-indicator" aria-label="thinking">
+                  <span className="typing-label">thinking</span>
                   <span className="typing-dot" />
                   <span className="typing-dot" />
                   <span className="typing-dot" />

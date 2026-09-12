@@ -62,10 +62,36 @@
   background: rgba(156, 39, 51, 0.08);
 }
 
+.settings-modal__section + .settings-modal__section {
+  margin-top: 28px;
+}
+
 .settings-modal__section-title {
   margin: 0 0 16px;
   font-family: var(--font-body);
   font-size: 0.9375rem;
   font-weight: 600;
   color: var(--tartan-maroon-dark);
+}
+
+.settings-modal__hint {
+  margin: -8px 0 14px;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--tartan-maroon-dark);
+  opacity: 0.78;
+}
+
+.settings-modal__link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 10px;
+  background: var(--tartan-maroon);
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
 }

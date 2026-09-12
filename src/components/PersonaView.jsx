@@ -25,6 +25,7 @@ function PersonaView({
   onSwitchMode,
   isDesktop,
   isSpeaking = false,
+  isPreparingSpeech = false,
   stopSpeech,
   isMuted = false,
   onToggleMute,
@@ -46,10 +47,6 @@ function PersonaView({
   const lastAssistantReply = [...messages]
     .reverse()
     .find((message) => message.role === "assistant" && message.content?.trim())?.content;
-  const personaCaptionText =
-    (isSpeaking && speechCaption?.trim()) ||
-    (interactionMode === "persona" && !isSpeaking && lastAssistantReply?.trim()) ||
-    "";
 
   const SCROLL_THRESHOLD = 72;
 
@@ -84,16 +81,27 @@ function PersonaView({
     onSend(transcript);
   }, [onSend, voiceModeRef, stopSpeech]);
 
-  const { listening, toggle: toggleMic } = useMicInput({ onResult: handleVoiceResult });
+  const { listening, isFinalizing, toggle: toggleMic } = useMicInput({
+    onResult: handleVoiceResult,
+  });
+
+  const isThinking = !isSpeaking && (isLoading || isPreparingSpeech || isFinalizing);
+  const personaCaptionText =
+    (isSpeaking && speechCaption?.trim()) ||
+    (interactionMode === "persona" &&
+      !isSpeaking &&
+      !isThinking &&
+      lastAssistantReply?.trim()) ||
+    "";
 
   const handleMicClick = useCallback(() => {
-    if (isLoading) return;
+    if (isLoading || isPreparingSpeech || isFinalizing) return;
     if (isSpeaking) {
       stopSpeech?.();
       return;
     }
     toggleMic();
-  }, [isLoading, isSpeaking, stopSpeech, toggleMic]);
+  }, [isLoading, isPreparingSpeech, isFinalizing, isSpeaking, stopSpeech, toggleMic]);
 
   useEffect(() => {
     if (!showChatHistory) return undefined;
@@ -117,10 +125,10 @@ function PersonaView({
     }
   }, [messages, isLoading, showChatHistory, scrollToBottom, checkScrollPosition]);
 
-  const micLabel = isLoading
-    ? "Processing…"
+  const micLabel = isLoading || isPreparingSpeech || isFinalizing
+    ? "Thinking…"
     : listening
-      ? "Listening…"
+      ? "Tap when you're done"
       : isSpeaking
         ? "Tap to stop"
         : "Tap to speak";
@@ -129,10 +137,16 @@ function PersonaView({
     ? "speaking"
     : listening
       ? "listening"
-      : isLoading
+      : isLoading || isPreparingSpeech || isFinalizing
         ? "thinking"
         : "idle";
-  const showIdleHint = showPersonaStage && !isSpeaking && !isLoading && !hasUserMessages;
+  const showIdleHint =
+    showPersonaStage &&
+    !isSpeaking &&
+    !isLoading &&
+    !isPreparingSpeech &&
+    !isFinalizing &&
+    !hasUserMessages;
   const isTutor = mode === "tutor";
 
   return (
@@ -272,7 +286,11 @@ function PersonaView({
 
               {isLoading && (
                 <div className="msg-row msg-row--assistant">
-                  <div className="msg-bubble msg-bubble--assistant msg-bubble--on-pattern typing-indicator">
+                  <div
+                    className="msg-bubble msg-bubble--assistant msg-bubble--on-pattern typing-indicator"
+                    aria-label="thinking"
+                  >
+                    <span className="typing-label">thinking</span>
                     <span className="typing-dot typing-dot--on-pattern" />
                     <span className="typing-dot typing-dot--on-pattern" />
                     <span className="typing-dot typing-dot--on-pattern" />
@@ -323,8 +341,10 @@ function PersonaView({
             </div>
           )}
 
-          {personaCaptionText && (
-            <PersonaCaption text={personaCaptionText} />
+          {interactionMode === "persona" && isThinking ? (
+            <PersonaCaption text="thinking" typing />
+          ) : (
+            personaCaptionText && <PersonaCaption text={personaCaptionText} />
           )}
 
           {showIdleHint && (
@@ -336,10 +356,6 @@ function PersonaView({
                   : "Tap the mic and ask me anything about CMU-Q"}
             </p>
           )}
-
-          {interactionMode === "persona" && isLoading && (
-            <p className="pv-idle-hint pv-idle-hint--live">Scotty is thinking…</p>
-          )}
         </div>
         )}
         {!showAvatarStage && <ScottyAvatar ref={avatarRef} hidden />}
@@ -348,7 +364,7 @@ function PersonaView({
       <footer className="pv-footer">
         <PersonaMicControls
           listening={listening}
-          isLoading={isLoading}
+          isLoading={isLoading || isPreparingSpeech || isFinalizing}
           isSpeaking={isSpeaking}
           micLabel={micLabel}
           onMicClick={handleMicClick}
