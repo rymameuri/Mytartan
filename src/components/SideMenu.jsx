@@ -426,20 +426,6 @@ function SideMenu({
         </div>
       )}
 
-      {!collapsed && (
-        <p className="side-menu__footer">
-          Info sourced from{" "}
-          <a
-            href="https://sites.google.com/andrew.cmu.edu/mycmuq-student-affairs/home"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            myCMU-Q Student Affairs
-          </a>
-          <br />
-          Made by Rym A. Ameuri · rameuri
-        </p>
-      )}
     </aside>
   );
 

@@ -581,32 +581,9 @@
   color: var(--app-text);
 }
 
-.side-menu__footer {
-  flex-shrink: 0;
-  margin: 12px 0 0;
-  padding: 12px 4px 0;
-  border-top: 1px solid var(--app-border);
-  font-size: 0.75rem;
-  line-height: 1.5;
-  color: var(--app-text-muted);
-}
-
-.side-menu__footer a {
-  color: var(--tartan-maroon);
-  text-decoration: none;
-}
-
-.side-menu__footer a:hover {
-  text-decoration: underline;
-}
-
 @media (max-width: 899px) {
   .side-menu__conv-menu-btn {
     opacity: 1;
-  }
-
-  .side-menu__footer {
-    display: none;
   }
 
   .side-menu {

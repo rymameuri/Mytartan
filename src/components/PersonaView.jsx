@@ -152,7 +152,10 @@ function PersonaView({
           </div>
           <div className="pv-header__copy">
             <p className="pv-header__name">Scotty</p>
-            <p className="pv-header__role">Your CMU-Q classmate · MyTartan</p>
+            <p className="pv-header__role">
+              Your CMU-Q classmate
+              <span className="pv-header__app"> · MyTartan</span>
+            </p>
           </div>
         </div>
         <div className="pv-header__actions">

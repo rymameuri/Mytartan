@@ -259,7 +259,11 @@
   }
 
   .pv-header__role {
-    max-width: 42vw;
+    max-width: none;
+  }
+
+  .pv-header__app {
+    display: none;
   }
 
   .pv-header__actions {
