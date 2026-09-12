@@ -225,7 +225,6 @@ function SideMenu({
   onToggleCollapsed,
   onClose,
   onNewChat,
-  onStartTutor,
   onSelectPrompt,
   onSelectConversation,
   onDeleteConversation,
@@ -290,7 +289,7 @@ function SideMenu({
       aria-label="Chat history"
     >
       <div className="side-menu__header">
-        {!collapsed && <h2 className="side-menu__title brand-display">MY TARTAN</h2>}
+        {!collapsed && <h2 className="side-menu__title brand-display">MyTartan</h2>}
         <div className="side-menu__header-actions">
           {isPersistent && onToggleCollapsed && (
             <button
@@ -318,16 +317,6 @@ function SideMenu({
       >
         <PlusIcon />
         <span className="side-menu__btn-label">New chat</span>
-      </button>
-
-      <button
-        type="button"
-        className="side-menu__tutor-btn"
-        onClick={onStartTutor}
-        title="Course Tutor"
-      >
-        <span className="side-menu__tutor-icon" aria-hidden="true">📚</span>
-        <span className="side-menu__btn-label">Course Tutor</span>
       </button>
 
       <div className="side-menu__scroll">

@@ -7,7 +7,7 @@ function ChatInputBar({
   isLoading,
   voiceModeRef,
   compact,
-  placeholder = "Ask MyTartan anything...",
+  placeholder = "or type here",
   onMicClick,
   micActive = false,
   showMic = false,

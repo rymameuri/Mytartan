@@ -13,7 +13,7 @@ const LEARNING_STYLES = [
 
 const USE_CASES = [
   "General campus questions",
-  "Course tutoring",
+  "Someone to talk to",
   "Finding my way around campus",
   "A mix of everything",
 ];

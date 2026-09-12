@@ -491,18 +491,32 @@
 }
 
 @media (max-width: 480px) {
-  .pv-header { padding: 12px 16px 6px; flex-wrap: wrap; }
-  .pv-mode-tabs { margin-left: 0; order: 3; width: 100%; justify-content: center; margin-top: 4px; }
-  .pv-mode-tab { font-size: 0.75rem; padding: 5px 10px; }
-  .pv-header__actions { order: 2; flex-wrap: wrap; justify-content: flex-end; gap: 4px; }
-  .pv-interaction-tabs { order: -1; width: 100%; justify-content: center; margin-bottom: 4px; }
-  .pv-interaction-tab { font-size: 0.6875rem; padding: 5px 10px; }
+  .pv-header {
+    padding: 10px 12px 8px;
+    gap: 8px;
+  }
+  .pv-brand__name {
+    font-size: 1rem;
+  }
+  .pv-header__actions {
+    gap: 4px;
+  }
+  .pv-icon-btn {
+    width: 34px;
+    height: 34px;
+  }
   .pv-messages { padding: 8px 12px 14px; }
   .pv-body--chat .pv-messages { padding: 2px 12px 4px; }
   .pv-scroll-down { bottom: 6px; }
   .pv-stage { padding: 8px 16px 4px; }
   .pv-body--chat .pv-stage { padding: 2px 16px 4px; }
-  .pv-footer { padding: 8px 16px 16px; }
+  .pv-footer {
+    padding: 8px 12px max(12px, env(safe-area-inset-bottom));
+    width: 100%;
+  }
+  .pv-identity__name {
+    font-size: 1.25rem;
+  }
 }
 
 @media (max-height: 700px) {

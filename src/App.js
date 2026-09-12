@@ -28,6 +28,7 @@ import { refreshCourse } from "./utils/courseApi";
 import { stripMarkdownFormatting } from "./utils/stripMarkdown";
 import { toSpokenText } from "./utils/spokenText";
 import { readSidebarCollapsed, writeSidebarCollapsed } from "./utils/sidebarPreference";
+import { COURSE_TUTOR_ENABLED } from "./config/features";
 import "./App.css";
 
 const API_BASE = process.env.REACT_APP_API_URL || "";
@@ -140,8 +141,9 @@ function AppShell() {
     [speak]
   );
 
-  const showPersona = mode === "qa" || (mode === "tutor" && !tutorScreen);
-  const showTutorPersonaRail = isDesktop && mode === "tutor" && tutorScreen === "dashboard";
+  const showPersona = !COURSE_TUTOR_ENABLED || mode === "qa" || (mode === "tutor" && !tutorScreen);
+  const showTutorPersonaRail =
+    COURSE_TUTOR_ENABLED && isDesktop && mode === "tutor" && tutorScreen === "dashboard";
 
   useAutoSpeakReply({
     enabled: mode === "qa" || (mode === "tutor" && tutorScreen === "workspace"),
@@ -189,16 +191,10 @@ function AppShell() {
     resetChatSession();
     const draft = newChat();
     setMessages(draft.messages);
-    setMode(draft.mode);
+    setMode(COURSE_TUTOR_ENABLED ? draft.mode : "qa");
     setTutorScreen(null);
     setCourseContext(null);
     setSavedCourseId(null);
-    closeMenu();
-  }
-
-  function handleStartTutor() {
-    newChat();
-    enterTutorDashboard();
     closeMenu();
   }
 
@@ -244,10 +240,17 @@ function AppShell() {
     resetChatSession();
     const selected = selectConversation(id);
     setMessages(selected.messages);
-    setMode(selected.mode);
-    setCourseContext(selected.courseContext ?? null);
-    setSavedCourseId(selected.savedCourseId ?? null);
-    setTutorScreen(selected.mode === "tutor" && selected.savedCourseId ? "workspace" : selected.mode === "tutor" ? "dashboard" : null);
+    const nextMode = COURSE_TUTOR_ENABLED ? selected.mode : "qa";
+    setMode(nextMode);
+    setCourseContext(COURSE_TUTOR_ENABLED ? selected.courseContext ?? null : null);
+    setSavedCourseId(COURSE_TUTOR_ENABLED ? selected.savedCourseId ?? null : null);
+    setTutorScreen(
+      COURSE_TUTOR_ENABLED && selected.mode === "tutor" && selected.savedCourseId
+        ? "workspace"
+        : COURSE_TUTOR_ENABLED && selected.mode === "tutor"
+          ? "dashboard"
+          : null
+    );
     closeMenu();
   }
 
@@ -275,6 +278,7 @@ function AppShell() {
   }
 
   function handleSwitchMode(nextMode) {
+    if (!COURSE_TUTOR_ENABLED && nextMode === "tutor") return;
     if (nextMode === mode) return;
     resetChatSession();
     setMode(nextMode);
@@ -300,7 +304,7 @@ function AppShell() {
   function handleShare() {
     if (!messages.length) return;
     const text = messages
-      .map((m) => `${m.role === "user" ? "You" : "MyTartan"}: ${m.content}`)
+      .map((m) => `${m.role === "user" ? "You" : "Scotty"}: ${m.content}`)
       .join("\n\n");
     navigator.clipboard.writeText(text).then(() => {
       alert("Chat copied to clipboard!");
@@ -310,7 +314,7 @@ function AppShell() {
   function handleDownload() {
     if (!messages.length) return;
     const text = messages
-      .map((m) => `${m.role === "user" ? "You" : "MyTartan"}: ${m.content}`)
+      .map((m) => `${m.role === "user" ? "You" : "Scotty"}: ${m.content}`)
       .join("\n\n");
     const blob = new Blob([text], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
@@ -616,9 +620,9 @@ function AppShell() {
     <div
       className={`app-shell${isDesktop ? " app-shell--with-sidebar" : ""}${
         sidebarCollapsed ? " app-shell--sidebar-collapsed" : ""
-      }${mode === "tutor" ? " app-shell--tutor" : ""}`}
+      }${COURSE_TUTOR_ENABLED && mode === "tutor" ? " app-shell--tutor" : ""}`}
     >
-      {mode !== "tutor" && <ScottyPattern />}
+      {!(COURSE_TUTOR_ENABLED && mode === "tutor") && <ScottyPattern />}
       <SideMenu
         isOpen={menuOpen || isDesktop}
         isPersistent={isDesktop}
@@ -626,7 +630,6 @@ function AppShell() {
         onToggleCollapsed={toggleSidebarCollapsed}
         onClose={closeMenu}
         onNewChat={handleNewChat}
-        onStartTutor={handleStartTutor}
         onSelectPrompt={handleSelectPrompt}
         onSelectConversation={handleSelectConversation}
         onDeleteConversation={handleDeleteConversation}
@@ -643,10 +646,10 @@ function AppShell() {
       <div
         className={`app-main app-main--unified${
           showTutorPersonaRail ? " app-main--with-persona" : ""
-        }${mode === "tutor" && tutorScreen === "workspace" ? " app-main--tutor-workspace" : ""}`}
+        }${COURSE_TUTOR_ENABLED && mode === "tutor" && tutorScreen === "workspace" ? " app-main--tutor-workspace" : ""}`}
       >
         <div className="app-main__content">
-          {mode === "tutor" && tutorScreen === "dashboard" && (
+          {COURSE_TUTOR_ENABLED && mode === "tutor" && tutorScreen === "dashboard" && (
             <CourseTutorDashboard
               onOpenClass={handleOpenClass}
               onBackToQa={handleBackToQa}
@@ -654,7 +657,7 @@ function AppShell() {
             />
           )}
 
-          {mode === "tutor" && tutorScreen === "workspace" && savedCourseId && courseContext && (
+          {COURSE_TUTOR_ENABLED && mode === "tutor" && tutorScreen === "workspace" && savedCourseId && courseContext && (
             <ClassWorkspace
               courseId={savedCourseId}
               courseContext={courseContext}
@@ -695,7 +698,7 @@ function AppShell() {
               onShare={handleShare}
               onDownload={handleDownload}
               onOpenMenu={() => setMenuOpen(true)}
-              onSwitchMode={handleSwitchMode}
+              onSwitchMode={COURSE_TUTOR_ENABLED ? handleSwitchMode : undefined}
               isDesktop={isDesktop}
               isSpeaking={isSpeaking}
               isPreparingSpeech={isPreparingSpeech}

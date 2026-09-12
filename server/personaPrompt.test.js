@@ -36,8 +36,27 @@ describe("personaPrompt", () => {
     expect(prompt).toMatch(/Playful casual:/);
     expect(prompt).toMatch(/Casual greeting:/);
     expect(prompt).toMatch(/Just chatting:/);
+    expect(prompt).toMatch(/Lonely \/ company:/);
+    expect(prompt).toMatch(/Overwhelm \/ midterms:/);
+    expect(prompt).toMatch(/Bored tonight:/);
     expect(prompt).toMatch(/Serious financial aid:/);
     expect(prompt).toMatch(/Socratic tutor:/);
+  });
+
+  test("qa mode covers hangout and campus facts without promoting tutor", () => {
+    const prompt = buildPersonaPrompt("qa");
+    expect(prompt).toMatch(/one Scotty students text/i);
+    expect(prompt).toMatch(/campus map/i);
+    expect(prompt).toMatch(/Never mention Course Tutor/i);
+    expect(prompt).not.toMatch(/suggest Tutor mode/i);
+  });
+
+  test("comfort rules listen first and avoid therapist cosplay", () => {
+    const prompt = buildPersonaPrompt("qa");
+    expect(prompt).toMatch(/COMFORT AND COMPANY/i);
+    expect(prompt).toMatch(/Do not play therapist/i);
+    expect(prompt).toMatch(/Do not dump crisis hotlines/i);
+    expect(prompt).toMatch(/I don't know what to do tonight/i);
   });
 
   test("tone rules tell Scotty not to hedge every reply", () => {

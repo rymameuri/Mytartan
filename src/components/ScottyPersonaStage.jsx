@@ -6,8 +6,8 @@ import "./ScottyPersonaStage.css";
 function ScottyPersonaStage({
   avatarRef,
   avatarState = "idle",
-  title = "My Tartan",
-  subtitle = "CMU-Q Student Assistant",
+  title = "Scotty",
+  subtitle = "Your CMU-Q classmate",
   hint = "",
   compact = false,
   rail = false,

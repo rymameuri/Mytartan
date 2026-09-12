@@ -10,9 +10,10 @@ function PersonaMicControls({
   onMicClick,
   onSend,
   voiceModeRef,
-  placeholder = "Ask MyTartan anything...",
+  placeholder = "or type here",
   inputOnly = false,
   micOnly = false,
+  showComposerMic = false,
 }) {
   const label =
     micLabel ??
@@ -22,7 +23,7 @@ function PersonaMicControls({
         ? "Listening…"
         : isSpeaking
           ? "Tap to stop"
-          : "Tap to speak to Scotty");
+          : "Tap the mic");
 
   return (
     <div className="persona-mic-controls">
@@ -65,6 +66,9 @@ function PersonaMicControls({
             voiceModeRef={voiceModeRef}
             compact
             placeholder={placeholder}
+            showMic={showComposerMic}
+            onMicClick={onMicClick}
+            micActive={listening}
           />
         </div>
       )}
