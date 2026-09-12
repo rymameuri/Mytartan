@@ -39,6 +39,10 @@
   box-shadow: none;
 }
 
+.app-shell:not(.app-shell--tutor) .app-main--unified {
+  background: transparent;
+}
+
 .app-main--unified.app-main--tutor-workspace {
   background: var(--ws-bg);
 }
