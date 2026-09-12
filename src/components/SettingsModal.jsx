@@ -34,7 +34,7 @@ function SettingsModal({ onClose, canvasConnection }) {
         </header>
 
         <section className="settings-modal__section">
-          <h3 className="settings-modal__section-title">Persona look</h3>
+          <h3 className="settings-modal__section-title">Scotty look</h3>
           <p className="settings-modal__hint">
             Adjust how large Scotty appears, or open the face editor to place his mouth and eyes.
           </p>

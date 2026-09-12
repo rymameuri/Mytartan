@@ -53,5 +53,7 @@ describe("PersonaView empty state", () => {
     expect(screen.queryByRole("tab", { name: /course tutor/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("tab", { name: /persona/i })).not.toBeInTheDocument();
     expect(screen.queryByText(/drag to scale/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/share chat/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/download chat/i)).not.toBeInTheDocument();
   });
 });

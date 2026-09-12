@@ -149,7 +149,9 @@ function PersonaView({
             <MenuIcon />
           </button>
         )}
-        <span className="pv-brand__name brand-display">MyTartan</span>
+        {!isDesktop && (
+          <span className="pv-brand__name brand-display">MyTartan</span>
+        )}
         <div className="pv-header__actions">
           <button
             type="button"
@@ -161,24 +163,26 @@ function PersonaView({
           >
             <VolumeIcon muted={isMuted} />
           </button>
-          <button
-            type="button"
-            className="pv-icon-btn"
-            aria-label="Share chat"
-            onClick={onShare}
-            disabled={!hasMessages}
-          >
-            <ShareIcon />
-          </button>
-          <button
-            type="button"
-            className="pv-icon-btn"
-            aria-label="Download chat"
-            onClick={onDownload}
-            disabled={!hasMessages}
-          >
-            <DownloadIcon />
-          </button>
+          {hasMessages && (
+            <>
+              <button
+                type="button"
+                className="pv-icon-btn"
+                aria-label="Share chat"
+                onClick={onShare}
+              >
+                <ShareIcon />
+              </button>
+              <button
+                type="button"
+                className="pv-icon-btn"
+                aria-label="Download chat"
+                onClick={onDownload}
+              >
+                <DownloadIcon />
+              </button>
+            </>
+          )}
           <SettingsButton onClick={onOpenSettings} />
         </div>
       </header>
