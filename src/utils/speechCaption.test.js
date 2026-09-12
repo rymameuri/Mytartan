@@ -26,22 +26,24 @@ test("splitIntoCaptionLines breaks long speech into chunks", () => {
   });
 });
 
-test("captionForWordIndex swaps lines instead of growing prefix", () => {
+test("captionForWordIndex grows the current line up to the spoken word", () => {
   const text =
     "Professor Nui? Where do I even begin! She is nothing short of extraordinary.";
   const first = captionForWordIndex(text, 0);
   const mid = captionForWordIndex(text, 8);
-  expect(first).not.toBe(mid);
-  expect(first).not.toMatch(/extraordinary/i);
-  expect(mid).not.toMatch(/^Professor Nui\? Where do I even begin! She is nothing$/);
+  expect(first).toBe("Professor");
+  expect(first).not.toMatch(/Where do I/i);
+  expect(mid).toBe("She is");
+  expect(mid).not.toMatch(/extraordinary/i);
 });
 
-test("captionForCharIndex maps spoken position to current line", () => {
+test("captionForCharIndex maps spoken position to words heard so far", () => {
   const text = "One two three four five six seven eight nine ten eleven twelve.";
-  const early = captionForCharIndex(text, 5);
+  const early = captionForCharIndex(text, 3);
   const later = captionForCharIndex(text, 50);
-  expect(early).toBe("One two three four five six seven");
-  expect(later).toBe("eight nine ten eleven twelve.");
+  expect(early).toBe("One");
+  expect(later).toMatch(/^eight nine ten/);
+  expect(later).not.toMatch(/twelve/i);
 });
 
 test("splitSpeechWords handles empty input", () => {
@@ -49,18 +51,19 @@ test("splitSpeechWords handles empty input", () => {
 });
 
 test("wordIndexForPlaybackProgress tracks audio clock", () => {
-  expect(wordIndexForPlaybackProgress(12, 0, 10)).toBe(0);
-  expect(wordIndexForPlaybackProgress(12, 5, 10)).toBe(6);
-  expect(wordIndexForPlaybackProgress(12, 10, 10)).toBe(11);
+  expect(wordIndexForPlaybackProgress(12, 0, 10, 0)).toBe(0);
+  expect(wordIndexForPlaybackProgress(12, 5, 10, 0)).toBe(6);
+  expect(wordIndexForPlaybackProgress(12, 10, 10, 0)).toBe(11);
   expect(wordIndexForPlaybackProgress(12, 0, NaN)).toBe(0);
 });
 
-test("captionForPlaybackProgress stays on the spoken line", () => {
+test("wordIndexForPlaybackProgress lags behind the audio clock", () => {
+  expect(wordIndexForPlaybackProgress(12, 5, 10, 0.28)).toBe(5);
+  expect(wordIndexForPlaybackProgress(12, 0.2, 10)).toBe(0);
+});
+
+test("captionForPlaybackProgress only shows words already spoken", () => {
   const text = "One two three four five six seven eight nine ten eleven twelve.";
-  expect(captionForPlaybackProgress(text, 0, 10)).toBe(
-    "One two three four five six seven"
-  );
-  expect(captionForPlaybackProgress(text, 8, 10)).toBe(
-    "eight nine ten eleven twelve."
-  );
+  expect(captionForPlaybackProgress(text, 0, 10)).toBe("One");
+  expect(captionForPlaybackProgress(text, 8, 10)).toBe("eight nine ten");
 });

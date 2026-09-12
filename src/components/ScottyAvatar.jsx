@@ -1,12 +1,15 @@
 import {
   forwardRef,
+  useCallback,
   useEffect,
   useImperativeHandle,
   useRef,
+  useState,
 } from "react";
 import tartanScottyFacialBase from "../assets/tartan-scotty-facial-base.png";
 import { useFacialCoords } from "../hooks/useFacialCoords";
 import { facialCoordsToStyle } from "../utils/facialCoords";
+import { computeRms, mouthFromAmplitude, smoothAmplitude } from "../utils/mouthSync";
 import "./ScottyAvatar.css";
 
 const API_BASE = process.env.REACT_APP_API_URL || "";
@@ -23,7 +26,14 @@ function cleanupPlayback({ audioRef, objectUrlRef, sourceRef, progressRafRef }) 
     objectUrlRef.current = null;
   }
 
-  sourceRef.current = null;
+  if (sourceRef.current) {
+    try {
+      sourceRef.current.disconnect();
+    } catch {
+      // already disconnected
+    }
+    sourceRef.current = null;
+  }
 
   const audio = audioRef.current;
   if (audio) {
@@ -96,13 +106,59 @@ const ScottyAvatar = forwardRef(function ScottyAvatar(
   ref
 ) {
   const facialCoords = useFacialCoords();
+  const [mouth, setMouth] = useState(null);
   const audioRef = useRef(null);
   const audioCtxRef = useRef(null);
+  const analyserRef = useRef(null);
+  const timeDataRef = useRef(null);
   const sourceRef = useRef(null);
   const objectUrlRef = useRef(null);
   const progressRafRef = useRef(null);
   const speakResolveRef = useRef(null);
   const speakRejectRef = useRef(null);
+  const mouthRef = useRef(null);
+  const smoothedLevelRef = useRef(0);
+
+  const resetMouth = useCallback(() => {
+    mouthRef.current = null;
+    smoothedLevelRef.current = 0;
+    setMouth(null);
+  }, []);
+
+  const sampleMouth = useCallback(() => {
+    const analyser = analyserRef.current;
+    const samples = timeDataRef.current;
+    if (!analyser || !samples) return;
+
+    analyser.getByteTimeDomainData(samples);
+    smoothedLevelRef.current = smoothAmplitude(
+      smoothedLevelRef.current,
+      computeRms(samples)
+    );
+    const next = mouthFromAmplitude(
+      smoothedLevelRef.current,
+      mouthRef.current || "closed"
+    );
+    if (next !== mouthRef.current) {
+      mouthRef.current = next;
+      setMouth(next);
+    }
+  }, []);
+
+  const endPlayback = useCallback(
+    (error) => {
+      cleanupPlayback({ audioRef, objectUrlRef, sourceRef, progressRafRef });
+      resetMouth();
+      if (error) {
+        speakRejectRef.current?.(error);
+      } else {
+        speakResolveRef.current?.();
+      }
+      speakResolveRef.current = null;
+      speakRejectRef.current = null;
+    },
+    [resetMouth]
+  );
 
   useImperativeHandle(ref, () => ({
     async speak(text, { onStart, onTimeUpdate } = {}) {
@@ -111,6 +167,7 @@ const ScottyAvatar = forwardRef(function ScottyAvatar(
       }
 
       cleanupPlayback({ audioRef, objectUrlRef, sourceRef, progressRafRef });
+      resetMouth();
 
       const response = await fetch(`${API_BASE}/api/tts`, {
         method: "POST",
@@ -142,9 +199,20 @@ const ScottyAvatar = forwardRef(function ScottyAvatar(
         if (ctx.state === "suspended") {
           await ctx.resume();
         }
+        if (!analyserRef.current) {
+          const analyser = ctx.createAnalyser();
+          analyser.fftSize = 1024;
+          analyser.smoothingTimeConstant = 0.55;
+          analyser.connect(ctx.destination);
+          analyserRef.current = analyser;
+          timeDataRef.current = new Uint8Array(analyser.fftSize);
+        }
         const source = ctx.createMediaElementSource(audio);
-        source.connect(ctx.destination);
+        source.connect(analyserRef.current);
         sourceRef.current = source;
+        mouthRef.current = "closed";
+        smoothedLevelRef.current = 0;
+        setMouth("closed");
       }
 
       const emitProgress = () => {
@@ -157,6 +225,7 @@ const ScottyAvatar = forwardRef(function ScottyAvatar(
         }
         const tick = () => {
           emitProgress();
+          sampleMouth();
           if (!audio.paused && !audio.ended) {
             progressRafRef.current = requestAnimationFrame(tick);
           } else {
@@ -188,38 +257,23 @@ const ScottyAvatar = forwardRef(function ScottyAvatar(
         };
 
         audio.onended = () => {
-          cleanupPlayback({ audioRef, objectUrlRef, sourceRef, progressRafRef });
-          speakResolveRef.current?.();
-          speakResolveRef.current = null;
-          speakRejectRef.current = null;
+          endPlayback();
         };
 
         audio.onerror = () => {
-          cleanupPlayback({ audioRef, objectUrlRef, sourceRef, progressRafRef });
-          const err = new Error("Audio playback failed");
-          speakRejectRef.current?.(err);
-          speakResolveRef.current = null;
-          speakRejectRef.current = null;
+          endPlayback(new Error("Audio playback failed"));
         };
 
         audio.play().catch((playErr) => {
-          cleanupPlayback({ audioRef, objectUrlRef, sourceRef, progressRafRef });
-          speakRejectRef.current?.(playErr);
-          speakResolveRef.current = null;
-          speakRejectRef.current = null;
+          endPlayback(playErr);
         });
       });
     },
 
     stop() {
-      if (speakResolveRef.current) {
-        speakResolveRef.current();
-        speakResolveRef.current = null;
-        speakRejectRef.current = null;
-      }
-      cleanupPlayback({ audioRef, objectUrlRef, sourceRef, progressRafRef });
+      endPlayback();
     },
-  }));
+  }), [endPlayback, resetMouth, sampleMouth]);
 
   useEffect(
     () => () => {
@@ -229,6 +283,12 @@ const ScottyAvatar = forwardRef(function ScottyAvatar(
       speakResolveRef.current = null;
       speakRejectRef.current = null;
       cleanupPlayback({ audioRef, objectUrlRef, sourceRef, progressRafRef });
+      if (audioCtxRef.current) {
+        audioCtxRef.current.close?.().catch(() => {});
+        audioCtxRef.current = null;
+        analyserRef.current = null;
+        timeDataRef.current = null;
+      }
     },
     []
   );
@@ -238,6 +298,7 @@ const ScottyAvatar = forwardRef(function ScottyAvatar(
   const className = [
     "scotty-avatar",
     `scotty-avatar--${resolvedState}`,
+    mouth && "scotty-avatar--lip-sync",
     compact && "scotty-avatar--compact",
     hero && "scotty-avatar--hero",
     persona && "scotty-avatar--persona",
@@ -251,6 +312,7 @@ const ScottyAvatar = forwardRef(function ScottyAvatar(
   return (
     <div
       className={className}
+      data-mouth={mouth || undefined}
       style={facialCoordsToStyle(facialCoords)}
       role="img"
       aria-label="Scotty, the My Tartan terrier mascot"

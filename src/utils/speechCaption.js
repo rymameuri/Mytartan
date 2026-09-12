@@ -63,7 +63,13 @@ export function captionForWordIndex(text, wordIndex, maxWords = DEFAULT_WORDS_PE
     }
   }
 
-  return lines[Math.min(lineIdx, lines.length - 1)];
+  const line = lines[Math.min(lineIdx, lines.length - 1)];
+  const lineStart = lineStarts[Math.min(lineIdx, lineStarts.length - 1)] ?? 0;
+  const words = splitSpeechWords(line);
+  if (!words.length) return "";
+
+  const spokenInLine = Math.min(words.length, Math.max(1, index - lineStart + 1));
+  return words.slice(0, spokenInLine).join(" ");
 }
 
 export function captionForCharIndex(text, charIndex, maxWords = DEFAULT_WORDS_PER_LINE) {
@@ -73,11 +79,20 @@ export function captionForCharIndex(text, charIndex, maxWords = DEFAULT_WORDS_PE
   return captionForWordIndex(text, Math.max(0, wordsSpoken - 1), maxWords);
 }
 
+/** Hold captions slightly behind the audio clock so they do not lead the voice. */
+export const CAPTION_LAG_SEC = 0.28;
+
 /** Map audio clock (0–1) onto the spoken word currently being heard. */
-export function wordIndexForPlaybackProgress(wordCount, currentTime, duration) {
+export function wordIndexForPlaybackProgress(
+  wordCount,
+  currentTime,
+  duration,
+  lagSec = CAPTION_LAG_SEC
+) {
   if (!wordCount) return 0;
   if (!Number.isFinite(duration) || duration <= 0) return 0;
-  const progress = Math.min(1, Math.max(0, currentTime / duration));
+  const lagged = Math.max(0, currentTime - Math.max(0, lagSec));
+  const progress = Math.min(1, lagged / duration);
   return Math.min(wordCount - 1, Math.floor(progress * wordCount));
 }
 

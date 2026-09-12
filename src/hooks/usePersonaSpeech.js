@@ -175,12 +175,11 @@ export function usePersonaSpeech(avatarRef) {
               updateCaptionForWord(normalized, 0);
               fallbackTimerRef.current = setTimeout(() => {
                 if (!revealTimerRef.current) {
-                  startTimedReveal(normalized, 450);
+                  startTimedReveal(normalized, 580);
                 }
-              }, 400);
+              }, 800);
             },
             onTimeUpdate: (currentTime, duration) => {
-              if (!Number.isFinite(duration) || duration <= 0) return;
               if (fallbackTimerRef.current) {
                 clearTimeout(fallbackTimerRef.current);
                 fallbackTimerRef.current = null;
@@ -189,6 +188,7 @@ export function usePersonaSpeech(avatarRef) {
                 clearInterval(revealTimerRef.current);
                 revealTimerRef.current = null;
               }
+              if (!Number.isFinite(duration) || duration <= 0) return;
               setCaption(captionForPlaybackProgress(normalized, currentTime, duration));
             },
           });

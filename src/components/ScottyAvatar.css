@@ -252,6 +252,31 @@
   animation: scotty-mouth-wide-cycle 1.08s steps(1, end) infinite;
 }
 
+/* Live audio level overrides the canned flap. */
+.scotty-avatar[data-mouth] .scotty-avatar__mouth-state--closed,
+.scotty-avatar[data-mouth] .scotty-avatar__mouth-state--small,
+.scotty-avatar[data-mouth] .scotty-avatar__mouth-state--wide {
+  animation: none;
+}
+
+.scotty-avatar[data-mouth="closed"] .scotty-avatar__mouth-state--closed,
+.scotty-avatar[data-mouth="closed"] .scotty-avatar__mouth-state--small,
+.scotty-avatar[data-mouth="closed"] .scotty-avatar__mouth-state--wide {
+  opacity: 0;
+}
+
+.scotty-avatar[data-mouth="small"] .scotty-avatar__mouth-state--small {
+  opacity: 1;
+  width: calc(var(--scotty-mouth-width) * 1.095);
+  height: calc(var(--scotty-mouth-height) * 1.167);
+}
+
+.scotty-avatar[data-mouth="wide"] .scotty-avatar__mouth-state--wide {
+  opacity: 1;
+  width: calc(var(--scotty-mouth-width) * 1.333);
+  height: calc(var(--scotty-mouth-height) * 1.524);
+}
+
 .scotty-avatar--listening .scotty-avatar__eye,
 .shb--listening .scotty-avatar__eye,
 .pv-avatar-frame--listening .scotty-avatar__eye,
