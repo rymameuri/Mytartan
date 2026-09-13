@@ -35,21 +35,11 @@ function sentencesFrom(text) {
   return unique;
 }
 
-function topicFromSentence(sentence) {
-  const words = sentence
-    .replace(/[^A-Za-z0-9\s-]/g, " ")
-    .split(/\s+/)
-    .filter((word) => word.length > 3);
-  if (words.length === 0) return "";
-  return words.slice(0, 4).join(" ");
-}
-
-function stemFor(sentence, index) {
-  const topic = topicFromSentence(sentence);
+function stemFor(index) {
   const variants = [
-    topic ? `According to your notes, which statement about ${topic} is accurate?` : "According to your notes, which statement is accurate?",
+    "According to your notes, which statement is accurate?",
     "Which of these matches your material?",
-    topic ? `What do your notes say about ${topic}?` : "What do your notes say here?",
+    "What do your notes say here?",
   ];
   return variants[index % variants.length];
 }
@@ -99,7 +89,7 @@ export function generateQuizFromSource(text, { count = 5, sourceName = "your not
 
     questions.push({
       number: String(questions.length + 1),
-      text: stemFor(correct, i),
+      text: stemFor(i),
       options: optionTexts.map((optionText, index) => ({
         id: letters[index],
         text: optionText,

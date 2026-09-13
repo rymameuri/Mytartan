@@ -26,7 +26,8 @@ function uniqueSentences(text, limit = 6) {
     .filter(Boolean)
     .flatMap((line) => line.split(/(?<=[.!?])\s+(?=[A-Z0-9])/))
     .map((item) => item.replace(/\s+/g, " ").trim())
-    .filter((item) => item.length >= 18 && item.length <= 180);
+    .filter((item) => item.length >= 18 && item.length <= 180)
+    .filter((item) => !/\.(txt|md|pdf|pptx|docx)$/i.test(item));
 
   const unique = [];
   const seen = new Set();

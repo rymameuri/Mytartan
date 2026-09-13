@@ -167,7 +167,7 @@ export async function extractStudyDocuments(files = []) {
   }
 
   return {
-    text: parts.map((part) => `## ${part.name}\n\n${part.text}`).join("\n\n"),
+    text: parts.map((part) => part.text).join("\n\n\n"),
     names: parts.map((part) => part.name),
     warnings,
   };

@@ -1,0 +1,5 @@
+Recursion needs a base case so the calls can stop.
+The call stack stores active function frames until they return.
+A recursive call should move toward the base case, not repeat the same input.
+Memoization stores answers so overlapping subproblems are not recomputed.
+Divide and conquer splits a problem into smaller pieces of the same kind.
