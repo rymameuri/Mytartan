@@ -263,6 +263,13 @@ function PersonaView({
     onSend(prompt);
   }, [composerBusy, onSend, voiceModeRef]);
 
+  const handleStudioLaunch = useCallback((prompt) => {
+    if (composerBusy) return;
+    armSpeechSynthesis();
+    if (voiceModeRef) voiceModeRef.current = false;
+    onSend(prompt);
+  }, [composerBusy, onSend, voiceModeRef]);
+
   const stageCaption = isThinking
     ? { text: "thinking", typing: true }
     : isSpeaking && speechCaption
@@ -456,21 +463,53 @@ function PersonaView({
           value={composerText}
           onChange={handleComposerChange}
         />
-        <p className="pv-footer__hint">
-          {listening
-            ? "Listening. Tap the mic when you're done, then edit or send."
-            : reviewing
-              ? "Edit if it looks messy, then send."
-              : studioOpen && teachStudio?.kind === "quiz"
-                ? "One beat, one question. Scotty stays with you."
-                : studioOpen && teachStudio?.kind === "mindmap"
-                  ? "The board grows as Scotty talks. Pause anytime."
-                : studioOpen && teachStudio?.kind === "sheet"
-                  ? "The sheet writes itself in beats. Save it when the scene ends."
-                : documentSource
-                  ? `Notes ready: ${documentSource.name}. Quiz me, whiteboard this, or ask for a cheat sheet.`
-                  : "Scotty can get things wrong. Check campus sources."}
-        </p>
+        {documentSource && !studioOpen && !listening && !reviewing ? (
+          <div className="pv-note-actions">
+            <p className="pv-footer__hint">
+              Notes ready: {documentSource.name}. Open a studio from this file:
+            </p>
+            <div className="pv-note-actions__row" role="group" aria-label="Study this file">
+              <button
+                type="button"
+                className="pv-note-actions__btn"
+                disabled={composerBusy}
+                onClick={() => handleStudioLaunch("Quiz me on this")}
+              >
+                Quiz me
+              </button>
+              <button
+                type="button"
+                className="pv-note-actions__btn"
+                disabled={composerBusy}
+                onClick={() => handleStudioLaunch("Whiteboard this")}
+              >
+                Whiteboard
+              </button>
+              <button
+                type="button"
+                className="pv-note-actions__btn"
+                disabled={composerBusy}
+                onClick={() => handleStudioLaunch("Cheat sheet from this")}
+              >
+                Cheat sheet
+              </button>
+            </div>
+          </div>
+        ) : (
+          <p className="pv-footer__hint">
+            {listening
+              ? "Listening. Tap the mic when you're done, then edit or send."
+              : reviewing
+                ? "Edit if it looks messy, then send."
+                : studioOpen && teachStudio?.kind === "quiz"
+                  ? "One beat, one question. Scotty stays with you."
+                  : studioOpen && teachStudio?.kind === "mindmap"
+                    ? "The board grows as Scotty talks. Pause anytime."
+                    : studioOpen && teachStudio?.kind === "sheet"
+                      ? "The sheet writes itself in beats. Save it when the scene ends."
+                      : "Scotty can get things wrong. Check campus sources."}
+          </p>
+        )}
       </footer>
     </div>
   );

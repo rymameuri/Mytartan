@@ -439,6 +439,13 @@ describe("isSmallTalk", () => {
   test("does not classify longer messages as small talk", () => {
     expect(isSmallTalk("hi there I wanted to ask about registration deadlines")).toBe(false);
   });
+
+  test("does not classify study-action asks as small talk", () => {
+    expect(isSmallTalk("create a quiz for this")).toBe(false);
+    expect(isSmallTalk("quiz me on this")).toBe(false);
+    expect(isSmallTalk("whiteboard this")).toBe(false);
+    expect(isSmallTalk("cheat sheet from this")).toBe(false);
+  });
 });
 
 describe("Course library API", () => {

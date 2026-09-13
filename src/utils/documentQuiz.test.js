@@ -1,5 +1,5 @@
 import { answersGroundedInSource, generateQuizFromSource } from "./documentQuiz";
-import { detectTeachIntent, extractConcept, teachReaction } from "./teachStudio";
+import { detectTeachIntent, extractConcept, teachReaction, tryOpenTeachStudio } from "./teachStudio";
 
 const NOTES = `
 Recursion needs a base case so the calls can stop.
@@ -11,7 +11,24 @@ Memoization stores answers so overlapping subproblems are not recomputed.
 describe("document quiz flow", () => {
   test("detects quiz-me intent and not a campus-policy dump", () => {
     expect(detectTeachIntent("quiz me on this")).toEqual({ kind: "quiz", concept: "" });
+    expect(detectTeachIntent("create a quiz for this")).toEqual({ kind: "quiz", concept: "" });
+    expect(detectTeachIntent("create a quiz for this", { hasSource: true })).toEqual({
+      kind: "quiz",
+      concept: "",
+    });
     expect(detectTeachIntent("Where is CaPS?")).toBeNull();
+  });
+
+  test("create a quiz for this + document opens a quiz studio", () => {
+    const source = { name: "Cresswell 2009_Place.pdf", text: NOTES };
+    const result = tryOpenTeachStudio("create a quiz for this", { source });
+    expect(result).toBeTruthy();
+    expect(result.opened).toBe(true);
+    expect(result.kind).toBe("quiz");
+    expect(result.studio.kind).toBe("quiz");
+    expect(result.studio.sourceName).toBe("Cresswell 2009_Place.pdf");
+    expect(result.studio.questions.length).toBeGreaterThanOrEqual(2);
+    expect(tryOpenTeachStudio("Where is CaPS?", { source })).toBe(false);
   });
 
   test("builds one-at-a-time MCQs grounded in the uploaded notes", () => {
@@ -54,5 +71,12 @@ describe("teach intent", () => {
   test("explain this with notes opens a mind-map", () => {
     expect(detectTeachIntent("can you explain this", { hasSource: true }).kind).toBe("mindmap");
     expect(detectTeachIntent("can you explain this", { hasSource: false })).toBeNull();
+  });
+
+  test("notes-ready study asks open the matching studio", () => {
+    expect(detectTeachIntent("whiteboard this", { hasSource: true }).kind).toBe("mindmap");
+    expect(detectTeachIntent("cheat sheet from this", { hasSource: true }).kind).toBe("sheet");
+    expect(tryOpenTeachStudio("whiteboard this", { hasSource: true })).toBe(true);
+    expect(tryOpenTeachStudio("cheat sheet from this", { hasSource: true })).toBe(true);
   });
 });

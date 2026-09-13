@@ -217,6 +217,22 @@ describe("PersonaView empty state", () => {
     expect(document.querySelector(".pv--chat-only")).not.toBeInTheDocument();
   });
 
+  test("notes-ready footer launches studios instead of a cryptic hint", () => {
+    const onSend = jest.fn();
+    renderPersona({
+      onSend,
+      documentSource: { name: "Cresswell 2009_Place.pdf", text: "Place is a relation between objects." },
+    });
+    expect(screen.getByText(/notes ready: cresswell 2009_place\.pdf/i)).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: /study this file/i })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /^quiz me$/i }));
+    expect(onSend).toHaveBeenCalledWith("Quiz me on this");
+    fireEvent.click(screen.getByRole("button", { name: /^whiteboard$/i }));
+    expect(onSend).toHaveBeenCalledWith("Whiteboard this");
+    fireEvent.click(screen.getByRole("button", { name: /^cheat sheet$/i }));
+    expect(onSend).toHaveBeenCalledWith("Cheat sheet from this");
+  });
+
   test("shows live captions while Scotty is talking", () => {
     renderPersona({
       isSpeaking: true,

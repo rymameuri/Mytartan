@@ -396,9 +396,17 @@ function isGratitudeMessage(normalized) {
   return normalized.split(/\s+/).length <= 12;
 }
 
+const STUDY_ACTION_RE =
+  /\b(?:(?:create|make|generate|build|start|write|draft)(?:\s+me)?(?:\s+a|\s+some)?\s+quiz|(?:can\s+you|could\s+you|please)\s+(?:create|make|generate|build|give\s+me)\s+(?:a\s+|some\s+)?quiz|give\s+me(?:\s+a|\s+some)?\s+quiz|quiz\s+me|quiz\s+on|quiz\s+(?:this|that|it)|a\s+quiz\s+(?:for|from|on)|test\s+me|white\s*board|mind[-\s]?map|mindmap|cheat\s*sheet|study\s*guide|formula\s*sheet|practice\s+questions|multiple[-\s]?choice)\b/i;
+
+function isStudyActionRequest(message) {
+  return STUDY_ACTION_RE.test(String(message || "").trim());
+}
+
 function isSmallTalk(message) {
   const normalized = message.trim().replace(/\s+/g, " ");
   if (!normalized) return false;
+  if (isStudyActionRequest(normalized)) return false;
   if (isGratitudeMessage(normalized)) return true;
 
   const words = normalized.split(/\s+/);
@@ -1352,6 +1360,20 @@ async function handleChatRequest(req, res, { stream = false } = {}) {
 
   if (!hasAiKey()) {
     if (KB_MODES.has(mode)) {
+      if (isStudyActionRequest(userQuery)) {
+        return sendChatReply(res,
+          "I can open a quiz, whiteboard, or cheat sheet from your notes. Attach a PDF in the composer, then tap Quiz me — or say create a quiz for this.",
+          {
+            stream,
+            replyMeta: buildReplyMeta({
+              mode,
+              userQuery,
+              confidence: computeConfidence([]),
+              keyFacts,
+            }),
+          }
+        );
+      }
       if (!campusFactQuery) {
         return sendChatReply(res, CASUAL_NO_AI_REPLY, {
           stream,
@@ -1703,6 +1725,7 @@ module.exports.hasAiKey = hasAiKey;
 module.exports.LOW_CONFIDENCE_THRESHOLD = LOW_CONFIDENCE_THRESHOLD;
 module.exports.LOW_CONFIDENCE_REPLY = LOW_CONFIDENCE_REPLY;
 module.exports.isSmallTalk = isSmallTalk;
+module.exports.isStudyActionRequest = isStudyActionRequest;
 module.exports.getSmallTalkReply = getSmallTalkReply;
 module.exports.isCampusFactQuery = isCampusFactQuery;
 module.exports.CASUAL_NO_AI_REPLY = CASUAL_NO_AI_REPLY;
