@@ -742,12 +742,13 @@ function AppShell() {
       }
 
       if (gotTokens) {
+        const spokenReply = stripMarkdownFormatting(reply);
         setMessages([
           ...updatedMessages,
           {
             id: assistantMessageId,
             role: "assistant",
-            content: stripMarkdownFormatting(reply),
+            content: spokenReply,
             confidence,
             feedbackContext: feedbackContext ?? {
               mode: activeMode,
@@ -759,6 +760,14 @@ function AppShell() {
             ...assistantExtras,
           },
         ]);
+        if (
+          activeMode === "qa" &&
+          spokenReply.trim() &&
+          !readMutedPreference(userId) &&
+          !isStructuredStudioContent(spokenReply)
+        ) {
+          speakFormatted(spokenReply);
+        }
       }
 
       if (activeMode === "tutor" && gotTokens && reply.trim() && !readMutedPreference(userId)) {
