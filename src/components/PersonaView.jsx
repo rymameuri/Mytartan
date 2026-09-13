@@ -386,6 +386,13 @@ function PersonaView({
       ) : (
         <main className="pv-body pv-body--idle">
           <div className="pv-stage pv-stage--persona-main">
+            {lastUserAsk && (
+              <p className="pv-last-ask" title={lastUserAsk}>
+                <span className="pv-last-ask__label">You</span>
+                {lastUserAsk}
+              </p>
+            )}
+
             <div className={`pv-avatar-frame pv-avatar-frame--${avatarState}`}>
               <ScottyAvatar ref={avatarRef} persona avatarState={avatarState} />
             </div>
@@ -406,27 +413,22 @@ function PersonaView({
 
             <PersonaCaption text={stageCaption.text} typing={stageCaption.typing} />
 
-            {lastUserAsk && (
-              <p className="pv-last-ask" title={lastUserAsk}>
-                <span className="pv-last-ask__label">You</span>
-                {lastUserAsk}
-              </p>
+            {!hasUserMessages && (
+              <ul className="pv-empty__chips" aria-label="Suggested questions">
+                {starterChips.map((chip) => (
+                  <li key={chip.id}>
+                    <button
+                      type="button"
+                      className="pv-empty__chip"
+                      disabled={composerBusy}
+                      onClick={() => handleChipClick(chip.prompt)}
+                    >
+                      {chip.label}
+                    </button>
+                  </li>
+                ))}
+              </ul>
             )}
-
-            <ul className="pv-empty__chips" aria-label="Suggested questions">
-              {starterChips.map((chip) => (
-                <li key={chip.id}>
-                  <button
-                    type="button"
-                    className="pv-empty__chip"
-                    disabled={composerBusy}
-                    onClick={() => handleChipClick(chip.prompt)}
-                  >
-                    {chip.label}
-                  </button>
-                </li>
-              ))}
-            </ul>
           </div>
         </main>
       )}

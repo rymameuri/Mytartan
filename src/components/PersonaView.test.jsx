@@ -195,7 +195,9 @@ describe("PersonaView empty state", () => {
     expect(document.querySelector(".pv-header__avatar")).not.toBeInTheDocument();
     expect(screen.getByText(/Yeah — let's get you through this week/i)).toBeInTheDocument();
     expect(document.querySelector(".pv-last-ask")).toHaveTextContent(/stressed about midterms/i);
-    expect(screen.getByRole("button", { name: /stressed about midterms/i })).toBeInTheDocument();
+    expect(document.querySelector(".pv-last-ask").compareDocumentPosition(document.querySelector(".pv-avatar-frame")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /stressed about midterms/i })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/suggested questions/i)).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /chat only/i })).toBeInTheDocument();
   });
 

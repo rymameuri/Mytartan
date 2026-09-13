@@ -222,7 +222,7 @@
 }
 
 .pv-last-ask {
-  margin: 2px 0 0;
+  margin: 0 0 4px;
   max-width: 36rem;
   padding: 8px 14px;
   border: 1px solid var(--app-border);
