@@ -23,23 +23,35 @@ function parseArgs() {
   return args;
 }
 
+function matchesFile(docFile, expected) {
+  return (
+    docFile === expected ||
+    docFile.endsWith(`/${expected}`) ||
+    docFile.includes(expected)
+  );
+}
+
 function isRelevant(doc, expectedFiles) {
   if (!expectedFiles.length) return false;
-  return expectedFiles.some(
-    (file) => doc.file === file || doc.file.endsWith(`/${file}`) || doc.file.includes(file)
-  );
+  return expectedFiles.some((file) => matchesFile(doc.file, file));
+}
+
+function hitsExcluded(docs, excludedFiles = []) {
+  if (!excludedFiles.length) return false;
+  return docs.some((doc) => excludedFiles.some((file) => matchesFile(doc.file, file)));
 }
 
 function evaluateQuery(entry, k) {
   const results = retrieveRelevantDocs(entry.query, { limit: k });
   const topK = results.slice(0, k);
   const relevantInTopK = topK.filter((doc) => isRelevant(doc, entry.expectedFiles));
+  const excludedHit = hitsExcluded(topK, entry.excludedFiles);
   const precisionAtK = entry.expectedFiles.length === 0
     ? (topK.length === 0 ? 1 : 0)
     : relevantInTopK.length / k;
   const hitAtK = entry.expectedFiles.length === 0
-    ? topK.length === 0
-    : relevantInTopK.length > 0;
+    ? topK.length === 0 && !excludedHit
+    : relevantInTopK.length > 0 && !excludedHit;
 
   return {
     id: entry.id,

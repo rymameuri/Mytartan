@@ -389,5 +389,18 @@
       "situations/quiet-vs-social-study.txt",
       "mycmuq/offices/library/overview.txt"
     ]
+  },
+  {
+    "id": "place-001",
+    "query": "Where's a quiet place to study on the CMU-Q campus?",
+    "expectedFiles": [
+      "situations/quiet-vs-social-study.txt",
+      "mycmuq/offices/library/overview.txt"
+    ],
+    "excludedFiles": [
+      "mycmuq/offices/student-affairs/study-abroad/external-study-abroad.txt",
+      "mycmuq/offices/student-affairs/study-abroad/studying-in-pittsburgh.txt",
+      "study-abroad"
+    ]
   }
 ]

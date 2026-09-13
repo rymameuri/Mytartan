@@ -610,6 +610,42 @@ function isCalendarDateQuery(queryLower) {
   );
 }
 
+function isStudyAbroadQuery(queryLower) {
+  return /\b(study abroad|studying abroad|external study|exchange program|washington semester|pittsburgh semester|semester in pittsburgh|studying in pittsburgh)\b/.test(
+    queryLower
+  );
+}
+
+function isCampusPlaceQuery(queryLower) {
+  if (isStudyAbroadQuery(queryLower)) return false;
+  return /\b(quiet place|quiet spot|quiet room|quiet area|quiet corner|place to study|places to study|spot to study|spots to study|study spot|study spots|study room|study rooms|where(?:'s| is| are).{0,48}stud(?:y|ying)|poetry garden|on[- ]campus stud|library)\b/.test(
+    queryLower
+  );
+}
+
+function isStudyAbroadDoc(doc) {
+  const file = String(doc.file || "").toLowerCase();
+  const topic = String(doc.topic || "").toLowerCase();
+  return (
+    file.includes("study-abroad/") ||
+    file.includes("/study-abroad") ||
+    /\bstudy abroad\b/.test(topic) ||
+    /\b(washington semester|studying in pittsburgh|external study abroad)\b/.test(topic)
+  );
+}
+
+function isCampusStudyPlaceDoc(doc) {
+  const file = String(doc.file || "").toLowerCase();
+  const topic = String(doc.topic || "").toLowerCase();
+  const body = String(doc.body || "").toLowerCase();
+  return (
+    file.includes("library/overview") ||
+    file.includes("quiet-vs-social-study") ||
+    file.includes("self-help-study-corner") ||
+    /\b(study rooms?|poetry garden|quiet study)\b/.test(`${topic} ${body}`)
+  );
+}
+
 function fileStemMatchesToken(fileLower, token) {
   const stem = fileLower.replace(/\.txt$/, "").split("/").pop() || "";
   return stem.includes(token);
@@ -642,6 +678,9 @@ function scoreDocumentTfidf(doc, queryTokens, queryLower) {
     return 0;
   }
   if (doc.file.includes("cross-registration") && !isCrossRegistrationQuery(queryLower)) {
+    return 0;
+  }
+  if (isCampusPlaceQuery(queryLower) && isStudyAbroadDoc(doc)) {
     return 0;
   }
 
@@ -700,26 +739,67 @@ function scoreDocumentTfidf(doc, queryTokens, queryLower) {
   }
   if (
     doc.file.startsWith("situations/") &&
-    /\b(homesick|rough night|midterms? week|first week|orientation|quiet study|social study|study room|choosing a minor|pick a minor|declare a minor)\b/.test(
+    /\b(homesick|rough night|midterms? week|first week|orientation|quiet study|quiet place|place to study|study spot|social study|study room|poetry garden|choosing a minor|pick a minor|declare a minor)\b/.test(
       queryLower
     )
   ) {
     score *= 1.65;
   }
+  if (isCampusPlaceQuery(queryLower)) {
+    if (fileLower.includes("mycmuq/offices/library/overview")) {
+      score *= 3.1;
+    } else if (isCampusStudyPlaceDoc(doc)) {
+      score *= 1.85;
+    }
+    if (
+      fileLower.includes("on-campus-noise") ||
+      fileLower.includes("qatar-campus-scholar") ||
+      (fileLower.includes("library-policies") && !fileLower.includes("mycmuq/offices/library"))
+    ) {
+      score *= 0.08;
+    }
+    if (/\bquiet\b/.test(queryLower) && fileLower.includes("self-help-study-corner")) {
+      score *= 0.35;
+    }
+  }
 
   return score;
 }
 
+function diversifyRankedFiles(ranked, preferEntry) {
+  const preferred = [];
+  const rest = [];
+  const seen = new Set();
+  for (const entry of ranked) {
+    if (seen.has(entry.doc.file)) continue;
+    seen.add(entry.doc.file);
+    if (preferEntry(entry)) preferred.push(entry);
+    else rest.push(entry);
+  }
+  return [...preferred, ...rest];
+}
+
 function rankDocuments(retrievalQuery) {
   const { normalizedQuery, queryTokens } = prepareQueryTokens(retrievalQuery);
+  const rawLower = String(retrievalQuery || "").toLowerCase();
+  const campusPlace = isCampusPlaceQuery(normalizedQuery) || isCampusPlaceQuery(rawLower);
 
-  return documents
+  const ranked = documents
     .map((doc) => ({
       doc,
       score: scoreDocumentTfidf(doc, queryTokens, normalizedQuery),
     }))
     .filter(({ score }) => score > 0)
     .sort((a, b) => b.score - a.score);
+
+  if (!campusPlace) return ranked;
+
+  return diversifyRankedFiles(
+    ranked,
+    (entry) =>
+      isCampusStudyPlaceDoc(entry.doc) &&
+      !/library-policies/.test(entry.doc.file || "")
+  );
 }
 
 function parseIndexArray(text, maxIndex) {
@@ -1023,6 +1103,8 @@ module.exports = {
   computeConfidence,
   getRetrievalStatus,
   isProfessorNuiQuery,
+  isCampusPlaceQuery,
+  isStudyAbroadQuery,
   getProfessorNuiReply: () => PROFESSOR_NUI_REPLY,
   hasContentKeywords,
 };

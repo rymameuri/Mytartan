@@ -43,6 +43,9 @@ describe("personaPrompt", () => {
     expect(prompt).toMatch(/Bored tonight:/);
     expect(prompt).toMatch(/Serious financial aid:/);
     expect(prompt).toMatch(/Socratic tutor:/);
+    expect(prompt).toMatch(/Quiet study spot:/);
+    expect(prompt).toMatch(/Library study rooms 1153 and 1155/i);
+    expect(prompt).toMatch(/Do not mention study abroad/i);
   });
 
   test("qa mode covers hangout and campus facts without promoting tutor", () => {

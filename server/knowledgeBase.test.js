@@ -188,6 +188,27 @@ describe("retrieveRelevantDocs — myCMU-Q portal content", () => {
     expectRelevant(results, { topicPattern: /quiet|social study/i, filePattern: /quiet-vs-social-study/ });
   });
 
+  test("study-abroad questions still retrieve study-abroad pages", () => {
+    const results = retrieveRelevantDocs("How do I apply for external study abroad?");
+    expect(results.some((doc) => /study-abroad/.test(doc.file))).toBe(true);
+  });
+
+  test("quiet place to study prefers library spots and excludes study abroad", () => {
+    expect(expandQuery("Where's a quiet place to study on the CMU-Q campus?")).toMatch(
+      /library|study rooms|poetry garden/i
+    );
+    const query = "Where's a quiet place to study on the CMU-Q campus?";
+    const results = retrieveRelevantDocs(query, { limit: 5 });
+    const files = results.map((doc) => doc.file);
+    expect(files.some((file) => /quiet-vs-social-study|library\/overview/.test(file))).toBe(true);
+    expect(files.some((file) => /library\/overview/.test(file))).toBe(true);
+    expect(files.some((file) => /quiet-vs-social-study/.test(file))).toBe(true);
+    expect(files.join("\n")).not.toMatch(/study-abroad/);
+    expect(results.map((doc) => doc.topic).join(" ")).not.toMatch(/study abroad/i);
+    const confidence = computeConfidence(results.slice(0, 2));
+    expect(confidence.sources.every((source) => !/study-abroad/.test(source.file))).toBe(true);
+  });
+
   test("first week slang expands and retrieves the situation guide", () => {
     expect(expandQuery("first week")).toMatch(/orientation|academic success|registration/i);
     const results = retrieveRelevantDocs("What should I do my first week at CMU-Q?");
