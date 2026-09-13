@@ -8,6 +8,7 @@ import { MenuIcon, ShareIcon, DownloadIcon, VolumeIcon, ChevronIcon } from "./Ic
 import SettingsButton from "./SettingsButton";
 import { orderStarterChips } from "../data/starterChips";
 import TeachStudio from "./TeachStudio";
+import { armSpeechSynthesis } from "../hooks/usePersonaSpeech";
 import "./PersonaView.css";
 import MessageFeedback from "./MessageFeedback";
 import "./ChatInterface.css";
@@ -256,6 +257,7 @@ function PersonaView({
 
   const handleChipClick = useCallback((prompt) => {
     if (composerBusy) return;
+    armSpeechSynthesis();
     if (voiceModeRef) voiceModeRef.current = false;
     onSend(prompt);
   }, [composerBusy, onSend, voiceModeRef]);

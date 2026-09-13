@@ -15,6 +15,8 @@ export const MUTE_STORAGE_KEY = "mytartan-persona-muted";
 
 const BROWSER_TTS_RATE = 1.05;
 
+let elevenLabsUnavailable = false;
+
 export function readMutedPreference(userId) {
   try {
     return localStorage.getItem(getUserStorageKey(MUTE_STORAGE_KEY, userId)) === "true";
@@ -99,43 +101,34 @@ export function usePersonaSpeech(avatarRef) {
 
   const speakBrowser = useCallback(
     (text) => {
-      if (!window.speechSynthesis || !text?.trim()) return;
+      if (!text?.trim()) return;
+
+      boundarySeenRef.current = false;
+      fullTextRef.current = text;
+      clearRevealTimers();
+      setIsPreparingSpeech(false);
+      setIsSpeaking(true);
+      updateCaptionForWord(text, 0);
+      startTimedReveal(text, msPerSpeechWord(BROWSER_TTS_RATE));
+
+      if (!window.speechSynthesis) {
+        const words = splitSpeechWords(text);
+        const holdMs = Math.max(words.length * msPerSpeechWord(BROWSER_TTS_RATE), 1200);
+        speakTimerRef.current = setTimeout(finishSpeaking, holdMs);
+        return;
+      }
 
       window.speechSynthesis.cancel();
       if (window.speechSynthesis.paused) {
         window.speechSynthesis.resume();
       }
 
-      boundarySeenRef.current = false;
-      fullTextRef.current = text;
-      clearRevealTimers();
-      setCaption("");
-
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.rate = BROWSER_TTS_RATE;
       utterance.pitch = 1;
 
-      fallbackTimerRef.current = setTimeout(() => {
-        if (!boundarySeenRef.current) {
-          startTimedReveal(text, msPerSpeechWord(BROWSER_TTS_RATE));
-        }
-      }, 400);
-
-      utterance.onstart = () => {
-        setIsSpeaking(true);
-        updateCaptionForWord(text, 0);
-      };
-
       utterance.onboundary = (event) => {
         boundarySeenRef.current = true;
-        if (fallbackTimerRef.current) {
-          clearTimeout(fallbackTimerRef.current);
-          fallbackTimerRef.current = null;
-        }
-        if (revealTimerRef.current) {
-          clearInterval(revealTimerRef.current);
-          revealTimerRef.current = null;
-        }
         if (event.charIndex != null) {
           setCaption(captionForCharIndex(text, event.charIndex));
         }
@@ -146,7 +139,9 @@ export function usePersonaSpeech(avatarRef) {
       };
 
       utterance.onerror = () => {
-        finishSpeaking();
+        const words = splitSpeechWords(text);
+        const holdMs = Math.max(words.length * msPerSpeechWord(BROWSER_TTS_RATE), 1200);
+        speakTimerRef.current = setTimeout(finishSpeaking, holdMs);
       };
 
       window.speechSynthesis.speak(utterance);
@@ -164,10 +159,12 @@ export function usePersonaSpeech(avatarRef) {
       if (!normalized) return;
 
       fullTextRef.current = normalized;
+      setIsPreparingSpeech(true);
+      setIsSpeaking(false);
+      updateCaptionForWord(normalized, 0);
 
-      if (avatarRef?.current) {
+      if (avatarRef?.current && !elevenLabsUnavailable) {
         try {
-          setIsPreparingSpeech(true);
           await avatarRef.current.speak(normalized, {
             onStart: () => {
               setIsPreparingSpeech(false);
@@ -195,7 +192,8 @@ export function usePersonaSpeech(avatarRef) {
           finishSpeaking();
           return;
         } catch (err) {
-          finishSpeaking();
+          elevenLabsUnavailable = true;
+          avatarRef.current?.stop?.();
           console.warn("[usePersonaSpeech] ElevenLabs unavailable, using browser TTS:", err.message);
         }
       }
