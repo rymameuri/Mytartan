@@ -1,4 +1,4 @@
-import { generateQuizFromSource } from "./documentQuiz";
+import { generateQuizFromSource, isBibliographicJunk } from "./documentQuiz";
 
 const QUIZ_RE =
   /\b(?:(?:create|make|generate|build|start|write|draft)(?:\s+me)?(?:\s+a|\s+some)?\s+quiz|(?:can\s+you|could\s+you|please)\s+(?:create|make|generate|build|give\s+me)\s+(?:a\s+|some\s+)?quiz|give\s+me(?:\s+a|\s+some)?\s+quiz|quiz\s+me|quiz\s+on|quiz\s+(?:this|that|it|these|those)|a\s+quiz\s+(?:for|from|on|about)|test\s+me|practice\s+questions|multiple[-\s]?choice)\b/i;
@@ -92,15 +92,16 @@ export function celebrateReaction(index = 0) {
 }
 
 export function teachReaction(question) {
-  const explanation = String(question?.explanation || "").trim();
-  if (explanation && explanation.length <= 280) {
-    return `Not quite. ${explanation}`;
-  }
   const correct = question?.options?.find((option) => option.id === question.correct);
-  if (correct?.text) {
-    return `Not quite. Your notes point to: ${correct.text}`;
+  const raw = String(question?.explanation || correct?.text || "").trim();
+  if (isBibliographicJunk(raw) || isBibliographicJunk(correct?.text)) {
+    return "Not quite. That option is just a citation line. Look for the idea the paper is arguing.";
   }
-  return "Not quite. Let's look at that idea again, then continue.";
+  const taught = "Not quite. Sit with the claim in your notes, not the wording of one option. What is the paper actually saying?";
+  if (correct?.text && taught.includes(correct.text)) {
+    return "Not quite. Look for the claim about the idea, not a name or publisher.";
+  }
+  return taught;
 }
 
 export const IMAGE_HINT =

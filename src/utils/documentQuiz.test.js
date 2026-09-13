@@ -1,4 +1,9 @@
-import { answersGroundedInSource, generateQuizFromSource } from "./documentQuiz";
+import {
+  answersGroundedInSource,
+  filterQuizQuestions,
+  generateQuizFromSource,
+  isBibliographicJunk,
+} from "./documentQuiz";
 import { detectTeachIntent, extractConcept, teachReaction, tryOpenTeachStudio } from "./teachStudio";
 
 const NOTES = `
@@ -52,8 +57,47 @@ describe("document quiz flow", () => {
     const quiz = generateQuizFromSource(NOTES, { count: 1 });
     const question = quiz.questions[0];
     const taught = teachReaction(question);
+    const correct = question.options.find((option) => option.id === question.correct);
     expect(taught.startsWith("Not quite.")).toBe(true);
     expect(taught.length).toBeLessThan(320);
+    expect(taught).not.toBe(correct.text);
+    expect(taught).not.toContain(correct.text);
+  });
+
+  test("rejects citation and affiliation lines from a paper extract", () => {
+    const paper = `
+Cresswell, Royal Holloway, University of London, Egham, UK & 2009 Elsevier Inc.
+© 2009 Elsevier Inc. All rights reserved. doi:10.1016/j.geoforum.2008.07.001
+Place is a way of understanding how location becomes meaningful through human practice.
+Geography treats place as more than a point on a map.
+A sense of place grows from everyday encounters, not from a publisher address.
+`;
+    expect(isBibliographicJunk("Cresswell, Royal Holloway, University of London, Egham, UK & 2009 Elsevier Inc.")).toBe(
+      true
+    );
+    const quiz = generateQuizFromSource(paper, { sourceName: "Cresswell 2009_Place.pdf", count: 4 });
+    expect(quiz.questions.length).toBeGreaterThanOrEqual(2);
+    const blob = JSON.stringify(quiz).toLowerCase();
+    expect(blob).not.toMatch(/elsevier|royal holloway|egham|doi:10/);
+    quiz.questions.forEach((question) => {
+      const correct = question.options.find((option) => option.id === question.correct);
+      expect(isBibliographicJunk(correct.text)).toBe(false);
+      expect(teachReaction(question)).not.toMatch(/elsevier|royal holloway/i);
+      expect(teachReaction(question)).not.toContain(correct.text);
+    });
+    expect(
+      filterQuizQuestions([
+        {
+          text: "Who wrote this?",
+          options: [
+            { id: "A", text: "Cresswell, Royal Holloway, University of London, Egham, UK & 2009 Elsevier Inc." },
+            { id: "B", text: "Place is a way of understanding location." },
+          ],
+          correct: "A",
+          explanation: "Cresswell, Royal Holloway, University of London, Egham, UK & 2009 Elsevier Inc.",
+        },
+      ])
+    ).toHaveLength(0);
   });
 });
 

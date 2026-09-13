@@ -3,6 +3,43 @@ import { parseQuizQuestions } from "./parseStudyOutput";
 const MIN_SENTENCE = 24;
 const MAX_SENTENCE = 240;
 
+/** Rules for any future LLM quiz JSON generator — also used as a comment for extractive quizzes. */
+export const QUIZ_GENERATION_RULES = `
+Ignore citations, affiliations, publisher lines, copyright, running headers/footers, DOI/ISBN, Elsevier/Springer, and university address blocks.
+Prefer conceptual claims from the paper body.
+Never use a proper-noun address or bibliographic string as a correct option.
+`.trim();
+
+const JUNK_PUBLISHER =
+  /\b(elsevier|springer|wiley|copyright|all rights reserved|doi:?\s*\d|isbn|issn|corresponding author|received\s+\d|accepted\s+\d|©)\b/i;
+const JUNK_AFFILIATION =
+  /\b(royal holloway|egham|university of london|dept\.|department of|[A-Z]{2,}\s+Inc\.?)\b/i;
+const CLAIM_VERB =
+  /\b(is|are|was|were|be|been|being|means|refers|argues|suggests|shows|describes|defines|treats|becomes|occurs|located|because|when|that|how|why)\b/i;
+
+export function isBibliographicJunk(text) {
+  const raw = String(text || "").replace(/\s+/g, " ").trim();
+  if (!raw) return true;
+  if (JUNK_PUBLISHER.test(raw)) return true;
+  if (/\b(19|20)\d{2}\b/.test(raw) && /\b(elsevier|inc\.|ltd\.?|press)\b/i.test(raw)) return true;
+  if (JUNK_AFFILIATION.test(raw) && !CLAIM_VERB.test(raw)) return true;
+  const claim = CLAIM_VERB.test(raw);
+  if (!claim && /,\s*.+,\s*/.test(raw) && /\b(university|college|uk|usa|united kingdom|department)\b/i.test(raw)) {
+    return true;
+  }
+  if (!claim && (raw.match(/,/g) || []).length >= 3) return true;
+  const words = raw.split(/\s+/);
+  const capped = words.filter((word) => /^[A-Z]/.test(word.replace(/^[^A-Za-z]+/, ""))).length;
+  if (!claim && words.length >= 5 && capped / words.length >= 0.65) return true;
+  return false;
+}
+
+export function isConceptualClaim(text) {
+  const raw = String(text || "").replace(/\s+/g, " ").trim();
+  if (raw.length < MIN_SENTENCE || isBibliographicJunk(raw)) return false;
+  return CLAIM_VERB.test(raw);
+}
+
 function clip(text, max = 120) {
   const normalized = String(text || "").replace(/\s+/g, " ").trim();
   if (normalized.length <= max) return normalized;
@@ -21,7 +58,8 @@ function sentencesFrom(text) {
     .map((sentence) => sentence.replace(/\s+/g, " ").trim())
     .filter((sentence) => {
       if (sentence.length < MIN_SENTENCE || sentence.length > MAX_SENTENCE) return false;
-      return /[A-Za-z]/.test(sentence);
+      if (!/[A-Za-z]/.test(sentence)) return false;
+      return !isBibliographicJunk(sentence);
     });
 
   const unique = [];
@@ -55,7 +93,7 @@ function rotate(items, shift) {
  * Never invents campus policy.
  */
 export function generateQuizFromSource(text, { count = 5, sourceName = "your notes" } = {}) {
-  const parsed = parseQuizQuestions(text);
+  const parsed = filterQuizQuestions(parseQuizQuestions(text));
   if (parsed.length >= 2) {
     return {
       title: `Quiz · ${sourceName}`,
@@ -64,7 +102,9 @@ export function generateQuizFromSource(text, { count = 5, sourceName = "your not
     };
   }
 
-  const sentences = sentencesFrom(text);
+  const extracted = sentencesFrom(text);
+  const conceptual = extracted.filter(isConceptualClaim);
+  const sentences = conceptual.length >= 2 ? conceptual : extracted;
   if (sentences.length < 2) {
     return {
       title: `Quiz · ${sourceName}`,
@@ -87,7 +127,7 @@ export function generateQuizFromSource(text, { count = 5, sourceName = "your not
     const letters = ["A", "B", "C", "D"].slice(0, optionTexts.length);
     const correctId = letters[optionTexts.indexOf(correctText)];
 
-    questions.push({
+    const built = {
       number: String(questions.length + 1),
       text: stemFor(i),
       options: optionTexts.map((optionText, index) => ({
@@ -96,7 +136,10 @@ export function generateQuizFromSource(text, { count = 5, sourceName = "your not
       })),
       correct: correctId,
       explanation: correct,
-    });
+    };
+    if (filterQuizQuestions([built]).length) {
+      questions.push(built);
+    }
   }
 
   return {
@@ -105,6 +148,18 @@ export function generateQuizFromSource(text, { count = 5, sourceName = "your not
     questions,
     error: questions.length ? undefined : "not_enough_text",
   };
+}
+
+export function filterQuizQuestions(questions = []) {
+  return questions
+    .map((question) => {
+      const options = (question.options || []).filter((option) => !isBibliographicJunk(option.text));
+      const correct = options.find((option) => option.id === question.correct);
+      if (!correct || options.length < 2) return null;
+      if (isBibliographicJunk(question.explanation) || isBibliographicJunk(correct.text)) return null;
+      return { ...question, options };
+    })
+    .filter(Boolean);
 }
 
 export function answersGroundedInSource(questions, sourceText) {

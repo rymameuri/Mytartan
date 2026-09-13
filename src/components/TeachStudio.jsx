@@ -81,9 +81,18 @@ function TeachStudio({
           <ScottyAvatar ref={avatarRef} persona avatarState={avatarState} />
         </div>
         <p className="teach-studio__name">Scotty</p>
-        {isSpeaking && speechCaption ? (
+        <p className="teach-studio__role">
+          {avatarState === "speaking"
+            ? "Talking with you"
+            : avatarState === "listening"
+              ? "Listening…"
+              : avatarState === "thinking" || isLoading
+                ? "Thinking…"
+                : "Ready when you are"}
+        </p>
+        {studio.kind !== "quiz" && isSpeaking && speechCaption ? (
           <PersonaCaption text={speechCaption} />
-        ) : isLoading ? (
+        ) : studio.kind !== "quiz" && isLoading ? (
           <PersonaCaption text="thinking" typing />
         ) : null}
         {studio.reaction?.text && (

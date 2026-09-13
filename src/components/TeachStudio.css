@@ -56,6 +56,13 @@
   color: var(--app-text);
 }
 
+.teach-studio__role {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--app-text-muted);
+}
+
 .teach-studio__rail .persona-caption {
   color: var(--app-text-secondary);
 }

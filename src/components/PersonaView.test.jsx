@@ -279,8 +279,41 @@ describe("PersonaView empty state", () => {
     });
     expect(document.querySelector(".teach-studio .pv-avatar-frame")).toBeInTheDocument();
     expect(document.querySelector(".teach-studio .pv-avatar-frame--speaking")).toBeInTheDocument();
-    expect(screen.getByText(/Nice — that's the base case/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/talking with you/i).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/Nice — that's the base case/i)).not.toBeInTheDocument();
     expect(screen.getByText(/Yes — recursion has to stop somewhere/i)).toBeInTheDocument();
     expect(screen.getByText(/What is a base case/i)).toBeInTheDocument();
+  });
+
+  test("quiz reaction fragments never become Scotty's subtitle", () => {
+    renderPersona({
+      isSpeaking: true,
+      speechCaption: "UK & 2009 Elsevier Inc.",
+      messages: [
+        { role: "user", content: "create a quiz for this" },
+        { role: "assistant", content: "Quiz from your notes.", studio: true },
+      ],
+      teachStudio: {
+        kind: "quiz",
+        title: "Quiz · Cresswell 2009_Place.pdf",
+        sourceName: "Cresswell 2009_Place.pdf",
+        questions: [
+          {
+            number: "1",
+            text: "Which claim matches the paper?",
+            options: [
+              { id: "A", text: "Place is more than a point on a map" },
+              { id: "B", text: "Cresswell, Royal Holloway, University of London, Egham, UK & 2009 Elsevier Inc." },
+            ],
+            correct: "A",
+          },
+        ],
+        reaction: { type: "teach", text: "Not quite. Look for the claim about the idea, not a citation." },
+      },
+    });
+    expect(document.querySelector(".teach-studio__role")).toHaveTextContent(/talking with you/i);
+    expect(document.querySelector(".teach-studio__role").textContent).not.toMatch(/elsevier|cresswell|uk/i);
+    expect(document.querySelector(".teach-studio .persona-caption")).not.toBeInTheDocument();
+    expect(document.querySelector(".pv-header__role")).toHaveTextContent(/talking with you/i);
   });
 });
