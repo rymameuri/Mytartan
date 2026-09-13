@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const axios = require("axios");
+const { yearBandFromGraduationDate } = require("./contactMap");
 
 axios.defaults.proxy = false;
 
@@ -854,25 +855,28 @@ async function retrieveRelevantDocsAsync(
 
 // ─── Student profile context ──────────────────────────────────────────────────
 
-function buildStudentContext(profile) {
+function buildStudentContext(profile, { now } = {}) {
   if (!profile?.onboardingComplete) return "";
 
   const major = profile.major?.trim();
+  if (!major) return "";
+
   const graduationDate = profile.graduationDate?.trim();
   const learningStyle = profile.learningStyle?.trim();
   const intendedUse = profile.intendedUse?.trim();
+  const yearBand = yearBandFromGraduationDate(graduationDate, now);
 
-  if (!major || !graduationDate || !learningStyle || !intendedUse) {
-    return "";
+  let text = `You are speaking with a CMU-Q student majoring in ${major}`;
+  if (graduationDate) text += `, expected to graduate in ${graduationDate}`;
+  if (yearBand !== "unknown") text += ` (${yearBand})`;
+  text += ".";
+  if (learningStyle) text += ` Their preferred learning style is ${learningStyle}.`;
+  if (intendedUse) text += ` They primarily use this assistant for ${intendedUse}.`;
+  text += " Tailor tone and referrals to this student. Do not mention Course Tutor.";
+  if (intendedUse && /navigation|way around/i.test(intendedUse)) {
+    text += " When location questions come up, offer the campus map.";
   }
-
-  return (
-    `You are speaking with a CMU-Q student majoring in ${major}, expected to graduate in ${graduationDate}. ` +
-    `Their preferred learning style is ${learningStyle}. They primarily use this assistant for ${intendedUse}. ` +
-    "Tailor your tone, the depth of explanation, and which features you suggest accordingly. " +
-    "If learningStyle is visual, favor suggesting whiteboard brainstorms and flashcards in Tutor mode. " +
-    "If intendedUse mentions navigation, proactively offer to show the campus map when location questions come up."
-  );
+  return text;
 }
 
 function buildContextBlock(docs) {

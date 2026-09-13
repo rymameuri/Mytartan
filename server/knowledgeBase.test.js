@@ -298,12 +298,14 @@ describe("buildStudentContext", () => {
   };
 
   test("returns personalized paragraph for complete onboarding", () => {
-    const context = buildStudentContext(completeProfile);
+    const context = buildStudentContext(completeProfile, { now: new Date("2026-09-13") });
     expect(context).toMatch(/Computer Science/);
     expect(context).toMatch(/May 2027/);
+    expect(context).toMatch(/senior/);
     expect(context).toMatch(/visual/);
     expect(context).toMatch(/campus navigation/);
-    expect(context).toMatch(/whiteboard brainstorms and flashcards/i);
+    expect(context).not.toMatch(/whiteboard brainstorms and flashcards/i);
+    expect(context).toMatch(/Do not mention Course Tutor/);
   });
 
   test("returns empty string when onboarding is incomplete", () => {
@@ -312,10 +314,19 @@ describe("buildStudentContext", () => {
     expect(buildStudentContext(undefined)).toBe("");
   });
 
-  test("returns empty string when any profile field is missing", () => {
+  test("returns empty string without a major, even if other fields are present", () => {
     expect(buildStudentContext({ ...completeProfile, major: null })).toBe("");
-    expect(buildStudentContext({ ...completeProfile, graduationDate: "" })).toBe("");
-    expect(buildStudentContext({ ...completeProfile, learningStyle: "  " })).toBe("");
-    expect(buildStudentContext({ ...completeProfile, intendedUse: null })).toBe("");
+  });
+
+  test("still builds context when optional fields are missing", () => {
+    const context = buildStudentContext({
+      ...completeProfile,
+      graduationDate: "",
+      learningStyle: "  ",
+      intendedUse: null,
+    });
+    expect(context).toMatch(/Computer Science/);
+    expect(context).not.toMatch(/expected to graduate/);
+    expect(context).not.toMatch(/preferred learning style/);
   });
 });

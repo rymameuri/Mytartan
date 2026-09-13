@@ -26,6 +26,13 @@ const {
   formatCourseContextBlock,
 } = require("./tutorPrompt");
 const { buildPersonaPrompt, resolvePersonaMode } = require("./personaPrompt");
+const { classifyIntent, shouldSelectReferrals } = require("./intentRouter");
+const {
+  selectContacts,
+  formatReferralBlock,
+  buildUnknownFactReply,
+  buildSupportiveReferralReply,
+} = require("./contactMap");
 const { generateTutorSpeechScript } = require("./tutorSpeech");
 const { generateQuizRecap } = require("./tutorQuizRecap");
 const {
@@ -84,8 +91,7 @@ const LOW_CONFIDENCE_THRESHOLD = 40;
 const MYCMUQ_STUDENT_AFFAIRS_URL =
   "https://sites.google.com/andrew.cmu.edu/mycmuq-student-affairs/home";
 
-const LOW_CONFIDENCE_REPLY =
-  `I'm not totally sure I have this right, so I don't want to guess. Best bet is the myCMU-Q Student Affairs site, or just ask the office that owns it. Enrollment Services for registration and dates, Qatar Foundation Financial Aid for scholarships, or your advisor for degree stuff.\n${MYCMUQ_STUDENT_AFFAIRS_URL}`;
+const LOW_CONFIDENCE_REPLY = buildUnknownFactReply([]);
 
 const PLACEHOLDER_KEYS = new Set([
   "",
@@ -213,8 +219,7 @@ function formatApiError(err, fallback = "Request failed") {
   return err.message || fallback;
 }
 
-const NO_KB_MATCH_REPLY =
-  `Hmm, I don't have that one. Best bet is the myCMU-Q Student Affairs site, or just ask the relevant CMU-Q office.\n${MYCMUQ_STUDENT_AFFAIRS_URL}`;
+const NO_KB_MATCH_REPLY = buildUnknownFactReply([]);
 
 const CASUAL_NO_AI_REPLY = "I'm here. What's going on?";
 
@@ -225,8 +230,8 @@ CRITICAL RULES:
 - NEVER invent names, roles, emails, dates, policies, dollar amounts, or contacts.
 - If they are venting, chatting, asking for study advice, or making small talk, just talk. That is not a knowledge-base miss.
 - If the excerpts actually answer a campus-fact question, say the answer. Do not hedge.
-- If the excerpts do not cover an official campus fact, say so once, casually. Do not guess those details from general knowledge. Then still help — who to ask, what to check next.
-- When you cannot answer an official campus fact, include the myCMU-Q Student Affairs URL on its own line (${MYCMUQ_STUDENT_AFFAIRS_URL}). Mention the relevant CMU-Q office when appropriate. Do not put the URL in parentheses or spell it out.
+- If the excerpts do not cover an official campus fact, say so once, casually. Do not guess those details from general knowledge. Then give one next step from TAILORED REFERRALS if provided.
+- Never invent emails, phones, or extra offices. Do not dump a directory. If TAILORED REFERRALS are missing and you must send them somewhere, name one office in plain language.
 - When authoritative key facts are provided, prefer their exact values over conflicting prose excerpts on the same topic.
 - At CMU-Q, "StuCo" means the Student College (student-taught courses), NOT a generic student council or student government. Do not make up StuCo officer titles or members.
 - Briefly name the human-readable source when answering from context (for example "according to the Financial Aid page" or "based on the Cross Registration page"). Do NOT include [Source:] labels, file names, or file paths.
@@ -454,8 +459,15 @@ async function retrieveForQuery(mode, userQuery, recentMessages = []) {
   return { docs, confidence };
 }
 
-function assembleSystemPrompt(appMode, studentContext, body, { smallTalk = false } = {}) {
-  const parts = [buildPersonaPrompt(resolvePersonaMode(appMode), { smallTalk })];
+function assembleSystemPrompt(
+  appMode,
+  studentContext,
+  body,
+  { smallTalk = false, role = null, referrals = "" } = {}
+) {
+  const parts = [
+    buildPersonaPrompt(resolvePersonaMode(appMode), { smallTalk, role, referrals }),
+  ];
   if (studentContext?.trim()) parts.push(studentContext.trim());
   if (body?.trim()) parts.push(body.trim());
   return parts.join("\n\n");
@@ -485,8 +497,11 @@ function buildSystemPrompt(
     studentContext = "",
     keyFacts = [],
     canvasContext = null,
+    role = null,
+    referrals = "",
   } = {}
 ) {
+  const promptOptions = { role, referrals };
   if (mode === "tutor") {
     return assembleSystemPrompt(
       mode,
@@ -501,13 +516,19 @@ function buildSystemPrompt(
           sourceItemContext,
         }),
         canvasContext
-      )
+      ),
+      { ...promptOptions, role: "teacher" }
     );
   }
 
   let prompt = SYSTEM_PROMPTS[mode];
   if (!KB_MODES.has(mode)) {
-    return assembleSystemPrompt(mode, studentContext, prependCanvasContext(prompt, canvasContext));
+    return assembleSystemPrompt(
+      mode,
+      studentContext,
+      prependCanvasContext(prompt, canvasContext),
+      promptOptions
+    );
   }
 
   if (smallTalk) {
@@ -534,13 +555,13 @@ function buildSystemPrompt(
     prompt += `\n\n${contextSections.join("\n\n")}`;
   } else if (mode === "chat") {
     prompt +=
-      "\n\nNo campus excerpts matched this message. Just talk like a friend. Do not invent CMU-Q-specific facts, names, dates, or policies. If they asked for an official campus detail you do not have, say so in one casual sentence, point them to Student Affairs, and keep the conversation going.";
+      "\n\nNo campus excerpts matched this message. Just talk like a friend. Do not invent CMU-Q-specific facts, names, dates, or policies. If they asked for an official campus detail you do not have, say so in one casual sentence, use TAILORED REFERRALS if provided, and keep the conversation going.";
   } else {
     prompt +=
-      `\n\nNo matching knowledge base excerpts were found. If this is an official campus-fact question, tell them casually that you do not have that one and put the myCMU-Q Student Affairs URL on its own line (${MYCMUQ_STUDENT_AFFAIRS_URL}). If they are just talking, talk back — do not say you lack information. Do not guess or invent CMU-Q-specific facts.`;
+      "\n\nNo matching knowledge base excerpts were found. If this is an official campus-fact question, tell them casually that you do not have that one and use TAILORED REFERRALS if provided. If they are just talking, talk back. Do not guess or invent CMU-Q-specific facts.";
   }
 
-  return assembleSystemPrompt(mode, studentContext, prompt);
+  return assembleSystemPrompt(mode, studentContext, prompt, promptOptions);
 }
 
 function answerFromKnowledgeBase(userQuery) {
@@ -1139,6 +1160,15 @@ async function handleChatRequest(req, res, { stream = false } = {}) {
   const latestUserMessage = [...messages].reverse().find((m) => m.role === "user");
   const userQuery = latestUserMessage?.content || "";
   const smallTalk = KB_MODES.has(mode) && isSmallTalk(userQuery);
+  const intent = classifyIntent(userQuery, mode);
+  const referralTopic = intent.topic === "general" ? "academics" : intent.topic;
+  const referralContacts = shouldSelectReferrals(intent)
+    ? selectContacts({
+        profile: req.user?.profile,
+        topic: referralTopic,
+      })
+    : [];
+  const referralBlock = formatReferralBlock(referralContacts);
   const canvasConnection = req.user?.id ? getConnection(req.user.id) : null;
   const canvasRelated = KB_MODES.has(mode) && isCanvasRelatedQuery(userQuery);
 
@@ -1194,6 +1224,8 @@ async function handleChatRequest(req, res, { stream = false } = {}) {
     studentContext,
     keyFacts,
     canvasContext,
+    role: intent.role,
+    referrals: referralBlock,
   });
   const aiOptions = getAiGenerationOptions(mode);
   const courseContextBlock =
@@ -1203,10 +1235,13 @@ async function handleChatRequest(req, res, { stream = false } = {}) {
 
   const campusFactQuery = isCampusFactQuery(userQuery);
   const requireKbAnswer =
-    KB_MODES.has(mode) && mode !== "chat" && campusFactQuery;
+    KB_MODES.has(mode) &&
+    mode !== "chat" &&
+    campusFactQuery &&
+    intent.role !== "emotional_support";
 
   if (requireKbAnswer && docs.length === 0 && !canvasRelated && !canvasConnection) {
-    const reply = NO_KB_MATCH_REPLY;
+    const reply = buildUnknownFactReply(referralContacts);
     const noMatchConfidence = computeConfidence([]);
     return sendChatReply(res, reply, {
       stream,
@@ -1222,7 +1257,19 @@ async function handleChatRequest(req, res, { stream = false } = {}) {
     !canvasRelated &&
     !canvasConnection
   ) {
-    return sendChatReply(res, LOW_CONFIDENCE_REPLY, { stream, replyMeta });
+    return sendChatReply(res, buildUnknownFactReply(referralContacts), { stream, replyMeta });
+  }
+
+  if (intent.topic === "mental_health" && !hasAiKey()) {
+    return sendChatReply(res, buildSupportiveReferralReply(referralContacts), {
+      stream,
+      replyMeta: buildReplyMeta({
+        mode,
+        userQuery,
+        confidence: computeConfidence(docs),
+        keyFacts,
+      }),
+    });
   }
 
   if (!hasAiKey()) {

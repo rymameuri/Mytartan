@@ -78,4 +78,49 @@ describe("personaPrompt", () => {
   test("buildPersonaPrompt falls back to qa for unknown modes", () => {
     expect(buildPersonaPrompt("unknown")).toMatch(/MODE — Q&A/i);
   });
+
+  test("injects role + CS academic referrals without the rest of the directory", () => {
+    const { selectContacts, formatReferralBlock } = require("./contactMap");
+    const referrals = formatReferralBlock(selectContacts({
+      profile: { major: "Computer Science" },
+      topic: "academics",
+      now: new Date("2026-09-13"),
+    }));
+    const prompt = buildPersonaPrompt("qa", { role: "campus_assistant", referrals });
+    expect(prompt).toMatch(/ROLE — CAMPUS ASSISTANT/);
+    expect(prompt).toMatch(/rdriley@andrew\.cmu\.edu/);
+    expect(prompt).not.toMatch(/hbouamor@/);
+    expect(prompt).not.toMatch(/atorinab@/);
+    expect(prompt).toMatch(/Never dump a list of offices/);
+  });
+
+  test("injects IS academic referrals, not CS emails", () => {
+    const { selectContacts, formatReferralBlock } = require("./contactMap");
+    const referrals = formatReferralBlock(selectContacts({
+      profile: { major: "Information Systems" },
+      topic: "academics",
+      now: new Date("2026-09-13"),
+    }));
+    const prompt = buildPersonaPrompt("qa", { role: "campus_assistant", referrals });
+    expect(prompt).toMatch(/hbouamor@andrew\.cmu\.edu/);
+    expect(prompt).not.toMatch(/rdriley@/);
+  });
+
+  test("mental-health role names CaPS and forbids fake therapy", () => {
+    const { selectContacts, formatReferralBlock } = require("./contactMap");
+    const referrals = formatReferralBlock(selectContacts({ topic: "mental_health" }));
+    const prompt = buildPersonaPrompt("qa", { role: "emotional_support", referrals });
+    expect(prompt).toMatch(/ROLE — EMOTIONAL SUPPORT/);
+    expect(prompt).toMatch(/not a licensed therapist/i);
+    expect(prompt).toMatch(/Do not diagnose/);
+    expect(prompt).toMatch(/atorinab@andrew\.cmu\.edu/);
+    expect(prompt).not.toMatch(/rdriley@/);
+    expect(prompt).not.toMatch(/hbouamor@/);
+  });
+
+  test("teacher role stays Socratic", () => {
+    const prompt = buildPersonaPrompt("qa", { role: "teacher" });
+    expect(prompt).toMatch(/ROLE — TEACHER/);
+    expect(prompt).toMatch(/Socratic/);
+  });
 });

@@ -35,6 +35,7 @@
     "test:server": "jest server/ --testEnvironment node --no-coverage",
     "test:all": "CI=true react-scripts test --watchAll=false && jest server/ --testEnvironment node --no-coverage",
     "eval:rag": "node scripts/eval_rag.js",
+    "eval:referrals": "node scripts/eval_referrals.js",
     "kb:sync-manifest": "node scripts/kb-sync-manifest.js",
     "kb:validate": "node scripts/kb-validate.js",
     "test:retrieval": "node scripts/test-retrieval.js",

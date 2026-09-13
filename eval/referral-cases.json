@@ -1,0 +1,65 @@
+[
+  {
+    "id": "cs-freshman-unknown-academic",
+    "query": "What are the quantum physics lab hours?",
+    "profile": {
+      "major": "Computer Science",
+      "graduationDate": "May 2030"
+    },
+    "now": "2026-09-13",
+    "expectIntent": {
+      "role": "campus_assistant",
+      "topic": "academics",
+      "intent": "academic_fact"
+    },
+    "mustIncludeEmails": ["rdriley@andrew.cmu.edu", "ddourado@andrew.cmu.edu"],
+    "mustExcludeEmails": [
+      "hbouamor@andrew.cmu.edu",
+      "atorinab@andrew.cmu.edu",
+      "srian@andrew.cmu.edu"
+    ],
+    "maxContacts": 3
+  },
+  {
+    "id": "is-financial-aid",
+    "query": "Can I lose my scholarship if my GPA drops? I need financial aid help.",
+    "profile": {
+      "major": "Information Systems",
+      "graduationDate": "May 2028"
+    },
+    "now": "2026-09-13",
+    "expectIntent": {
+      "role": "campus_assistant",
+      "topic": "financial_aid",
+      "intent": "academic_fact"
+    },
+    "mustIncludeEmails": ["srian@andrew.cmu.edu"],
+    "mustExcludeEmails": [
+      "rdriley@andrew.cmu.edu",
+      "hbouamor@andrew.cmu.edu",
+      "atorinab@andrew.cmu.edu"
+    ],
+    "maxContacts": 3
+  },
+  {
+    "id": "mental-health-struggling",
+    "query": "I'm really struggling mentally",
+    "profile": {
+      "major": "Computer Science",
+      "graduationDate": "May 2030"
+    },
+    "now": "2026-09-13",
+    "expectIntent": {
+      "role": "emotional_support",
+      "topic": "mental_health",
+      "intent": "emotional_support"
+    },
+    "mustIncludeEmails": ["atorinab@andrew.cmu.edu"],
+    "mustExcludeEmails": [
+      "rdriley@andrew.cmu.edu",
+      "hbouamor@andrew.cmu.edu",
+      "srian@andrew.cmu.edu"
+    ],
+    "maxContacts": 1
+  }
+]

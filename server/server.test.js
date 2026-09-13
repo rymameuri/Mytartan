@@ -187,7 +187,7 @@ describe("POST /api/chat — input validation", () => {
     }
   });
 
-  test("tells user to check myCMU-Q Student Affairs when a campus-fact query has no KB match", async () => {
+  test("unknown campus fact says so once without dumping the contact directory", async () => {
     const res = await request(app)
       .post("/api/chat")
       .send({
@@ -196,9 +196,11 @@ describe("POST /api/chat — input validation", () => {
       });
 
     expect(res.status).toBe(200);
-    expect(res.body.reply).toMatch(/don't have that one/i);
-    expect(res.body.reply).toMatch(/mycmuq-student-affairs/i);
-    expect(res.body.reply).toMatch(/\nhttps:\/\/sites\.google\.com/);
+    expect(res.body.reply).toMatch(/don't have the official answer/i);
+    expect(res.body.reply).not.toMatch(/mycmuq-student-affairs/i);
+    expect((res.body.reply.match(/@[a-z0-9.-]+/gi) || []).length).toBeLessThanOrEqual(3);
+    expect(res.body.reply).not.toMatch(/hbouamor@/);
+    expect(res.body.reply).not.toMatch(/atorinab@/);
     expect(res.body.confidence).toMatchObject({ sourceCount: 0, score: 0 });
   });
 
@@ -225,7 +227,10 @@ describe("POST /api/chat — input validation", () => {
       });
 
     expect(res.status).toBe(200);
-    expect(res.body.reply).toBe(LOW_CONFIDENCE_REPLY);
+    expect(res.body.reply).toMatch(/don't have the official answer/i);
+    expect((res.body.reply.match(/@[a-z0-9.-]+/gi) || []).length).toBeLessThanOrEqual(3);
+    expect(res.body.reply).not.toMatch(/hbouamor@/);
+    expect(res.body.reply).not.toMatch(/atorinab@/);
     expect(res.body.confidence.score).toBeLessThan(LOW_CONFIDENCE_THRESHOLD);
   });
 
@@ -255,6 +260,87 @@ describe("POST /api/chat — input validation", () => {
       });
 
     expect(res.status).not.toBe(400);
+  });
+
+  test("CS profile unknown academic refers CS advising, not every office", async () => {
+    const email = `cs-referral-${Date.now()}@example.com`;
+    const signupRes = await request(app)
+      .post("/api/auth/signup")
+      .send({ email, password: "testpass123" });
+    await request(app)
+      .patch("/api/auth/profile")
+      .set("Authorization", `Bearer ${signupRes.body.token}`)
+      .send({
+        major: "Computer Science",
+        graduationDate: "May 2030",
+        learningStyle: "visual",
+        intendedUse: "campus navigation",
+      });
+
+    const res = await request(app)
+      .post("/api/chat")
+      .set("Authorization", `Bearer ${signupRes.body.token}`)
+      .send({
+        messages: [{ role: "user", content: "heygen xyzzy quuxington" }],
+        mode: "qa",
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.reply).toMatch(/don't have the official answer/i);
+    expect(res.body.reply).toMatch(/rdriley@andrew\.cmu\.edu/);
+    expect(res.body.reply).toMatch(/ddourado@andrew\.cmu\.edu/);
+    expect(res.body.reply).not.toMatch(/hbouamor@/);
+    expect(res.body.reply).not.toMatch(/atorinab@/);
+    expect(res.body.reply).not.toMatch(/srian@/);
+    expect((res.body.reply.match(/@[a-z0-9.-]+/gi) || []).length).toBeLessThanOrEqual(3);
+  });
+
+  test("IS profile unknown academic refers IS advising, not CS", async () => {
+    const email = `is-referral-${Date.now()}@example.com`;
+    const signupRes = await request(app)
+      .post("/api/auth/signup")
+      .send({ email, password: "testpass123" });
+    await request(app)
+      .patch("/api/auth/profile")
+      .set("Authorization", `Bearer ${signupRes.body.token}`)
+      .send({
+        major: "Information Systems",
+        graduationDate: "May 2028",
+        learningStyle: "reading",
+        intendedUse: "campus navigation",
+      });
+
+    const res = await request(app)
+      .post("/api/chat")
+      .set("Authorization", `Bearer ${signupRes.body.token}`)
+      .send({
+        messages: [{ role: "user", content: "heygen xyzzy quuxington" }],
+        mode: "qa",
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.reply).toMatch(/hbouamor@andrew\.cmu\.edu/);
+    expect(res.body.reply).not.toMatch(/rdriley@/);
+    expect(res.body.reply).not.toMatch(/atorinab@/);
+    expect((res.body.reply.match(/@[a-z0-9.-]+/gi) || []).length).toBeLessThanOrEqual(3);
+  });
+
+  test("mental-health message hands off to CaPS without fake therapy or a directory", async () => {
+    const res = await request(app)
+      .post("/api/chat")
+      .send({
+        messages: [{ role: "user", content: "I'm really struggling mentally" }],
+        mode: "qa",
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.reply).toMatch(/I'm here with you/);
+    expect(res.body.reply).toMatch(/not a counselor/i);
+    expect(res.body.reply).toMatch(/atorinab@andrew\.cmu\.edu/);
+    expect(res.body.reply).not.toMatch(/rdriley@/);
+    expect(res.body.reply).not.toMatch(/hbouamor@/);
+    expect(res.body.reply).not.toMatch(/diagnos/i);
+    expect((res.body.reply.match(/@[a-z0-9.-]+/gi) || []).length).toBe(1);
   });
 });
 
