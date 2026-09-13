@@ -31,8 +31,10 @@ import { COURSE_TUTOR_ENABLED } from "./config/features";
 import { extractStudyDocuments } from "./utils/extractSyllabusText";
 import { generateQuizFromSource } from "./utils/documentQuiz";
 import { buildMindMapFromConcept, guessTitle } from "./utils/mindMap";
+import { detectSheetKind, generateStudySheet } from "./utils/studySheet";
 import {
   ATTACH_HINT,
+  SHEET_ATTACH_HINT,
   celebrateReaction,
   detectTeachIntent,
   teachReaction,
@@ -175,6 +177,32 @@ function AppShell() {
     }
     if (teachStudio.step === prevMindStepRef.current) return;
     prevMindStepRef.current = teachStudio.step;
+    if (teachStudio.step > 0 && teachStudio.reaction?.text && !readMutedPreference(userId)) {
+      speakFormatted(teachStudio.reaction.text);
+    }
+  }, [teachStudio, speakFormatted, userId]);
+
+  const prevSheetStepRef = useRef(0);
+  useEffect(() => {
+    if (teachStudio?.kind !== "sheet") {
+      prevSheetStepRef.current = 0;
+      return;
+    }
+    if (teachStudio.step === prevSheetStepRef.current) return;
+    prevSheetStepRef.current = teachStudio.step;
+    if (teachStudio.step > 0 && teachStudio.reaction?.text && !readMutedPreference(userId)) {
+      speakFormatted(teachStudio.reaction.text);
+    }
+  }, [teachStudio, speakFormatted, userId]);
+
+  const prevSheetStepRef = useRef(0);
+  useEffect(() => {
+    if (teachStudio?.kind !== "sheet") {
+      prevSheetStepRef.current = 0;
+      return;
+    }
+    if (teachStudio.step === prevSheetStepRef.current) return;
+    prevSheetStepRef.current = teachStudio.step;
     if (teachStudio.step > 0 && teachStudio.reaction?.text && !readMutedPreference(userId)) {
       speakFormatted(teachStudio.reaction.text);
     }
@@ -365,6 +393,30 @@ function AppShell() {
     URL.revokeObjectURL(url);
   }
 
+  function rebuildSheetStudio(source, { kind, density, seed, userContent }) {
+    const sheet = generateStudySheet(source.text, {
+      sourceName: source.name,
+      major: user?.profile?.major,
+      kind,
+      density,
+      seed,
+    });
+    if (!sheet.sections.length) return null;
+    return {
+      kind: "sheet",
+      title: sheet.title,
+      sourceName: source.name,
+      sourceText: source.text,
+      sheetKind: sheet.kind,
+      density: sheet.density,
+      seed,
+      sheet,
+      step: 0,
+      reaction: { type: "teach", text: sheet.sections[0]?.narration || "I'll lay this out like a CMU one-pager." },
+      userContent,
+    };
+  }
+
   const handleMindMapStep = useCallback((next) => {
     setTeachStudio((current) => {
       if (!current || current.kind !== "mindmap") return current;
@@ -378,6 +430,48 @@ function AppShell() {
       };
     });
   }, []);
+
+  const handleSheetStep = useCallback((next) => {
+    setTeachStudio((current) => {
+      if (!current || current.kind !== "sheet") return current;
+      const last = Math.max((current.sheet?.sections?.length ?? 1) - 1, 0);
+      const step = Math.min(Math.max(next, 0), last);
+      if (step === current.step) return current;
+      return {
+        ...current,
+        step,
+        reaction: { type: "teach", text: current.sheet.sections[step]?.narration || "" },
+      };
+    });
+  }, []);
+
+  function handleSheetDensity(density) {
+    const source = documentSourceRef.current;
+    setTeachStudio((current) => {
+      if (!current || current.kind !== "sheet" || !source?.text) return current;
+      const next = rebuildSheetStudio(source, {
+        kind: current.sheetKind || current.sheet?.kind,
+        density,
+        seed: current.seed || 0,
+        userContent: current.userContent,
+      });
+      return next || current;
+    });
+  }
+
+  function handleSheetRegenerate() {
+    const source = documentSourceRef.current;
+    setTeachStudio((current) => {
+      if (!current || current.kind !== "sheet" || !source?.text) return current;
+      const next = rebuildSheetStudio(source, {
+        kind: current.sheetKind || current.sheet?.kind,
+        density: current.density || "dense",
+        seed: (current.seed || 0) + 1,
+        userContent: current.userContent,
+      });
+      return next || current;
+    });
+  }
 
   function handleQuizAnswer({ correct, question, index }) {
     const text = correct ? celebrateReaction(index) : teachReaction(question);
@@ -431,8 +525,9 @@ function AppShell() {
 
     const wantQuiz = intent?.kind === "quiz" || (emptyAsk && files.length > 0);
     const wantMap = intent?.kind === "mindmap";
+    const wantSheet = intent?.kind === "sheet";
 
-    if (!wantQuiz && !wantMap) {
+    if (!wantQuiz && !wantMap && !wantSheet) {
       if (warnings.length && emptyAsk) {
         appendStudioMessages(
           files.map((file) => file.name).join(", ") || "Uploaded a file",
@@ -447,7 +542,9 @@ function AppShell() {
       String(text || "").trim() ||
       (wantQuiz
         ? `Quiz me on ${files.map((file) => file.name).join(", ") || source?.name || "this"}`
-        : `Whiteboard ${intent?.concept || source?.name || "this"}`);
+        : wantSheet
+          ? `Cheat sheet from ${files.map((file) => file.name).join(", ") || source?.name || "this"}`
+          : `Whiteboard ${intent?.concept || source?.name || "this"}`);
 
     if (wantQuiz) {
       if (!source?.text) {
@@ -473,6 +570,33 @@ function AppShell() {
         questions: quiz.questions,
         reaction: { type: "teach", text: "Whenever you're ready — pick an answer." },
       });
+      return true;
+    }
+
+    if (wantSheet) {
+      if (!source?.text) {
+        appendStudioMessages(userContent, warnings[0] || SHEET_ATTACH_HINT);
+        return true;
+      }
+      const sheetKind = detectSheetKind(text);
+      const studio = rebuildSheetStudio(source, {
+        kind: sheetKind,
+        density: "dense",
+        seed: 0,
+        userContent,
+      });
+      if (!studio) {
+        appendStudioMessages(
+          userContent,
+          "I couldn't pull a tight sheet from that file. Try a lecture PDF or PPTX with a few full sentences."
+        );
+        return true;
+      }
+      appendStudioMessages(
+        userContent,
+        `A ${studio.sheet.kind === "cheatsheet" ? "cheat sheet" : studio.sheet.kind.replace("-", " ")} from your notes — ${studio.sheet.courseLabel} style. I'll reveal it section by section. Not an official past paper.`
+      );
+      setTeachStudio(studio);
       return true;
     }
 
@@ -891,6 +1015,9 @@ function AppShell() {
               onQuizAnswer={handleQuizAnswer}
               onDocumentQuizComplete={handleDocumentQuizComplete}
               onMindMapStep={handleMindMapStep}
+              onSheetStep={handleSheetStep}
+              onSheetDensity={handleSheetDensity}
+              onSheetRegenerate={handleSheetRegenerate}
             />
           )}
         </div>

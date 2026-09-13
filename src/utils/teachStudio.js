@@ -1,5 +1,7 @@
 const QUIZ_RE =
   /\b(quiz me|quiz on|test me|give me (a |some )?quiz|practice questions|multiple[-\s]?choice)\b/i;
+const SHEET_RE =
+  /\b(cheat\s*sheet|study\s*guide|formula\s*sheet|exam review|cram sheet|one[- ]pager|condense|study sheet)\b/i;
 const MAP_RE =
   /\b(white\s*board|mind[-\s]?map|mindmap|map this out|draw (this|it) out|sketch this)\b/i;
 const STRUGGLE_RE =
@@ -28,6 +30,9 @@ export function detectTeachIntent(text, { hasSource = false } = {}) {
 
   if (QUIZ_RE.test(raw)) {
     return { kind: "quiz", concept: extractConcept(raw) };
+  }
+  if (SHEET_RE.test(raw)) {
+    return { kind: "sheet", concept: extractConcept(raw) };
   }
   if (MAP_RE.test(raw)) {
     return { kind: "mindmap", concept: extractConcept(raw), struggle: false };
@@ -62,3 +67,6 @@ export const IMAGE_HINT =
 
 export const ATTACH_HINT =
   "Attach a PDF, PPTX, Word, or text file from your notes — I quiz you on your material, not campus policy.";
+
+export const SHEET_ATTACH_HINT =
+  "Attach your slides or notes first — I'll build a CMU-style one-pager from your material, not a fake past paper.";

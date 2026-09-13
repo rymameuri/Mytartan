@@ -37,6 +37,9 @@ function PersonaView({
   onQuizAnswer,
   onDocumentQuizComplete,
   onMindMapStep,
+  onSheetStep,
+  onSheetDensity,
+  onSheetRegenerate,
 }) {
   const messagesContainerRef = useRef(null);
   const isNearBottomRef = useRef(true);
@@ -258,6 +261,9 @@ function PersonaView({
           onAnswer={onQuizAnswer}
           onQuizComplete={onDocumentQuizComplete}
           onMindMapStep={onMindMapStep}
+          onSheetStep={onSheetStep}
+          onSheetDensity={onSheetDensity}
+          onSheetRegenerate={onSheetRegenerate}
           isDesktop={isDesktop}
         />
       ) : (
@@ -397,8 +403,10 @@ function PersonaView({
                 ? "One question at a time, from your notes — not campus policy."
                 : studioOpen && teachStudio?.kind === "mindmap"
                   ? "The map grows as Scotty explains."
+                : studioOpen && teachStudio?.kind === "sheet"
+                  ? "The sheet reveals section by section — print when it's all on the page."
                 : documentSource
-                  ? `Notes ready: ${documentSource.name}. Say “quiz me on this” or “whiteboard this”.`
+                  ? `Notes ready: ${documentSource.name}. Quiz me, whiteboard this, or ask for a cheat sheet.`
                 : "Scotty can get things wrong. Check campus sources."}
         </p>
       </footer>

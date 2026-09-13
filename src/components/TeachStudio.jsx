@@ -3,6 +3,7 @@ import ScottyAvatar from "./ScottyAvatar";
 import MessageContent from "./MessageContent";
 import QuizPlayer from "./QuizPlayer";
 import MindMapBoard from "./MindMapBoard";
+import StudySheetBoard from "./StudySheetBoard";
 import "./TeachStudio.css";
 
 function TeachStudio({
@@ -15,17 +16,33 @@ function TeachStudio({
   onAnswer,
   onQuizComplete,
   onMindMapStep,
+  onSheetStep,
+  onSheetDensity,
+  onSheetRegenerate,
   isDesktop = true,
 }) {
   useEffect(() => {
-    if (studio?.kind !== "mindmap") return undefined;
-    const last = (studio.map?.steps?.length ?? 1) - 1;
-    if (studio.step >= last) return undefined;
-    const timer = window.setTimeout(() => {
-      onMindMapStep?.(studio.step + 1);
-    }, 3800);
-    return () => window.clearTimeout(timer);
-  }, [studio?.kind, studio?.step, studio?.map?.steps?.length, onMindMapStep]);
+    if (studio?.kind === "mindmap") {
+      const last = (studio.map?.steps?.length ?? 1) - 1;
+      if (studio.step >= last) return undefined;
+      const timer = window.setTimeout(() => onMindMapStep?.(studio.step + 1), 3800);
+      return () => window.clearTimeout(timer);
+    }
+    if (studio?.kind === "sheet") {
+      const last = (studio.sheet?.sections?.length ?? 1) - 1;
+      if (studio.step >= last) return undefined;
+      const timer = window.setTimeout(() => onSheetStep?.(studio.step + 1), 2800);
+      return () => window.clearTimeout(timer);
+    }
+    return undefined;
+  }, [
+    studio?.kind,
+    studio?.step,
+    studio?.map?.steps?.length,
+    studio?.sheet?.sections?.length,
+    onMindMapStep,
+    onSheetStep,
+  ]);
 
   if (!studio) return null;
 
@@ -58,7 +75,11 @@ function TeachStudio({
       <section className="teach-studio__pane">
         <header className="teach-studio__pane-bar">
           <p className="teach-studio__kicker">
-            {studio.kind === "quiz" ? "Quiz studio" : "Whiteboard studio"}
+            {studio.kind === "quiz"
+              ? "Quiz studio"
+              : studio.kind === "sheet"
+                ? "Study studio"
+                : "Whiteboard studio"}
             {studio.sourceName ? ` · ${studio.sourceName}` : ""}
           </p>
           <button type="button" className="teach-studio__close" onClick={onClose}>
@@ -77,6 +98,16 @@ function TeachStudio({
           )}
           {studio.kind === "mindmap" && (
             <MindMapBoard map={studio.map} step={studio.step} onContinue={onMindMapStep} />
+          )}
+          {studio.kind === "sheet" && (
+            <StudySheetBoard
+              sheet={studio.sheet}
+              step={studio.step}
+              density={studio.density}
+              onContinue={onSheetStep}
+              onToggleDensity={onSheetDensity}
+              onRegenerate={onSheetRegenerate}
+            />
           )}
         </div>
       </section>

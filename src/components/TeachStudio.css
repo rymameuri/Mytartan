@@ -138,6 +138,18 @@
   border-radius: 16px;
   background: var(--app-surface);
   box-shadow: 0 10px 30px rgba(28, 25, 23, 0.05);
+  animation: studio-scene 0.45s ease both;
+}
+
+@keyframes studio-scene {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 @media (max-width: 899px) {

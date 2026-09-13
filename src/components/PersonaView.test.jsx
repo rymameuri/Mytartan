@@ -141,6 +141,44 @@ describe("PersonaView empty state", () => {
     expect(screen.getAllByText(/Start at the center/i).length).toBeGreaterThan(0);
   });
 
+  test("opens a study studio for a CMU-style cheat sheet", () => {
+    renderPersona({
+      messages: [{ role: "user", content: "cheat sheet from these slides" }],
+      teachStudio: {
+        kind: "sheet",
+        title: "Cheat sheet · 15-112",
+        sourceName: "15-112-recursion.pptx",
+        density: "dense",
+        step: 0,
+        sheet: {
+          kind: "cheatsheet",
+          title: "Cheat sheet · 15-112",
+          sourceName: "15-112-recursion.pptx",
+          courseLabel: "15-112",
+          courseCode: "15-112",
+          density: "dense",
+          disclaimer: "From your notes — not an official past paper.",
+          sections: [
+            {
+              id: "defs",
+              kicker: "Be exact",
+              title: "Key definitions",
+              items: [{ lead: "Core", body: "Recursion needs a base case so the calls can stop." }],
+              narration: "Definitions first.",
+            },
+          ],
+          footerNote: "Not official CMU exams.",
+        },
+        reaction: { type: "teach", text: "I'll lay this out like a CMU one-pager." },
+      },
+    });
+    expect(screen.getByText(/study studio/i)).toBeInTheDocument();
+    expect(screen.getByText(/Key definitions/i)).toBeInTheDocument();
+    expect(screen.getByText(/not an official past paper/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /denser/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /print/i })).toBeInTheDocument();
+  });
+
   test("hides chips and the hero once a conversation has started", () => {
     renderPersona({
       messages: [
