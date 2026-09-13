@@ -9,11 +9,9 @@ import {
 import tartanScottyFacialBase from "../assets/tartan-scotty-facial-base.png";
 import { useFacialCoords } from "../hooks/useFacialCoords";
 import { facialCoordsToStyle } from "../utils/facialCoords";
-import { computeRms, mouthFromAmplitude, smoothAmplitude } from "../utils/mouthSync";
 import {
   createTtsError,
   fetchTtsAudio,
-  getUnlockedAudioContext,
   unlockHtmlAudio,
 } from "../utils/elevenLabsVoice";
 import "./ScottyAvatar.css";
@@ -113,37 +111,23 @@ const ScottyAvatar = forwardRef(function ScottyAvatar(
   const facialCoords = useFacialCoords();
   const [mouth, setMouth] = useState(null);
   const audioRef = useRef(null);
-  const audioCtxRef = useRef(null);
-  const analyserRef = useRef(null);
-  const timeDataRef = useRef(null);
   const sourceRef = useRef(null);
   const objectUrlRef = useRef(null);
   const progressRafRef = useRef(null);
   const speakResolveRef = useRef(null);
   const speakRejectRef = useRef(null);
   const mouthRef = useRef(null);
-  const smoothedLevelRef = useRef(0);
 
   const resetMouth = useCallback(() => {
     mouthRef.current = null;
-    smoothedLevelRef.current = 0;
     setMouth(null);
   }, []);
 
   const sampleMouth = useCallback(() => {
-    const analyser = analyserRef.current;
-    const samples = timeDataRef.current;
-    if (!analyser || !samples) return;
-
-    analyser.getByteTimeDomainData(samples);
-    smoothedLevelRef.current = smoothAmplitude(
-      smoothedLevelRef.current,
-      computeRms(samples)
-    );
-    const next = mouthFromAmplitude(
-      smoothedLevelRef.current,
-      mouthRef.current || "closed"
-    );
+    const audio = audioRef.current;
+    if (!audio || audio.paused || audio.ended) return;
+    const phase = audio.currentTime % 0.36;
+    const next = phase < 0.12 ? "closed" : phase < 0.24 ? "small" : "wide";
     if (next !== mouthRef.current) {
       mouthRef.current = next;
       setMouth(next);
@@ -186,36 +170,8 @@ const ScottyAvatar = forwardRef(function ScottyAvatar(
       audio.volume = muted ? 0 : 1;
       audioRef.current = audio;
 
-      if (!audioCtxRef.current) {
-        audioCtxRef.current = getUnlockedAudioContext() || null;
-        if (!audioCtxRef.current) {
-          const AudioContext = window.AudioContext || window.webkitAudioContext;
-          if (AudioContext) {
-            audioCtxRef.current = new AudioContext();
-          }
-        }
-      }
-
-      const ctx = audioCtxRef.current;
-      if (ctx) {
-        if (ctx.state === "suspended") {
-          await ctx.resume();
-        }
-        if (!analyserRef.current) {
-          const analyser = ctx.createAnalyser();
-          analyser.fftSize = 1024;
-          analyser.smoothingTimeConstant = 0.55;
-          analyser.connect(ctx.destination);
-          analyserRef.current = analyser;
-          timeDataRef.current = new Uint8Array(analyser.fftSize);
-        }
-        const source = ctx.createMediaElementSource(audio);
-        source.connect(analyserRef.current);
-        sourceRef.current = source;
-        mouthRef.current = "closed";
-        smoothedLevelRef.current = 0;
-        setMouth("closed");
-      }
+      mouthRef.current = "closed";
+      setMouth("closed");
 
       const emitProgress = () => {
         onTimeUpdate?.(audio.currentTime, audioDuration(audio));
@@ -268,16 +224,10 @@ const ScottyAvatar = forwardRef(function ScottyAvatar(
 
         const startPlayback = async () => {
           try {
-            if (ctx?.state === "suspended") {
-              await ctx.resume();
-            }
             await audio.play();
           } catch (firstErr) {
             try {
               unlockHtmlAudio();
-              if (ctx?.state === "suspended") {
-                await ctx.resume();
-              }
               await audio.play();
             } catch {
               endPlayback(
@@ -305,12 +255,6 @@ const ScottyAvatar = forwardRef(function ScottyAvatar(
       speakResolveRef.current = null;
       speakRejectRef.current = null;
       cleanupPlayback({ audioRef, objectUrlRef, sourceRef, progressRafRef });
-      if (audioCtxRef.current) {
-        audioCtxRef.current.close?.().catch(() => {});
-        audioCtxRef.current = null;
-        analyserRef.current = null;
-        timeDataRef.current = null;
-      }
     },
     []
   );

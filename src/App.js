@@ -760,13 +760,6 @@ function AppShell() {
             ...assistantExtras,
           },
         ]);
-        if (
-          activeMode === "qa" &&
-          spokenReply.trim() &&
-          !isStructuredStudioContent(spokenReply)
-        ) {
-          speakFormatted(spokenReply);
-        }
       }
 
       if (activeMode === "tutor" && gotTokens && reply.trim() && !readMutedPreference(userId)) {

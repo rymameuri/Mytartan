@@ -115,6 +115,7 @@ export function usePersonaSpeech(avatarRef, userId) {
   );
 
   const finishSpeaking = useCallback(() => {
+    inFlightTextRef.current = "";
     clearTimeout(speakTimerRef.current);
     speakTimerRef.current = null;
     clearRevealTimers();
@@ -180,11 +181,14 @@ export function usePersonaSpeech(avatarRef, userId) {
       if (!normalized) return;
       if (inFlightTextRef.current === normalized) return;
 
+      speakGenRef.current += 1;
+      window.speechSynthesis?.cancel();
+      avatarRef?.current?.stop?.();
       clearTimeout(speakTimerRef.current);
       clearRevealTimers();
       clearCaption();
 
-      const gen = ++speakGenRef.current;
+      const gen = speakGenRef.current;
       inFlightTextRef.current = normalized;
       fullTextRef.current = normalized;
       setIsPreparingSpeech(true);
@@ -195,7 +199,6 @@ export function usePersonaSpeech(avatarRef, userId) {
 
       const finishIfCurrent = () => {
         if (speakGenRef.current === gen) {
-          inFlightTextRef.current = "";
           finishSpeaking();
         }
       };
@@ -247,7 +250,6 @@ export function usePersonaSpeech(avatarRef, userId) {
                 ? "[Scotty voice] ElevenLabs /api/tts succeeded but playback was blocked. Tap “Tap to play Scotty”. Not using browser TTS."
                 : `[Scotty voice] ElevenLabs failed; not falling back to browser TTS: ${err.message}`
             );
-            inFlightTextRef.current = "";
             return;
           }
           console.warn("[Scotty voice] ElevenLabs not configured, using browser TTS:", err.message);
@@ -265,7 +267,6 @@ export function usePersonaSpeech(avatarRef, userId) {
       if (speakGenRef.current !== gen) return;
       setVoiceStatus("browser");
       speakBrowser(normalized);
-      inFlightTextRef.current = "";
     },
     [
       avatarRef,
@@ -315,6 +316,10 @@ export function usePersonaSpeech(avatarRef, userId) {
 /**
  * Auto-read assistant replies aloud (respects mute preference in localStorage).
  */
+export function spokenReplyKey(text) {
+  return normalizeSpeechCaption(toSpokenText(text));
+}
+
 export function useAutoSpeakReply({
   enabled,
   isLoading,
@@ -347,16 +352,17 @@ export function useAutoSpeakReply({
       (replyCandidate && !isStructuredStudioContent(replyCandidate)
         ? replyCandidate
         : "");
+    const key = spokenReplyKey(toSpeak);
 
-    if (lastSpokenRef.current === null) {
-      lastSpokenRef.current = toSpeak || "";
-      if (!wasLoading) return;
+    if (lastSpokenRef.current === null && !wasLoading) {
+      lastSpokenRef.current = key || "";
+      return;
     }
 
     if (!toSpeak) return;
-    if (!wasLoading && lastSpokenRef.current === toSpeak) return;
+    if (lastSpokenRef.current === key) return;
 
-    lastSpokenRef.current = toSpeak;
+    lastSpokenRef.current = key;
     if (voiceModeRef) voiceModeRef.current = false;
     speak(toSpeak);
   }, [enabled, isLoading, lastReply, speechText, voiceModeRef, speak, chatSessionKey, userId]);
