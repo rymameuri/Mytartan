@@ -30,7 +30,7 @@ import { readSidebarCollapsed, writeSidebarCollapsed } from "./utils/sidebarPref
 import { COURSE_TUTOR_ENABLED } from "./config/features";
 import { extractStudyDocuments } from "./utils/extractSyllabusText";
 import { generateQuizFromSource } from "./utils/documentQuiz";
-import { buildMindMapFromConcept, guessTitle } from "./utils/mindMap";
+import { buildMindMapFromConcept } from "./utils/mindMap";
 import { detectSheetKind, generateStudySheet } from "./utils/studySheet";
 import {
   ATTACH_HINT,
@@ -588,16 +588,16 @@ function AppShell() {
       return true;
     }
 
-    const concept = intent?.concept || guessTitle(source?.text) || "this idea";
-    const map = buildMindMapFromConcept(concept, {
+    const map = buildMindMapFromConcept(intent?.concept, {
       sourceText: source?.text || "",
+      sourceName: source?.name || "",
       struggle: Boolean(intent?.struggle),
     });
     appendStudioMessages(
       userContent,
       intent?.struggle
         ? "This one's sticky — I'll walk it on the board, one piece at a time."
-        : `I'll map ${concept} beside us. Watch the board as we go.`
+        : `I'll map ${map.title} beside us. Watch the board as we go.`
     );
     setTeachStudio({
       kind: "mindmap",

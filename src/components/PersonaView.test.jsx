@@ -285,6 +285,46 @@ describe("PersonaView empty state", () => {
     expect(screen.getByText(/What is a base case/i)).toBeInTheDocument();
   });
 
+  test("whiteboard aside teaches the concept and never becomes Scotty's subtitle", () => {
+    renderPersona({
+      isSpeaking: true,
+      speechCaption: "Cresswell, Royal Holloway, University of London, Egham, UK & 2009 Elsevier Inc.",
+      messages: [
+        { role: "user", content: "whiteboard this" },
+        { role: "assistant", content: "I'll map Place beside us.", studio: true },
+      ],
+      teachStudio: {
+        kind: "mindmap",
+        title: "Place",
+        step: 1,
+        map: {
+          title: "Place",
+          width: 800,
+          height: 520,
+          nodes: [
+            { id: "n0", label: "Place", x: 400, y: 250 },
+            { id: "n1", label: "Location", x: 600, y: 250 },
+          ],
+          links: [{ id: "e1", from: "n0", to: "n1" }],
+          steps: [
+            { revealNodeIds: ["n0"], revealLinkIds: [], narration: "Here's Place on the board." },
+            {
+              revealNodeIds: ["n1"],
+              revealLinkIds: ["e1"],
+              narration: "Location — the physical point, not a publisher address.",
+            },
+          ],
+        },
+        reaction: { type: "teach", text: "Location — the physical point, not a publisher address." },
+      },
+    });
+    expect(document.querySelector(".teach-studio__role")).toHaveTextContent(/talking with you/i);
+    expect(document.querySelector(".teach-studio__role").textContent).not.toMatch(/elsevier|royal holloway|uk/i);
+    expect(document.querySelector(".teach-studio .persona-caption")).not.toBeInTheDocument();
+    expect(screen.getAllByText(/Location — the physical point/i).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/All rights reserved/i)).not.toBeInTheDocument();
+  });
+
   test("quiz reaction fragments never become Scotty's subtitle", () => {
     renderPersona({
       isSpeaking: true,

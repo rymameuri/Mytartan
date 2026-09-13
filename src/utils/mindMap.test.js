@@ -1,4 +1,5 @@
-import { buildMindMapFromConcept, normalizeMindMap, visibleMindMap } from "./mindMap";
+import { buildMindMapFromConcept, extractConceptLabels, normalizeMindMap, visibleMindMap } from "./mindMap";
+import { isBibliographicJunk } from "./sourceTextFilters";
 
 const RAW = {
   title: "Recursion",
@@ -78,5 +79,74 @@ describe("mind-map data shape", () => {
       links: [{ from: "a", to: "missing" }],
     });
     expect(map.links).toHaveLength(0);
+  });
+
+  test("Cresswell-like extract keeps concept labels and drops citation junk", () => {
+    const paper = `
+Cresswell, Royal Holloway, University of London, Egham, UK & 2009 Elsevier Inc.
+© 2009 Elsevier Inc. All rights reserved. doi:10.1016/j.geoforum.2008.07.001
+All rights reserved.
+Place is a way of understanding how location becomes meaningful through human practice.
+Cresswell describes place through location, locale, and a sense of place.
+Location is the physical point on the earth's surface.
+Locale is the material setting where social life unfolds.
+A sense of place is the emotional attachment people have to a location.
+Meaning grows from everyday encounters, not from a publisher address.
+`;
+    expect(isBibliographicJunk("Cresswell, Royal Holloway, University of London, Egham, UK & 2009 Elsevier Inc.")).toBe(
+      true
+    );
+    expect(isBibliographicJunk("All rights reserved.")).toBe(true);
+
+    const labels = extractConceptLabels(paper);
+    const blob = JSON.stringify(labels).toLowerCase();
+    expect(blob).not.toMatch(/elsevier|royal holloway|all rights reserved|egham|doi:10/);
+    expect(labels.map((item) => item.label.toLowerCase())).toEqual(
+      expect.arrayContaining(["location", "locale", "sense of place", "meaning"])
+    );
+
+    const map = buildMindMapFromConcept("this", {
+      sourceText: paper,
+      sourceName: "Cresswell 2009_Place.pdf",
+    });
+    expect(map.title.toLowerCase()).not.toMatch(/this idea|elsevier|royal holloway/);
+    expect(map.title).toMatch(/place/i);
+    expect(map.nodes[0].label).toMatch(/place/i);
+    expect(map.nodes[0].label.toLowerCase()).not.toBe("this idea");
+
+    const mapBlob = JSON.stringify(map).toLowerCase();
+    expect(mapBlob).not.toMatch(/elsevier|royal holloway|all rights reserved|egham/);
+    expect(mapBlob).not.toContain("this idea");
+    map.nodes.forEach((node) => {
+      expect(isBibliographicJunk(node.label)).toBe(false);
+      expect(node.label).not.toMatch(/…$/);
+    });
+    map.steps.forEach((step) => {
+      expect(step.narration).not.toMatch(/elsevier|royal holloway|all rights reserved/i);
+      expect(step.narration.length).toBeGreaterThan(12);
+    });
+    expect(map.steps[1].narration).toMatch(/location|locale|sense of place|meaning/i);
+  });
+
+  test("normalizeMindMap drops affiliation nodes and junk narration", () => {
+    const map = normalizeMindMap({
+      title: "this idea",
+      nodes: [
+        { id: "n0", label: "this idea" },
+        { id: "n1", label: "All rights reserved." },
+        { id: "n2", label: "Location" },
+      ],
+      steps: [
+        {
+          revealNodeIds: ["n2"],
+          revealLinkIds: [],
+          narration: "Cresswell, Royal Holloway, University of London, Egham, UK & 2009 Elsevier Inc.",
+        },
+      ],
+    });
+    expect(map.title).toBe("Concept");
+    expect(map.nodes.map((node) => node.label)).toEqual(["Location"]);
+    expect(map.steps[0].narration).not.toMatch(/elsevier|royal holloway/i);
+    expect(map.steps[0].narration).toMatch(/location/i);
   });
 });

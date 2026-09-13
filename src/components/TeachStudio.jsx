@@ -90,9 +90,9 @@ function TeachStudio({
                 ? "Thinking…"
                 : "Ready when you are"}
         </p>
-        {studio.kind !== "quiz" && isSpeaking && speechCaption ? (
+        {studio.kind !== "quiz" && studio.kind !== "mindmap" && isSpeaking && speechCaption ? (
           <PersonaCaption text={speechCaption} />
-        ) : studio.kind !== "quiz" && isLoading ? (
+        ) : studio.kind !== "quiz" && studio.kind !== "mindmap" && isLoading ? (
           <PersonaCaption text="thinking" typing />
         ) : null}
         {studio.reaction?.text && (
