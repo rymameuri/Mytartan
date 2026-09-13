@@ -61,6 +61,37 @@ describe("ChatInputBar", () => {
     expect(input.value).toBe("");
   });
 
+  test("shows a live voice draft the user can edit", () => {
+    const onChange = jest.fn();
+    render(
+      <ChatInputBar
+        onSend={noOp}
+        isLoading={false}
+        value="um what is stew co"
+        onChange={onChange}
+        showMic
+        micActive
+      />
+    );
+    expect(screen.getByLabelText(/message input/i).value).toBe("um what is stew co");
+    expect(screen.getByLabelText(/stop listening/i)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText(/message input/i), {
+      target: { value: "What is StuCo?" },
+    });
+    expect(onChange).toHaveBeenCalledWith("What is StuCo?");
+  });
+
+  test("lets the student attach a file and send without typing", () => {
+    const mockSend = jest.fn();
+    render(<ChatInputBar onSend={mockSend} isLoading={false} allowAttach />);
+
+    const file = new File(["Recursion needs a base case."], "notes.txt", { type: "text/plain" });
+    fireEvent.change(screen.getByLabelText(/attach notes/i), { target: { files: [file] } });
+    expect(screen.getByLabelText(/send message/i)).toBeEnabled();
+    fireEvent.click(screen.getByLabelText(/send message/i));
+    expect(mockSend).toHaveBeenCalledWith("", { files: [file] });
+  });
+
   test("does not call onSend for whitespace-only input", () => {
     const mockSend = jest.fn();
     render(<ChatInputBar onSend={mockSend} isLoading={false} />);

@@ -7,14 +7,14 @@ test("leaves ordinary speech unchanged", () => {
   expect(toSpokenText("I'm good! What's going on?")).toBe("I'm good! What's going on?");
 });
 
-test("flattens em dashes and ellipses so TTS does not hitch", () => {
+test("turns clause dashes into sentence stops so speech can breathe", () => {
   expect(flattenSpeechPauses("Hey — Scotty here. What's up?")).toBe(
-    "Hey, Scotty here. What's up?"
+    "Hey. Scotty here. What's up?"
   );
   expect(flattenSpeechPauses("Yeah — club fair Thursday...")).toBe(
-    "Yeah, club fair Thursday."
+    "Yeah. Club fair Thursday."
   );
-  expect(toSpokenText("I hear you — this matters.")).toBe("I hear you, this matters.");
+  expect(toSpokenText("I hear you — this matters.")).toBe("I hear you. This matters.");
   expect(toSpokenText("CMU-Q need-based aid")).toBe("CMU-Q need-based aid");
   expect(toSpokenText("Weeks 1–2 cover loops")).toBe("Weeks 1 to 2 cover loops");
 });

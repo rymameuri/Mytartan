@@ -1,4 +1,3 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
 @import "./theme.css";
 
 * {
@@ -10,8 +9,8 @@ body {
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: var(--tartan-maroon);
-  color: var(--tartan-white);
+  background: var(--app-bg);
+  color: var(--app-text);
 }
 
 html,

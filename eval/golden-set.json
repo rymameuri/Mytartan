@@ -365,5 +365,42 @@
     "id": "halluc-008",
     "query": "What's the overload unit cap?",
     "expectedFiles": ["studies/course-overload.txt"]
+  },
+  {
+    "id": "sit-001",
+    "query": "I'm homesick and it's a rough night",
+    "expectedFiles": [
+      "situations/rough-night-homesick.txt",
+      "mycmuq/offices/student-affairs/caps-q/caps-services.txt"
+    ]
+  },
+  {
+    "id": "sit-002",
+    "query": "What should I do my first week at CMU-Q?",
+    "expectedFiles": [
+      "situations/first-week.txt",
+      "mycmuq/offices/student-affairs/international-student-support/new-international-exchange-students.txt"
+    ]
+  },
+  {
+    "id": "sit-003",
+    "query": "quiet study vs social study at CMU-Q",
+    "expectedFiles": [
+      "situations/quiet-vs-social-study.txt",
+      "mycmuq/offices/library/overview.txt"
+    ]
+  },
+  {
+    "id": "place-001",
+    "query": "Where's a quiet place to study on the CMU-Q campus?",
+    "expectedFiles": [
+      "situations/quiet-vs-social-study.txt",
+      "mycmuq/offices/library/overview.txt"
+    ],
+    "excludedFiles": [
+      "mycmuq/offices/student-affairs/study-abroad/external-study-abroad.txt",
+      "mycmuq/offices/student-affairs/study-abroad/studying-in-pittsburgh.txt",
+      "study-abroad"
+    ]
   }
 ]

@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import LoginSignup from "./components/Auth/LoginSignup";
+import VerifyPending from "./components/Auth/VerifyPending";
 import OnboardingFlow from "./components/Onboarding/OnboardingFlow";
 import PersonaView from "./components/PersonaView";
 import SideMenu from "./components/SideMenu";
-import ScottyPattern from "./components/ScottyPattern";
 import ScottyPersonaStage from "./components/ScottyPersonaStage";
 import CourseTutorDashboard from "./components/CourseTutorDashboard";
 import ClassWorkspace from "./components/ClassWorkspace";
@@ -28,6 +28,18 @@ import { refreshCourse } from "./utils/courseApi";
 import { stripMarkdownFormatting } from "./utils/stripMarkdown";
 import { toSpokenText } from "./utils/spokenText";
 import { readSidebarCollapsed, writeSidebarCollapsed } from "./utils/sidebarPreference";
+import { COURSE_TUTOR_ENABLED } from "./config/features";
+import { extractStudyDocuments } from "./utils/extractSyllabusText";
+import { generateQuizFromSource } from "./utils/documentQuiz";
+import { buildMindMapFromConcept } from "./utils/mindMap";
+import { detectSheetKind, generateStudySheet } from "./utils/studySheet";
+import {
+  ATTACH_HINT,
+  SHEET_ATTACH_HINT,
+  celebrateReaction,
+  detectTeachIntent,
+  teachReaction,
+} from "./utils/teachStudio";
 import "./App.css";
 
 const API_BASE = process.env.REACT_APP_API_URL || "";
@@ -58,10 +70,29 @@ function useIsDesktop() {
 }
 
 function AppRoutes() {
-  const { token, user } = useAuth();
+  const { token, user, fetchMailStatus } = useAuth();
+  const [mailConfigured, setMailConfigured] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchMailStatus()
+      .then((status) => {
+        if (!cancelled) setMailConfigured(Boolean(status.configured));
+      })
+      .catch(() => {
+        if (!cancelled) setMailConfigured(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchMailStatus]);
 
   if (!token) {
     return <LoginSignup />;
+  }
+
+  if (mailConfigured && user?.emailVerified === false) {
+    return <VerifyPending />;
   }
 
   if (!user?.profile?.onboardingComplete) {
@@ -104,11 +135,14 @@ function AppShell() {
   const [chatSessionKey, setChatSessionKey] = useState(0);
   const [tutorSpeechText, setTutorSpeechText] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [teachStudio, setTeachStudio] = useState(null);
+  const [documentSource, setDocumentSource] = useState(null);
   const voiceModeRef = useRef(false);
   const avatarRef = useRef(null);
   const abortControllerRef = useRef(null);
+  const documentSourceRef = useRef(null);
   const isDesktop = useIsDesktop();
-  const { isSpeaking, isPreparingSpeech, speak, stop, caption } = usePersonaSpeech(avatarRef);
+  const { isSpeaking, isPreparingSpeech, speak, stop, caption, voiceStatus, retryVoice } = usePersonaSpeech(avatarRef, userId);
   const { isMuted, toggleMute } = useMutedPreference(stop, userId);
   const canvasConnection = useCanvasConnection(userId, token);
 
@@ -140,8 +174,9 @@ function AppShell() {
     [speak]
   );
 
-  const showPersona = mode === "qa" || (mode === "tutor" && !tutorScreen);
-  const showTutorPersonaRail = isDesktop && mode === "tutor" && tutorScreen === "dashboard";
+  const showPersona = !COURSE_TUTOR_ENABLED || mode === "qa" || (mode === "tutor" && !tutorScreen);
+  const showTutorPersonaRail =
+    COURSE_TUTOR_ENABLED && isDesktop && mode === "tutor" && tutorScreen === "dashboard";
 
   useAutoSpeakReply({
     enabled: mode === "qa" || (mode === "tutor" && tutorScreen === "workspace"),
@@ -153,6 +188,33 @@ function AppShell() {
     chatSessionKey,
     userId,
   });
+
+  const prevMindStepRef = useRef(0);
+  useEffect(() => {
+    if (teachStudio?.kind !== "mindmap") {
+      prevMindStepRef.current = 0;
+      return;
+    }
+    if (teachStudio.step === prevMindStepRef.current) return;
+    prevMindStepRef.current = teachStudio.step;
+    if (teachStudio.step > 0 && teachStudio.reaction?.text && !readMutedPreference(userId)) {
+      speakFormatted(teachStudio.reaction.text);
+    }
+  }, [teachStudio, speakFormatted, userId]);
+
+  const prevSheetStepRef = useRef(0);
+  useEffect(() => {
+    if (teachStudio?.kind !== "sheet") {
+      prevSheetStepRef.current = 0;
+      return;
+    }
+    if (teachStudio.step === prevSheetStepRef.current) return;
+    prevSheetStepRef.current = teachStudio.step;
+    if (teachStudio.step > 0 && teachStudio.reaction?.text && !readMutedPreference(userId)) {
+      speakFormatted(teachStudio.reaction.text);
+    }
+  }, [teachStudio, speakFormatted, userId]);
+
 
   function closeMenu() {
     setMenuOpen(false);
@@ -166,6 +228,12 @@ function AppShell() {
     });
   }
 
+  function resetTeachSession() {
+    setTeachStudio(null);
+    setDocumentSource(null);
+    documentSourceRef.current = null;
+  }
+
   function resetChatSession() {
     abortControllerRef.current?.abort();
     abortControllerRef.current = null;
@@ -173,6 +241,16 @@ function AppShell() {
     setTutorListening(false);
     setIsLoading(false);
     setChatSessionKey((key) => key + 1);
+    resetTeachSession();
+  }
+
+  function appendStudioMessages(userText, assistantText) {
+    setMessages((prev) => [
+      ...prev,
+      { role: "user", content: userText },
+      { role: "assistant", content: assistantText, studio: true },
+    ]);
+    setIsLoading(false);
   }
 
   function enterTutorDashboard() {
@@ -189,16 +267,10 @@ function AppShell() {
     resetChatSession();
     const draft = newChat();
     setMessages(draft.messages);
-    setMode(draft.mode);
+    setMode(COURSE_TUTOR_ENABLED ? draft.mode : "qa");
     setTutorScreen(null);
     setCourseContext(null);
     setSavedCourseId(null);
-    closeMenu();
-  }
-
-  function handleStartTutor() {
-    newChat();
-    enterTutorDashboard();
     closeMenu();
   }
 
@@ -244,10 +316,17 @@ function AppShell() {
     resetChatSession();
     const selected = selectConversation(id);
     setMessages(selected.messages);
-    setMode(selected.mode);
-    setCourseContext(selected.courseContext ?? null);
-    setSavedCourseId(selected.savedCourseId ?? null);
-    setTutorScreen(selected.mode === "tutor" && selected.savedCourseId ? "workspace" : selected.mode === "tutor" ? "dashboard" : null);
+    const nextMode = COURSE_TUTOR_ENABLED ? selected.mode : "qa";
+    setMode(nextMode);
+    setCourseContext(COURSE_TUTOR_ENABLED ? selected.courseContext ?? null : null);
+    setSavedCourseId(COURSE_TUTOR_ENABLED ? selected.savedCourseId ?? null : null);
+    setTutorScreen(
+      COURSE_TUTOR_ENABLED && selected.mode === "tutor" && selected.savedCourseId
+        ? "workspace"
+        : COURSE_TUTOR_ENABLED && selected.mode === "tutor"
+          ? "dashboard"
+          : null
+    );
     closeMenu();
   }
 
@@ -275,6 +354,7 @@ function AppShell() {
   }
 
   function handleSwitchMode(nextMode) {
+    if (!COURSE_TUTOR_ENABLED && nextMode === "tutor") return;
     if (nextMode === mode) return;
     resetChatSession();
     setMode(nextMode);
@@ -300,7 +380,7 @@ function AppShell() {
   function handleShare() {
     if (!messages.length) return;
     const text = messages
-      .map((m) => `${m.role === "user" ? "You" : "MyTartan"}: ${m.content}`)
+      .map((m) => `${m.role === "user" ? "You" : "Scotty"}: ${m.content}`)
       .join("\n\n");
     navigator.clipboard.writeText(text).then(() => {
       alert("Chat copied to clipboard!");
@@ -310,7 +390,7 @@ function AppShell() {
   function handleDownload() {
     if (!messages.length) return;
     const text = messages
-      .map((m) => `${m.role === "user" ? "You" : "MyTartan"}: ${m.content}`)
+      .map((m) => `${m.role === "user" ? "You" : "Scotty"}: ${m.content}`)
       .join("\n\n");
     const blob = new Blob([text], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
@@ -321,9 +401,241 @@ function AppShell() {
     URL.revokeObjectURL(url);
   }
 
+  function rebuildSheetStudio(source, { kind, density, seed, userContent }) {
+    const sheet = generateStudySheet(source.text, {
+      sourceName: source.name,
+      major: user?.profile?.major,
+      kind,
+      density,
+      seed,
+    });
+    if (!sheet.sections.length) return null;
+    return {
+      kind: "sheet",
+      title: sheet.title,
+      sourceName: source.name,
+      sourceText: source.text,
+      sheetKind: sheet.kind,
+      density: sheet.density,
+      seed,
+      sheet,
+      step: 0,
+      reaction: { type: "teach", text: sheet.sections[0]?.narration || "I'll lay this out like a CMU one-pager." },
+      userContent,
+    };
+  }
+
+  const handleMindMapStep = useCallback((next) => {
+    setTeachStudio((current) => {
+      if (!current || current.kind !== "mindmap") return current;
+      const last = Math.max((current.map?.steps?.length ?? 1) - 1, 0);
+      const step = Math.min(Math.max(next, 0), last);
+      if (step === current.step) return current;
+      return {
+        ...current,
+        step,
+        reaction: { type: "teach", text: current.map.steps[step]?.narration || "" },
+      };
+    });
+  }, []);
+
+  const handleSheetStep = useCallback((next) => {
+    setTeachStudio((current) => {
+      if (!current || current.kind !== "sheet") return current;
+      const last = Math.max((current.sheet?.sections?.length ?? 1) - 1, 0);
+      const step = Math.min(Math.max(next, 0), last);
+      if (step === current.step) return current;
+      return {
+        ...current,
+        step,
+        reaction: { type: "teach", text: current.sheet.sections[step]?.narration || "" },
+      };
+    });
+  }, []);
+
+  function handleSheetDensity(density) {
+    const source = documentSourceRef.current;
+    setTeachStudio((current) => {
+      if (!current || current.kind !== "sheet" || !source?.text) return current;
+      const next = rebuildSheetStudio(source, {
+        kind: current.sheetKind || current.sheet?.kind,
+        density,
+        seed: current.seed || 0,
+        userContent: current.userContent,
+      });
+      return next || current;
+    });
+  }
+
+  function handleSheetRegenerate() {
+    const source = documentSourceRef.current;
+    setTeachStudio((current) => {
+      if (!current || current.kind !== "sheet" || !source?.text) return current;
+      const next = rebuildSheetStudio(source, {
+        kind: current.sheetKind || current.sheet?.kind,
+        density: current.density || "dense",
+        seed: (current.seed || 0) + 1,
+        userContent: current.userContent,
+      });
+      return next || current;
+    });
+  }
+
+  function handleQuizAnswer({ correct, question, index }) {
+    const text = correct ? celebrateReaction(index) : teachReaction(question);
+    setTeachStudio((current) =>
+      current ? { ...current, reaction: { type: correct ? "celebrate" : "teach", text } } : current
+    );
+    if (!readMutedPreference(userId)) {
+      speakFormatted(text);
+    }
+  }
+
+  function handleDocumentQuizComplete(results) {
+    const recap = `Finished the quiz from your notes: ${results.score}/${results.total}. Ask to retry or whiteboard something you missed.`;
+    setTeachStudio((current) =>
+      current
+        ? { ...current, reaction: { type: "celebrate", text: `${results.score} out of ${results.total}. Solid work.` } }
+        : current
+    );
+    setMessages((prev) => [...prev, { role: "assistant", content: recap, studio: true }]);
+    if (!readMutedPreference(userId)) {
+      speakFormatted(`That's ${results.score} out of ${results.total} from your notes.`);
+    }
+  }
+
+  async function tryOpenTeachStudio(text, files = []) {
+    const intent = detectTeachIntent(text, { hasSource: Boolean(documentSourceRef.current || files.length) });
+    const emptyAsk = !String(text || "").trim();
+    if (!intent && !(emptyAsk && files.length) && !files.length) {
+      return false;
+    }
+
+    let source = documentSourceRef.current;
+    let warnings = [];
+
+    if (files.length) {
+      setIsLoading(true);
+      try {
+        const extracted = await extractStudyDocuments(files);
+        warnings = extracted.warnings;
+        if (extracted.text) {
+          source = { name: extracted.names.join(", "), text: extracted.text };
+          documentSourceRef.current = source;
+          setDocumentSource(source);
+        }
+      } catch (err) {
+        warnings.push(err.message || "Could not read that file.");
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    const wantQuiz = intent?.kind === "quiz" || (emptyAsk && files.length > 0);
+    const wantMap = intent?.kind === "mindmap";
+    const wantSheet = intent?.kind === "sheet";
+
+    if (!wantQuiz && !wantMap && !wantSheet) {
+      if (warnings.length && emptyAsk) {
+        appendStudioMessages(
+          files.map((file) => file.name).join(", ") || "Uploaded a file",
+          warnings.join(" ")
+        );
+        return true;
+      }
+      return false;
+    }
+
+    const userContent =
+      String(text || "").trim() ||
+      (wantQuiz
+        ? `Quiz me on ${files.map((file) => file.name).join(", ") || source?.name || "this"}`
+        : wantSheet
+          ? `Cheat sheet from ${files.map((file) => file.name).join(", ") || source?.name || "this"}`
+          : `Whiteboard ${intent?.concept || source?.name || "this"}`);
+
+    if (wantQuiz) {
+      if (!source?.text) {
+        appendStudioMessages(userContent, warnings[0] || ATTACH_HINT);
+        return true;
+      }
+      const quiz = generateQuizFromSource(source.text, { sourceName: source.name, count: 5 });
+      if (!quiz.questions.length) {
+        appendStudioMessages(
+          userContent,
+          "I couldn't pull enough statements from that file to quiz you. Try a notes PDF or paste a few paragraphs."
+        );
+        return true;
+      }
+      appendStudioMessages(
+        userContent,
+        `Quiz from your notes (${source.name}) — one question at a time. This is your material, not campus policy.`
+      );
+      setTeachStudio({
+        kind: "quiz",
+        title: quiz.title,
+        sourceName: source.name,
+        questions: quiz.questions,
+        reaction: { type: "teach", text: "Whenever you're ready — pick an answer." },
+      });
+      return true;
+    }
+
+    if (wantSheet) {
+      if (!source?.text) {
+        appendStudioMessages(userContent, warnings[0] || SHEET_ATTACH_HINT);
+        return true;
+      }
+      const sheetKind = detectSheetKind(text);
+      const studio = rebuildSheetStudio(source, {
+        kind: sheetKind,
+        density: "dense",
+        seed: 0,
+        userContent,
+      });
+      if (!studio) {
+        appendStudioMessages(
+          userContent,
+          "I couldn't pull a tight sheet from that file. Try a lecture PDF or PPTX with a few full sentences."
+        );
+        return true;
+      }
+      appendStudioMessages(
+        userContent,
+        `A ${studio.sheet.kind === "cheatsheet" ? "cheat sheet" : studio.sheet.kind.replace("-", " ")} from your notes — ${studio.sheet.courseLabel} style. I'll reveal it section by section. Not an official past paper.`
+      );
+      setTeachStudio(studio);
+      return true;
+    }
+
+    const map = buildMindMapFromConcept(intent?.concept, {
+      sourceText: source?.text || "",
+      sourceName: source?.name || "",
+      struggle: Boolean(intent?.struggle),
+    });
+    appendStudioMessages(
+      userContent,
+      intent?.struggle
+        ? "This one's sticky — I'll walk it on the board, one piece at a time."
+        : `I'll map ${map.title} beside us. Watch the board as we go.`
+    );
+    setTeachStudio({
+      kind: "mindmap",
+      title: map.title,
+      map,
+      step: 0,
+      reaction: { type: "teach", text: map.steps[0]?.narration || "" },
+    });
+    return true;
+  }
+
   async function handleSend(text, overrideMode, options = {}) {
     armSpeechSynthesis();
     const activeMode = overrideMode ?? mode;
+    if (activeMode !== "tutor") {
+      const handled = await tryOpenTeachStudio(text, options.files || []);
+      if (handled) return;
+    }
     const isStudioGeneration = Boolean(options.studioGeneration);
     const speechMode = options.speechMode ?? (isStudioGeneration ? "introduction" : null);
     const userMessage = {
@@ -450,12 +762,13 @@ function AppShell() {
       }
 
       if (gotTokens) {
+        const spokenReply = stripMarkdownFormatting(reply);
         setMessages([
           ...updatedMessages,
           {
             id: assistantMessageId,
             role: "assistant",
-            content: stripMarkdownFormatting(reply),
+            content: spokenReply,
             confidence,
             feedbackContext: feedbackContext ?? {
               mode: activeMode,
@@ -616,9 +929,8 @@ function AppShell() {
     <div
       className={`app-shell${isDesktop ? " app-shell--with-sidebar" : ""}${
         sidebarCollapsed ? " app-shell--sidebar-collapsed" : ""
-      }${mode === "tutor" ? " app-shell--tutor" : ""}`}
+      }${COURSE_TUTOR_ENABLED && mode === "tutor" ? " app-shell--tutor" : ""}`}
     >
-      {mode !== "tutor" && <ScottyPattern />}
       <SideMenu
         isOpen={menuOpen || isDesktop}
         isPersistent={isDesktop}
@@ -626,7 +938,6 @@ function AppShell() {
         onToggleCollapsed={toggleSidebarCollapsed}
         onClose={closeMenu}
         onNewChat={handleNewChat}
-        onStartTutor={handleStartTutor}
         onSelectPrompt={handleSelectPrompt}
         onSelectConversation={handleSelectConversation}
         onDeleteConversation={handleDeleteConversation}
@@ -643,10 +954,10 @@ function AppShell() {
       <div
         className={`app-main app-main--unified${
           showTutorPersonaRail ? " app-main--with-persona" : ""
-        }${mode === "tutor" && tutorScreen === "workspace" ? " app-main--tutor-workspace" : ""}`}
+        }${COURSE_TUTOR_ENABLED && mode === "tutor" && tutorScreen === "workspace" ? " app-main--tutor-workspace" : ""}`}
       >
         <div className="app-main__content">
-          {mode === "tutor" && tutorScreen === "dashboard" && (
+          {COURSE_TUTOR_ENABLED && mode === "tutor" && tutorScreen === "dashboard" && (
             <CourseTutorDashboard
               onOpenClass={handleOpenClass}
               onBackToQa={handleBackToQa}
@@ -654,7 +965,7 @@ function AppShell() {
             />
           )}
 
-          {mode === "tutor" && tutorScreen === "workspace" && savedCourseId && courseContext && (
+          {COURSE_TUTOR_ENABLED && mode === "tutor" && tutorScreen === "workspace" && savedCourseId && courseContext && (
             <ClassWorkspace
               courseId={savedCourseId}
               courseContext={courseContext}
@@ -695,7 +1006,7 @@ function AppShell() {
               onShare={handleShare}
               onDownload={handleDownload}
               onOpenMenu={() => setMenuOpen(true)}
-              onSwitchMode={handleSwitchMode}
+              onSwitchMode={COURSE_TUTOR_ENABLED ? handleSwitchMode : undefined}
               isDesktop={isDesktop}
               isSpeaking={isSpeaking}
               isPreparingSpeech={isPreparingSpeech}
@@ -706,6 +1017,18 @@ function AppShell() {
               voiceModeRef={voiceModeRef}
               avatarRef={avatarRef}
               speechCaption={caption}
+              voiceStatus={voiceStatus}
+              onRetryVoice={retryVoice}
+              profile={user?.profile}
+              teachStudio={teachStudio}
+              documentSource={documentSource}
+              onCloseStudio={() => setTeachStudio(null)}
+              onQuizAnswer={handleQuizAnswer}
+              onDocumentQuizComplete={handleDocumentQuizComplete}
+              onMindMapStep={handleMindMapStep}
+              onSheetStep={handleSheetStep}
+              onSheetDensity={handleSheetDensity}
+              onSheetRegenerate={handleSheetRegenerate}
             />
           )}
         </div>

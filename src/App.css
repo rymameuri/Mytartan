@@ -3,12 +3,8 @@
   display: flex;
   height: 100%;
   min-height: 100vh;
-  background: var(--tartan-maroon);
+  background: var(--app-bg);
   overflow: hidden;
-}
-
-.app-shell > .scotty-pattern {
-  z-index: 0;
 }
 
 .app-shell--tutor {
@@ -28,15 +24,15 @@
   min-width: 0;
   min-height: 0;
   height: 100vh;
-  background: var(--tartan-panel);
-  backdrop-filter: blur(10px);
-  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.08);
+  background: var(--app-surface);
 }
 
 .app-main--unified {
-  background: var(--ws-bg);
-  backdrop-filter: none;
-  box-shadow: none;
+  background: var(--app-bg);
+}
+
+.app-shell:not(.app-shell--tutor) .app-main--unified {
+  background: var(--app-bg);
 }
 
 .app-main--unified.app-main--tutor-workspace {
@@ -63,9 +59,8 @@
   justify-content: flex-end;
   gap: 6px;
   padding: 8px 16px;
-  border-bottom: 1px solid rgba(156, 39, 51, 0.12);
-  background: rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--app-border);
+  background: var(--app-surface);
   min-height: 48px;
 }
 
@@ -89,16 +84,16 @@
   width: 36px;
   height: 36px;
   border: none;
-  border-radius: 10px;
+  border-radius: 8px;
   background: transparent;
-  color: var(--tartan-maroon-dark);
+  color: var(--app-text-secondary);
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease;
 }
 
 .icon-btn:hover:not(:disabled) {
-  background: rgba(156, 39, 51, 0.08);
-  color: var(--tartan-maroon);
+  background: var(--app-hover);
+  color: var(--app-text);
 }
 
 .icon-btn:disabled {

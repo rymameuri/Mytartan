@@ -6,6 +6,10 @@
   color: var(--tartan-white);
 }
 
+.scotty-persona--cream {
+  color: var(--app-text);
+}
+
 .scotty-persona--rail {
   width: min(280px, 28vw);
   padding: 16px 12px;
@@ -13,9 +17,19 @@
   background: rgba(0, 0, 0, 0.12);
 }
 
+.scotty-persona--cream.scotty-persona--rail {
+  border-left: none;
+  background: transparent;
+}
+
+.scotty-persona--hero .sp-avatar-frame {
+  width: min(280px, 62vw);
+  height: min(280px, 62vw);
+}
+
 .scotty-persona--compact .sp-avatar-frame {
-  width: min(140px, 28vw);
-  height: min(140px, 28vw);
+  width: min(188px, 36vw);
+  height: min(188px, 36vw);
 }
 
 .sp-stage {
@@ -28,19 +42,60 @@
 
 .sp-avatar-frame {
   position: relative;
-  width: min(200px, 40vw);
-  height: min(200px, 40vw);
+  width: min(220px, 48vw);
+  height: min(220px, 48vw);
   flex-shrink: 0;
   overflow: visible;
+}
+
+.sp-avatar-glow {
+  position: absolute;
+  inset: -10%;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0;
+}
+
+.sp-avatar-frame--speaking .sp-avatar-glow {
+  opacity: 1;
+  background: radial-gradient(circle, rgba(156, 39, 51, 0.18), transparent 68%);
+  animation: sp-speak-glow 1.2s ease-in-out infinite;
+}
+
+.sp-avatar-frame--listening .sp-avatar-glow {
+  opacity: 1;
+  box-shadow: 0 0 0 3px rgba(156, 39, 51, 0.22);
+}
+
+.sp-avatar-frame--thinking .sp-avatar-glow {
+  opacity: 1;
+  background: radial-gradient(circle, rgba(28, 25, 23, 0.08), transparent 70%);
+  animation: sp-think-glow 1.6s ease-in-out infinite;
+}
+
+.sp-avatar-frame .shb,
+.sp-avatar-frame .scotty-avatar {
+  position: relative;
+  z-index: 1;
 }
 
 .sp-identity {
   text-align: center;
 }
 
+.scotty-persona--cream .sp-identity__name {
+  color: var(--app-text);
+}
+
 .sp-identity__name {
   margin: 0 0 4px;
-  font-size: 1.125rem;
+  font-size: 1.25rem;
+}
+
+.scotty-persona--hero .sp-identity__name {
+  font-size: 1.75rem;
+  letter-spacing: -0.03em;
 }
 
 .sp-identity__role {
@@ -53,6 +108,11 @@
   gap: 6px;
 }
 
+.scotty-persona--cream .sp-identity__role {
+  color: var(--app-text-muted);
+  opacity: 1;
+}
+
 .sp-identity__dot {
   width: 8px;
   height: 8px;
@@ -61,12 +121,33 @@
   box-shadow: 0 0 8px rgba(110, 231, 160, 0.6);
 }
 
+.sp-identity__dot--speaking {
+  background: var(--tartan-maroon);
+  box-shadow: 0 0 8px rgba(156, 39, 51, 0.45);
+  animation: sp-dot-pulse 1s ease-in-out infinite;
+}
+
+.sp-identity__dot--listening {
+  background: #3b82f6;
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.45);
+}
+
+.sp-identity__dot--thinking {
+  background: #c4b5a5;
+  box-shadow: none;
+}
+
 .sp-identity__hint {
   margin: 8px 0 0;
   font-size: 0.75rem;
   opacity: 0.75;
   line-height: 1.4;
   max-width: 220px;
+}
+
+.scotty-persona--cream .sp-identity__hint {
+  color: var(--app-text-muted);
+  opacity: 1;
 }
 
 .sp-mute-btn {
@@ -87,13 +168,29 @@
   transition: background 0.15s ease, border-color 0.15s ease;
 }
 
+.scotty-persona--cream .sp-mute-btn {
+  border-color: var(--app-border);
+  background: var(--app-surface);
+  color: var(--app-text-secondary);
+}
+
 .sp-mute-btn:hover {
   background: rgba(255, 255, 255, 0.18);
+}
+
+.scotty-persona--cream .sp-mute-btn:hover {
+  background: var(--app-hover);
 }
 
 .sp-mute-btn--active {
   background: rgba(255, 255, 255, 0.22);
   border-color: rgba(255, 255, 255, 0.45);
+}
+
+.scotty-persona--cream .sp-mute-btn--active {
+  background: var(--app-accent-soft);
+  border-color: rgba(156, 39, 51, 0.22);
+  color: var(--tartan-maroon);
 }
 
 .sp-mute-btn svg {
@@ -102,8 +199,44 @@
   flex-shrink: 0;
 }
 
+.scotty-persona--cream .persona-caption {
+  margin-top: 8px;
+}
+
+@keyframes sp-speak-glow {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.85;
+  }
+  50% {
+    transform: scale(1.06);
+    opacity: 1;
+  }
+}
+
+@keyframes sp-think-glow {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+@keyframes sp-dot-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.25);
+  }
+}
+
 @media (max-width: 900px) {
-  .scotty-persona--rail {
+  .scotty-persona--rail:not(.scotty-persona--cream) {
     display: none;
   }
 }

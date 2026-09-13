@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
-import { extractSyllabusText } from "./extractSyllabusText";
+import { extractStudyDocuments, extractSyllabusText } from "./extractSyllabusText";
+import { samplePptxBytes } from "./storedZip";
 
 jest.mock("pdfjs-dist", () => ({
   version: "4.10.38",
@@ -37,6 +38,23 @@ describe("extractSyllabusText", () => {
   test("rejects unsupported file types", async () => {
     const file = makeFile("data", "notes.doc", "application/msword");
     await expect(extractSyllabusText(file)).rejects.toThrow(/Unsupported file type/i);
+  });
+
+  test("extracts text from PPTX slides", async () => {
+    const file = new File([samplePptxBytes()], "notes.pptx", {
+      type: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    });
+    const text = await extractSyllabusText(file);
+    expect(text).toMatch(/Recursion/i);
+    expect(text).toMatch(/base case/i);
+  });
+
+  test("asks for paste or PDF when the upload is an image", async () => {
+    const file = makeFile("fake-image", "slide.png", "image/png");
+    await expect(extractSyllabusText(file)).rejects.toThrow(/image/i);
+    const result = await extractStudyDocuments([file]);
+    expect(result.text).toBe("");
+    expect(result.warnings[0]).toMatch(/image/i);
   });
 
   test("rejects oversized text files", async () => {

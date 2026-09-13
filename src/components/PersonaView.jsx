@@ -1,28 +1,102 @@
-import { useState, useRef, useCallback, useEffect } from "react";
-import ScottyAvatar from "./ScottyAvatar";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import MessageContent from "./MessageContent";
 import PersonaMicControls from "./PersonaMicControls";
 import PersonaCaption from "./PersonaCaption";
-import AvatarScaleHandle from "./AvatarScaleHandle";
+import ScottyAvatar from "./ScottyAvatar";
 import { useMicInput } from "../hooks/useMicInput";
-import { useAvatarZoom } from "../hooks/useAvatarZoom";
 import { MenuIcon, ShareIcon, DownloadIcon, VolumeIcon, ChevronIcon } from "./Icons";
 import SettingsButton from "./SettingsButton";
+import { orderStarterChips } from "../data/starterChips";
+import { personaWelcomeCaption } from "../utils/personaWelcome";
+import TeachStudio from "./TeachStudio";
+import { armSpeechSynthesis } from "../hooks/usePersonaSpeech";
 import "./PersonaView.css";
 import MessageFeedback from "./MessageFeedback";
 import "./ChatInterface.css";
+
+function TranscriptLog({
+  messages,
+  isLoading,
+  mode,
+  messagesContainerRef,
+  showScrollDown,
+  onScrollToBottom,
+}) {
+  return (
+    <div className="pv-messages-wrap">
+      <div
+        className="pv-messages message-history"
+        ref={messagesContainerRef}
+        role="log"
+        aria-live="polite"
+        aria-relevant="additions"
+      >
+        {messages.map((message, index) => {
+          const isUser = message.role === "user";
+          const msgId = message.id ?? index;
+          return (
+            <div
+              key={msgId}
+              className={`msg-row${isUser ? " msg-row--user" : " msg-row--assistant"}`}
+            >
+              <div className={`msg-bubble${isUser ? " msg-bubble--user" : " msg-bubble--assistant"}`}>
+                <MessageContent content={message.content} />
+                {!isUser && message.confidence?.message && (
+                  <p className="msg-confidence" title={message.confidence.message}>
+                    {message.confidence.message}
+                  </p>
+                )}
+                {!isUser && !message.streaming && !message.studio && (
+                  <MessageFeedback
+                    messageId={message.id ?? `pv-${msgId}`}
+                    reply={message.content}
+                    feedbackContext={message.feedbackContext ?? { mode }}
+                    disabled={isLoading}
+                  />
+                )}
+              </div>
+            </div>
+          );
+        })}
+
+        {isLoading && (
+          <div className="msg-row msg-row--assistant">
+            <div
+              className="msg-bubble msg-bubble--assistant typing-indicator"
+              aria-label="thinking"
+            >
+              <span className="typing-label">thinking</span>
+              <span className="typing-dot" />
+              <span className="typing-dot" />
+              <span className="typing-dot" />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {showScrollDown && (
+        <button
+          type="button"
+          className="pv-scroll-down"
+          aria-label="Scroll to latest message"
+          onClick={onScrollToBottom}
+        >
+          <ChevronIcon />
+        </button>
+      )}
+    </div>
+  );
+}
 
 function PersonaView({
   chatSessionKey = 0,
   messages = [],
   isLoading,
   mode = "qa",
-  courseContext = null,
   onSend,
   onShare,
   onDownload,
   onOpenMenu,
-  onSwitchMode,
   isDesktop,
   isSpeaking = false,
   isPreparingSpeech = false,
@@ -33,20 +107,31 @@ function PersonaView({
   voiceModeRef,
   avatarRef,
   speechCaption = "",
+  voiceStatus = "idle",
+  onRetryVoice,
+  profile = null,
+  teachStudio = null,
+  documentSource = null,
+  onCloseStudio,
+  onQuizAnswer,
+  onDocumentQuizComplete,
+  onMindMapStep,
+  onSheetStep,
+  onSheetDensity,
+  onSheetRegenerate,
 }) {
   const messagesContainerRef = useRef(null);
   const isNearBottomRef = useRef(true);
   const [showScrollDown, setShowScrollDown] = useState(false);
-  const [interactionMode, setInteractionMode] = useState("persona");
-  const { zoom, setZoom, resetZoom, avatarStyle, minZoom, maxZoom } = useAvatarZoom();
+  const [chatOnly, setChatOnly] = useState(false);
   const hasMessages = messages.length > 0;
   const hasUserMessages = messages.some((message) => message.role === "user");
-  const showChatHistory = interactionMode === "chat" && hasUserMessages;
-  const showPersonaStage = interactionMode === "persona" || !hasUserMessages;
-  const showAvatarStage = interactionMode === "persona" || !hasUserMessages;
   const lastAssistantReply = [...messages]
     .reverse()
     .find((message) => message.role === "assistant" && message.content?.trim())?.content;
+  const lastUserAsk = [...messages]
+    .reverse()
+    .find((message) => message.role === "user" && message.content?.trim())?.content;
 
   const SCROLL_THRESHOLD = 72;
 
@@ -72,27 +157,53 @@ function PersonaView({
     voiceModeRef.current = false;
     isNearBottomRef.current = true;
     setShowScrollDown(false);
-    setInteractionMode("persona");
+    setChatOnly(false);
   }, [chatSessionKey, stopSpeech, voiceModeRef]);
 
-  const handleVoiceResult = useCallback((transcript) => {
+  const [composerText, setComposerText] = useState("");
+
+  const handleVoiceResult = useCallback((spoken) => {
     stopSpeech?.();
     voiceModeRef.current = true;
-    onSend(transcript);
+    onSend(spoken);
+    setComposerText("");
   }, [onSend, voiceModeRef, stopSpeech]);
 
-  const { listening, isFinalizing, toggle: toggleMic } = useMicInput({
+  const {
+    listening,
+    reviewing,
+    isFinalizing,
+    transcript,
+    setTranscript,
+    toggle: toggleMic,
+    reset: resetMic,
+  } = useMicInput({
     onResult: handleVoiceResult,
   });
 
+  useEffect(() => {
+    if (listening || reviewing) setComposerText(transcript);
+  }, [listening, reviewing, transcript]);
+
   const isThinking = !isSpeaking && (isLoading || isPreparingSpeech || isFinalizing);
-  const personaCaptionText =
-    (isSpeaking && speechCaption?.trim()) ||
-    (interactionMode === "persona" &&
-      !isSpeaking &&
-      !isThinking &&
-      lastAssistantReply?.trim()) ||
-    "";
+
+  const handleComposerChange = useCallback((next) => {
+    setComposerText(next);
+    if (listening || reviewing) setTranscript(next);
+  }, [listening, reviewing, setTranscript]);
+
+  const handleComposerSend = useCallback((text, extra) => {
+    armSpeechSynthesis();
+    if (reviewing) {
+      stopSpeech?.();
+      voiceModeRef.current = true;
+    } else if (voiceModeRef) {
+      voiceModeRef.current = false;
+    }
+    onSend(text, undefined, extra || {});
+    setComposerText("");
+    resetMic();
+  }, [onSend, resetMic, reviewing, stopSpeech, voiceModeRef]);
 
   const handleMicClick = useCallback(() => {
     if (isLoading || isPreparingSpeech || isFinalizing) return;
@@ -103,8 +214,11 @@ function PersonaView({
     toggleMic();
   }, [isLoading, isPreparingSpeech, isFinalizing, isSpeaking, stopSpeech, toggleMic]);
 
+  const studioOpen = Boolean(teachStudio);
+  const showTranscript = chatOnly && hasUserMessages && !studioOpen;
+
   useEffect(() => {
-    if (!showChatHistory) return undefined;
+    if (!showTranscript) return undefined;
 
     const el = messagesContainerRef.current;
     if (!el) return undefined;
@@ -113,25 +227,27 @@ function PersonaView({
     checkScrollPosition();
 
     return () => el.removeEventListener("scroll", checkScrollPosition);
-  }, [showChatHistory, checkScrollPosition]);
+  }, [showTranscript, checkScrollPosition]);
 
   useEffect(() => {
-    if (!showChatHistory) return;
+    if (!showTranscript) return;
     if (isNearBottomRef.current) {
       const isStreaming = messages.some((message) => message.streaming);
       requestAnimationFrame(() => scrollToBottom(isStreaming ? "auto" : "smooth"));
     } else {
       checkScrollPosition();
     }
-  }, [messages, isLoading, showChatHistory, scrollToBottom, checkScrollPosition]);
+  }, [messages, isLoading, showTranscript, scrollToBottom, checkScrollPosition]);
 
   const micLabel = isLoading || isPreparingSpeech || isFinalizing
     ? "Thinking…"
     : listening
-      ? "Tap when you're done"
+      ? "Listening… tap again when you're done"
+      : reviewing
+        ? "Edit if needed, then send — or tap the mic"
       : isSpeaking
         ? "Tap to stop"
-        : "Tap to speak";
+        : "Tap the mic";
 
   const avatarState = isSpeaking
     ? "speaking"
@@ -140,17 +256,40 @@ function PersonaView({
       : isLoading || isPreparingSpeech || isFinalizing
         ? "thinking"
         : "idle";
-  const showIdleHint =
-    showPersonaStage &&
-    !isSpeaking &&
-    !isLoading &&
-    !isPreparingSpeech &&
-    !isFinalizing &&
-    !hasUserMessages;
-  const isTutor = mode === "tutor";
+  const starterChips = useMemo(() => orderStarterChips(profile ?? {}), [profile]);
+  const composerBusy = isLoading || isPreparingSpeech || isFinalizing;
+
+  const handleChipClick = useCallback((prompt) => {
+    if (composerBusy) return;
+    armSpeechSynthesis();
+    if (voiceModeRef) voiceModeRef.current = false;
+    onSend(prompt);
+  }, [composerBusy, onSend, voiceModeRef]);
+
+  const handleStudioLaunch = useCallback((prompt) => {
+    if (composerBusy) return;
+    armSpeechSynthesis();
+    if (voiceModeRef) voiceModeRef.current = false;
+    onSend(prompt);
+  }, [composerBusy, onSend, voiceModeRef]);
+
+  const stageCaption = isThinking
+    ? { text: "thinking", typing: true }
+    : isSpeaking && speechCaption
+      ? { text: speechCaption, typing: false }
+      : lastAssistantReply
+        ? { text: lastAssistantReply, typing: false }
+        : { text: personaWelcomeCaption(profile), typing: false };
+
+  const shellClass = [
+    "pv",
+    !showTranscript && !studioOpen ? "pv--persona-mode" : "",
+    studioOpen ? "pv--studio" : "",
+    showTranscript ? "pv--chat-only" : "",
+  ].filter(Boolean).join(" ");
 
   return (
-    <div className={`pv${interactionMode === "persona" ? " pv--persona-mode" : ""}`}>
+    <div className={shellClass}>
       <div className="pv__overlay" aria-hidden="true" />
 
       <header className="pv-header">
@@ -164,220 +303,224 @@ function PersonaView({
             <MenuIcon />
           </button>
         )}
-        <span className="pv-brand__name brand-display">MY TARTAN</span>
-        <div className="pv-mode-tabs" role="tablist" aria-label="Assistant mode">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={mode === "qa"}
-            className={`pv-mode-tab${mode === "qa" ? " pv-mode-tab--active" : ""}`}
-            onClick={() => onSwitchMode?.("qa")}
-          >
-            Q&amp;A
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={mode === "tutor"}
-            className={`pv-mode-tab${mode === "tutor" ? " pv-mode-tab--active" : ""}`}
-            onClick={() => onSwitchMode?.("tutor")}
-          >
-            Course Tutor
-          </button>
+        <div className="pv-header__identity">
+          <div className="pv-header__copy">
+            <p className="pv-header__name">Scotty</p>
+            <p className="pv-header__role">
+              {avatarState === "speaking"
+                ? "Talking with you"
+                : avatarState === "listening"
+                  ? "Listening…"
+                  : avatarState === "thinking"
+                    ? "Thinking…"
+                    : "Live companion"}
+              <span className="pv-header__app"> · MyTartan</span>
+            </p>
+            {voiceStatus === "blocked" && (
+              <button type="button" className="pv-voice-status" onClick={onRetryVoice}>
+                Tap to play Scotty
+              </button>
+            )}
+            {voiceStatus === "error" && (
+              <p className="pv-voice-status pv-voice-status--error">ElevenLabs voice failed</p>
+            )}
+          </div>
         </div>
         <div className="pv-header__actions">
-          <div className="pv-interaction-tabs" role="tablist" aria-label="Input mode">
+          {hasUserMessages && !studioOpen && (
             <button
               type="button"
-              role="tab"
-              aria-selected={interactionMode === "persona"}
-              className={`pv-interaction-tab${
-                interactionMode === "persona" ? " pv-interaction-tab--active" : ""
-              }`}
-              onClick={() => setInteractionMode("persona")}
+              className={`pv-mode-toggle${chatOnly ? " pv-mode-toggle--active" : ""}`}
+              aria-pressed={chatOnly}
+              aria-label={chatOnly ? "Back to persona" : "Chat only"}
+              onClick={() => setChatOnly((current) => !current)}
             >
-              Persona
+              {chatOnly ? "Persona" : "Chat only"}
             </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={interactionMode === "chat"}
-              className={`pv-interaction-tab${
-                interactionMode === "chat" ? " pv-interaction-tab--active" : ""
-              }`}
-              onClick={() => setInteractionMode("chat")}
-            >
-              Chat
-            </button>
-          </div>
+          )}
           <button
             type="button"
             className={`pv-icon-btn${isMuted ? " pv-icon-btn--active" : ""}`}
-            aria-label={isMuted ? "Unmute persona" : "Mute persona"}
+            aria-label={isMuted ? "Unmute Scotty" : "Mute Scotty"}
             aria-pressed={isMuted}
-            title={isMuted ? "Unmute persona" : "Mute persona"}
+            title={isMuted ? "Unmute Scotty" : "Mute Scotty"}
             onClick={onToggleMute}
           >
             <VolumeIcon muted={isMuted} />
           </button>
-          <button
-            type="button"
-            className="pv-icon-btn"
-            aria-label="Share chat"
-            onClick={onShare}
-            disabled={!hasMessages}
-          >
-            <ShareIcon />
-          </button>
-          <button
-            type="button"
-            className="pv-icon-btn"
-            aria-label="Download chat"
-            onClick={onDownload}
-            disabled={!hasMessages}
-          >
-            <DownloadIcon />
-          </button>
+          {hasMessages && (
+            <>
+              <button
+                type="button"
+                className="pv-icon-btn"
+                aria-label="Share chat"
+                onClick={onShare}
+              >
+                <ShareIcon />
+              </button>
+              <button
+                type="button"
+                className="pv-icon-btn"
+                aria-label="Download chat"
+                onClick={onDownload}
+              >
+                <DownloadIcon />
+              </button>
+            </>
+          )}
           <SettingsButton onClick={onOpenSettings} />
         </div>
       </header>
 
-      <main
-        className={`pv-body${showChatHistory ? " pv-body--chat" : " pv-body--idle"}${
-          showChatHistory && !showAvatarStage ? " pv-body--chat-full" : ""
-        }`}
-      >
-        {showChatHistory && (
-          <div className="pv-messages-wrap">
-            <div
-              className="pv-messages message-history"
-              ref={messagesContainerRef}
-              role="log"
-              aria-live="polite"
-              aria-relevant="additions"
-            >
-              {messages.map((message, index) => {
-                const isUser = message.role === "user";
-                const msgId = message.id ?? index;
-                return (
-                  <div
-                    key={msgId}
-                    className={`msg-row${isUser ? " msg-row--user" : " msg-row--assistant"}`}
-                  >
-                    <div className={`msg-bubble msg-bubble--on-pattern${isUser ? " msg-bubble--user" : " msg-bubble--assistant"}`}>
-                      <MessageContent content={message.content} />
-                      {!isUser && message.confidence?.message && (
-                        <p className="msg-confidence" title={message.confidence.message}>
-                          {message.confidence.message}
-                        </p>
-                      )}
-                      {!isUser && !message.streaming && !message.studio && (
-                        <MessageFeedback
-                          messageId={message.id ?? `pv-${msgId}`}
-                          reply={message.content}
-                          feedbackContext={message.feedbackContext ?? { mode }}
-                          disabled={isLoading}
-                        />
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+      {studioOpen ? (
+        <TeachStudio
+          studio={teachStudio}
+          messages={messages}
+          isLoading={isLoading}
+          isSpeaking={isSpeaking}
+          speechCaption={speechCaption}
+          avatarState={avatarState}
+          avatarRef={avatarRef}
+          onClose={onCloseStudio}
+          onAnswer={onQuizAnswer}
+          onQuizComplete={onDocumentQuizComplete}
+          onMindMapStep={onMindMapStep}
+          onSheetStep={onSheetStep}
+          onSheetDensity={onSheetDensity}
+          onSheetRegenerate={onSheetRegenerate}
+          isDesktop={isDesktop}
+        />
+      ) : showTranscript ? (
+        <main className="pv-body pv-body--chat">
+          <TranscriptLog
+            messages={messages}
+            isLoading={isLoading}
+            mode={mode}
+            messagesContainerRef={messagesContainerRef}
+            showScrollDown={showScrollDown}
+            onScrollToBottom={() => scrollToBottom()}
+          />
+        </main>
+      ) : (
+        <main className="pv-body pv-body--idle">
+          <div className="pv-stage pv-stage--persona-main">
+            {lastUserAsk && (
+              <p className="pv-last-ask" title={lastUserAsk}>
+                <span className="pv-last-ask__label">You</span>
+                {lastUserAsk}
+              </p>
+            )}
 
-              {isLoading && (
-                <div className="msg-row msg-row--assistant">
-                  <div
-                    className="msg-bubble msg-bubble--assistant msg-bubble--on-pattern typing-indicator"
-                    aria-label="thinking"
-                  >
-                    <span className="typing-label">thinking</span>
-                    <span className="typing-dot typing-dot--on-pattern" />
-                    <span className="typing-dot typing-dot--on-pattern" />
-                    <span className="typing-dot typing-dot--on-pattern" />
-                  </div>
-                </div>
-              )}
+            <div className={`pv-avatar-frame pv-avatar-frame--${avatarState}`}>
+              <ScottyAvatar ref={avatarRef} persona avatarState={avatarState} />
             </div>
 
-            {showScrollDown && (
-              <button
-                type="button"
-                className="pv-scroll-down"
-                aria-label="Scroll to latest message"
-                onClick={() => scrollToBottom()}
-              >
-                <ChevronIcon />
-              </button>
-            )}
-          </div>
-        )}
-
-        {showAvatarStage && (
-        <div className={`pv-stage${interactionMode === "persona" ? " pv-stage--persona-main" : ""}`}>
-          <div
-            className={`pv-avatar-frame pv-avatar-frame--${avatarState}`}
-            style={avatarStyle}
-          >
-            <ScottyAvatar ref={avatarRef} persona avatarState={avatarState} />
-          </div>
-
-          {interactionMode === "persona" && (
-            <AvatarScaleHandle
-              zoom={zoom}
-              setZoom={setZoom}
-              minZoom={minZoom}
-              maxZoom={maxZoom}
-              onReset={resetZoom}
-            />
-          )}
-
-          {showPersonaStage && (
             <div className="pv-identity">
-              <p className="pv-identity__name brand-display">My Tartan</p>
+              <p className="pv-identity__name brand-display">Hey, I&apos;m Scotty</p>
               <p className="pv-identity__role">
-                <span className="pv-identity__dot" />
-                {isTutor ? "Course Tutor" : "CMU-Q Student Assistant"}
+                <span className={`pv-identity__dot pv-identity__dot--${avatarState}`} />
+                {avatarState === "speaking"
+                  ? "Talking with you"
+                  : avatarState === "listening"
+                    ? "Listening…"
+                    : avatarState === "thinking"
+                      ? "Thinking…"
+                      : "Your CMU-Q classmate"}
               </p>
             </div>
-          )}
 
-          {interactionMode === "persona" && isThinking ? (
-            <PersonaCaption text="thinking" typing />
-          ) : (
-            personaCaptionText && <PersonaCaption text={personaCaptionText} />
-          )}
+            <PersonaCaption text={stageCaption.text} typing={stageCaption.typing} />
 
-          {showIdleHint && (
-            <p className="pv-idle-hint">
-              {isTutor
-                ? "Open your class dashboard to add materials and study"
-                : interactionMode === "chat"
-                  ? "Type a question about CMU-Q registration, campus life, or policies"
-                  : "Tap the mic and ask me anything about CMU-Q"}
-            </p>
-          )}
-        </div>
-        )}
-        {!showAvatarStage && <ScottyAvatar ref={avatarRef} hidden />}
-      </main>
+            {!hasUserMessages && (
+              <ul className="pv-empty__chips" aria-label="Suggested questions">
+                {starterChips.map((chip) => (
+                  <li key={chip.id}>
+                    <button
+                      type="button"
+                      className="pv-empty__chip"
+                      disabled={composerBusy}
+                      onClick={() => handleChipClick(chip.prompt)}
+                    >
+                      {chip.label}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </main>
+      )}
 
       <footer className="pv-footer">
         <PersonaMicControls
           listening={listening}
+          reviewing={reviewing}
           isLoading={isLoading || isPreparingSpeech || isFinalizing}
           isSpeaking={isSpeaking}
           micLabel={micLabel}
           onMicClick={handleMicClick}
-          onSend={onSend}
+          onSend={handleComposerSend}
           voiceModeRef={voiceModeRef}
-          micOnly={interactionMode === "persona"}
-          inputOnly={interactionMode === "chat"}
           placeholder={
-            isTutor
-              ? "Ask Scotty about your course…"
-              : "Ask about CMU-Q registration, campus life, policies…"
+            listening
+              ? "Listening…"
+              : reviewing
+                ? "Edit this, then send"
+                : "Message Scotty"
           }
+          inputOnly
+          showComposerMic
+          allowAttach
+          value={composerText}
+          onChange={handleComposerChange}
         />
+        {documentSource && !studioOpen && !listening && !reviewing ? (
+          <div className="pv-note-actions">
+            <p className="pv-footer__hint">
+              Notes ready: {documentSource.name}. Open a studio from this file:
+            </p>
+            <div className="pv-note-actions__row" role="group" aria-label="Study this file">
+              <button
+                type="button"
+                className="pv-note-actions__btn"
+                disabled={composerBusy}
+                onClick={() => handleStudioLaunch("Quiz me on this")}
+              >
+                Quiz me
+              </button>
+              <button
+                type="button"
+                className="pv-note-actions__btn"
+                disabled={composerBusy}
+                onClick={() => handleStudioLaunch("Whiteboard this")}
+              >
+                Whiteboard
+              </button>
+              <button
+                type="button"
+                className="pv-note-actions__btn"
+                disabled={composerBusy}
+                onClick={() => handleStudioLaunch("Cheat sheet from this")}
+              >
+                Cheat sheet
+              </button>
+            </div>
+          </div>
+        ) : (
+          <p className="pv-footer__hint">
+            {listening
+              ? "Listening. Tap the mic when you're done, then edit or send."
+              : reviewing
+                ? "Edit if it looks messy, then send."
+                : studioOpen && teachStudio?.kind === "quiz"
+                  ? "One beat, one question. Scotty stays with you."
+                  : studioOpen && teachStudio?.kind === "mindmap"
+                    ? "The board grows as Scotty talks. Pause anytime."
+                    : studioOpen && teachStudio?.kind === "sheet"
+                      ? "The sheet writes itself in beats. Save it when the scene ends."
+                      : "Scotty can get things wrong. Check campus sources."}
+          </p>
+        )}
       </footer>
     </div>
   );

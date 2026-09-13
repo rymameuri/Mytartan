@@ -1,0 +1,366 @@
+import { render, screen, fireEvent } from "@testing-library/react";
+import PersonaView from "./PersonaView";
+
+jest.mock("./ScottyAvatar", () => {
+  return function MockScottyAvatar() {
+    return <div data-testid="scotty-avatar" />;
+  };
+});
+
+jest.mock("../hooks/useMicInput", () => ({
+  useMicInput: () => ({
+    listening: false,
+    reviewing: false,
+    isFinalizing: false,
+    transcript: "",
+    setTranscript: jest.fn(),
+    toggle: jest.fn(),
+    reset: jest.fn(),
+  }),
+}));
+
+jest.mock("./MessageFeedback", () => {
+  return function MockMessageFeedback() {
+    return null;
+  };
+});
+
+const voiceModeRef = { current: false };
+const noOp = () => {};
+
+function renderPersona(props = {}) {
+  return render(
+    <PersonaView
+      messages={[]}
+      isLoading={false}
+      onSend={noOp}
+      onShare={noOp}
+      onDownload={noOp}
+      voiceModeRef={voiceModeRef}
+      {...props}
+    />
+  );
+}
+
+describe("PersonaView empty state", () => {
+  test("introduces Scotty as the classmate and MyTartan as the app", () => {
+    renderPersona();
+    expect(screen.getByText(/mytartan/i)).toBeInTheDocument();
+    expect(screen.getByText(/hey, i'm scotty/i)).toBeInTheDocument();
+    expect(screen.getByText(/your cmu-q classmate/i)).toBeInTheDocument();
+    expect(screen.getByText(/what's going on\?/i)).toBeInTheDocument();
+  });
+
+  test("greets the student by preferred name and major", () => {
+    renderPersona({
+      profile: { preferredName: "Rym", major: "Computer Science", onboardingComplete: true },
+    });
+    expect(screen.getByText(/hey rym — computer science, right\? what's going on\?/i)).toBeInTheDocument();
+  });
+
+  test("has a Message Scotty composer with a mic", () => {
+    renderPersona();
+    expect(screen.getByPlaceholderText(/message scotty/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/speak to scotty/i)).toBeInTheDocument();
+  });
+
+  test("hides course tutor, tartan wallpaper, and scale chrome", () => {
+    renderPersona();
+    expect(screen.queryByRole("tab", { name: /course tutor/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: /persona/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/drag to scale/i)).not.toBeInTheDocument();
+    expect(document.querySelector(".scotty-pattern")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/share chat/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/download chat/i)).not.toBeInTheDocument();
+  });
+
+  test("shows a hero Scotty and starter chips that send", () => {
+    const onSend = jest.fn();
+    renderPersona({ onSend });
+    expect(document.querySelector(".pv-avatar-frame")).toBeInTheDocument();
+    expect(document.querySelector("[data-testid=\"scotty-avatar\"]")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /stressed about midterms/i })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /stressed about midterms/i }));
+    expect(onSend).toHaveBeenCalledWith(
+      "I'm stressed about midterms. Can you help me get through this week?"
+    );
+  });
+
+  test("opens a quiz studio with Scotty docked and one question", () => {
+    renderPersona({
+      messages: [
+        { role: "user", content: "quiz me on notes.txt" },
+        { role: "assistant", content: "Quiz from your notes.", studio: true },
+      ],
+      teachStudio: {
+        kind: "quiz",
+        title: "Quiz · notes.txt",
+        sourceName: "notes.txt",
+        questions: [
+          {
+            number: "1",
+            text: "What is a base case?",
+            options: [
+              { id: "A", text: "Stopping condition" },
+              { id: "B", text: "First line" },
+            ],
+            correct: "A",
+            explanation: "Recursion must stop.",
+          },
+        ],
+        reaction: { type: "teach", text: "Whenever you're ready — pick an answer." },
+      },
+    });
+    expect(document.querySelector(".pv--studio")).toBeInTheDocument();
+    expect(document.querySelector(".teach-studio .pv-avatar-frame")).toBeInTheDocument();
+    expect(screen.getByText(/quiz studio/i)).toBeInTheDocument();
+    expect(screen.getByText(/What is a base case/i)).toBeInTheDocument();
+    expect(screen.getByText(/Whenever you're ready/i)).toBeInTheDocument();
+    expect(screen.queryByText(/What is the call stack/i)).not.toBeInTheDocument();
+  });
+
+  test("opens a whiteboard studio for an animated mind-map", () => {
+    renderPersona({
+      messages: [{ role: "user", content: "whiteboard recursion" }],
+      teachStudio: {
+        kind: "mindmap",
+        title: "Recursion",
+        step: 0,
+        map: {
+          title: "Recursion",
+          width: 800,
+          height: 520,
+          nodes: [
+            { id: "n0", label: "Recursion", x: 400, y: 250 },
+            { id: "n1", label: "Base case", x: 600, y: 250 },
+          ],
+          links: [{ id: "e1", from: "n0", to: "n1" }],
+          steps: [
+            { revealNodeIds: ["n0"], revealLinkIds: [], narration: "Start at the center." },
+            { revealNodeIds: ["n1"], revealLinkIds: ["e1"], narration: "Add the base case." },
+          ],
+        },
+        reaction: { type: "teach", text: "Start at the center." },
+      },
+    });
+    expect(screen.getByText(/whiteboard studio/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/mind map of recursion/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Start at the center/i).length).toBeGreaterThan(0);
+  });
+
+  test("opens a study studio for a CMU-style cheat sheet", () => {
+    renderPersona({
+      messages: [{ role: "user", content: "cheat sheet from these slides" }],
+      teachStudio: {
+        kind: "sheet",
+        title: "Cheat sheet · 15-112",
+        sourceName: "15-112-recursion.pptx",
+        density: "dense",
+        step: 0,
+        sheet: {
+          kind: "cheatsheet",
+          title: "Cheat sheet · 15-112",
+          sourceName: "15-112-recursion.pptx",
+          courseLabel: "15-112",
+          courseCode: "15-112",
+          density: "dense",
+          disclaimer: "From your notes — not an official past paper.",
+          sections: [
+            {
+              id: "defs",
+              kicker: "Be exact",
+              title: "Key definitions",
+              items: [{ lead: "Core", body: "Recursion needs a base case so the calls can stop." }],
+              narration: "Definitions first.",
+            },
+          ],
+          footerNote: "Not official CMU exams.",
+        },
+        reaction: { type: "teach", text: "I'll lay this out like a CMU one-pager." },
+      },
+    });
+    expect(screen.getByText(/study studio/i)).toBeInTheDocument();
+    expect(screen.getByText(/Key definitions/i)).toBeInTheDocument();
+    expect(screen.getByText(/not an official past paper/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /denser/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /print/i })).toBeInTheDocument();
+    expect(document.querySelector(".teach-studio__log")).not.toBeInTheDocument();
+    expect(document.querySelector(".teach-studio--scene")).toBeInTheDocument();
+  });
+
+  test("keeps the hero persona after a chip or message — no bubble takeover", () => {
+    renderPersona({
+      messages: [
+        { role: "user", content: "I'm stressed about midterms. Can you help me get through this week?" },
+        { role: "assistant", content: "Yeah — let's get you through this week." },
+      ],
+    });
+    expect(document.querySelector(".pv-avatar-frame")).toBeInTheDocument();
+    expect(document.querySelector(".pv--persona-mode")).toBeInTheDocument();
+    expect(document.querySelector(".pv--chat-only")).not.toBeInTheDocument();
+    expect(document.querySelector(".message-history")).not.toBeInTheDocument();
+    expect(document.querySelector(".pv-header__avatar")).not.toBeInTheDocument();
+    expect(screen.getByText(/Yeah — let's get you through this week/i)).toBeInTheDocument();
+    expect(document.querySelector(".pv-last-ask")).toHaveTextContent(/stressed about midterms/i);
+    expect(document.querySelector(".pv-last-ask").compareDocumentPosition(document.querySelector(".pv-avatar-frame")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /stressed about midterms/i })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/suggested questions/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /chat only/i })).toBeInTheDocument();
+  });
+
+  test("Chat only is an optional transcript; Persona switches back", () => {
+    renderPersona({
+      messages: [
+        { role: "user", content: "Where is the library?" },
+        { role: "assistant", content: "The library is in the Academic Building." },
+      ],
+    });
+    fireEvent.click(screen.getByRole("button", { name: /chat only/i }));
+    expect(document.querySelector(".pv--chat-only")).toBeInTheDocument();
+    expect(document.querySelector(".message-history")).toBeInTheDocument();
+    expect(document.querySelector(".pv-avatar-frame")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /back to persona/i }));
+    expect(document.querySelector(".pv-avatar-frame")).toBeInTheDocument();
+    expect(document.querySelector(".pv--chat-only")).not.toBeInTheDocument();
+  });
+
+  test("notes-ready footer launches studios instead of a cryptic hint", () => {
+    const onSend = jest.fn();
+    renderPersona({
+      onSend,
+      documentSource: { name: "Cresswell 2009_Place.pdf", text: "Place is a relation between objects." },
+    });
+    expect(screen.getByText(/notes ready: cresswell 2009_place\.pdf/i)).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: /study this file/i })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /^quiz me$/i }));
+    expect(onSend).toHaveBeenCalledWith("Quiz me on this");
+    fireEvent.click(screen.getByRole("button", { name: /^whiteboard$/i }));
+    expect(onSend).toHaveBeenCalledWith("Whiteboard this");
+    fireEvent.click(screen.getByRole("button", { name: /^cheat sheet$/i }));
+    expect(onSend).toHaveBeenCalledWith("Cheat sheet from this");
+  });
+
+  test("shows a tap-to-play control when ElevenLabs audio is blocked", () => {
+    const onRetryVoice = jest.fn();
+    renderPersona({ voiceStatus: "blocked", onRetryVoice });
+    fireEvent.click(screen.getByRole("button", { name: /tap to play scotty/i }));
+    expect(onRetryVoice).toHaveBeenCalled();
+  });
+
+  test("shows live captions while Scotty is talking", () => {
+    renderPersona({
+      isSpeaking: true,
+      speechCaption: "Library's in the Academic Building — I can walk you.",
+    });
+    expect(screen.getByText(/Library's in the Academic Building/i)).toBeInTheDocument();
+    expect(document.querySelector(".pv-avatar-frame--speaking")).toBeInTheDocument();
+    expect(document.querySelector(".pv-avatar-frame")).toBeInTheDocument();
+  });
+
+  test("keeps talking Scotty docked beside a studio", () => {
+    renderPersona({
+      isSpeaking: true,
+      speechCaption: "Nice — that's the base case.",
+      messages: [
+        { role: "user", content: "quiz me on notes.txt" },
+        { role: "assistant", content: "Quiz from your notes.", studio: true },
+      ],
+      teachStudio: {
+        kind: "quiz",
+        title: "Quiz · notes.txt",
+        sourceName: "notes.txt",
+        questions: [
+          {
+            number: "1",
+            text: "What is a base case?",
+            options: [
+              { id: "A", text: "Stopping condition" },
+              { id: "B", text: "First line" },
+            ],
+            correct: "A",
+            explanation: "Recursion must stop.",
+          },
+        ],
+        reaction: { type: "celebrate", text: "Yes — recursion has to stop somewhere." },
+      },
+    });
+    expect(document.querySelector(".teach-studio .pv-avatar-frame")).toBeInTheDocument();
+    expect(document.querySelector(".teach-studio .pv-avatar-frame--speaking")).toBeInTheDocument();
+    expect(screen.getAllByText(/talking with you/i).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/Nice — that's the base case/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/Yes — recursion has to stop somewhere/i)).toBeInTheDocument();
+    expect(screen.getByText(/What is a base case/i)).toBeInTheDocument();
+  });
+
+  test("whiteboard aside teaches the concept and never becomes Scotty's subtitle", () => {
+    renderPersona({
+      isSpeaking: true,
+      speechCaption: "Cresswell, Royal Holloway, University of London, Egham, UK & 2009 Elsevier Inc.",
+      messages: [
+        { role: "user", content: "whiteboard this" },
+        { role: "assistant", content: "I'll map Place beside us.", studio: true },
+      ],
+      teachStudio: {
+        kind: "mindmap",
+        title: "Place",
+        step: 1,
+        map: {
+          title: "Place",
+          width: 800,
+          height: 520,
+          nodes: [
+            { id: "n0", label: "Place", x: 400, y: 250 },
+            { id: "n1", label: "Location", x: 600, y: 250 },
+          ],
+          links: [{ id: "e1", from: "n0", to: "n1" }],
+          steps: [
+            { revealNodeIds: ["n0"], revealLinkIds: [], narration: "Here's Place on the board." },
+            {
+              revealNodeIds: ["n1"],
+              revealLinkIds: ["e1"],
+              narration: "Location — the physical point, not a publisher address.",
+            },
+          ],
+        },
+        reaction: { type: "teach", text: "Location — the physical point, not a publisher address." },
+      },
+    });
+    expect(document.querySelector(".teach-studio__role")).toHaveTextContent(/talking with you/i);
+    expect(document.querySelector(".teach-studio__role").textContent).not.toMatch(/elsevier|royal holloway|uk/i);
+    expect(document.querySelector(".teach-studio .persona-caption")).not.toBeInTheDocument();
+    expect(screen.getAllByText(/Location — the physical point/i).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/All rights reserved/i)).not.toBeInTheDocument();
+  });
+
+  test("quiz reaction fragments never become Scotty's subtitle", () => {
+    renderPersona({
+      isSpeaking: true,
+      speechCaption: "UK & 2009 Elsevier Inc.",
+      messages: [
+        { role: "user", content: "create a quiz for this" },
+        { role: "assistant", content: "Quiz from your notes.", studio: true },
+      ],
+      teachStudio: {
+        kind: "quiz",
+        title: "Quiz · Cresswell 2009_Place.pdf",
+        sourceName: "Cresswell 2009_Place.pdf",
+        questions: [
+          {
+            number: "1",
+            text: "Which claim matches the paper?",
+            options: [
+              { id: "A", text: "Place is more than a point on a map" },
+              { id: "B", text: "Cresswell, Royal Holloway, University of London, Egham, UK & 2009 Elsevier Inc." },
+            ],
+            correct: "A",
+          },
+        ],
+        reaction: { type: "teach", text: "Not quite. Look for the claim about the idea, not a citation." },
+      },
+    });
+    expect(document.querySelector(".teach-studio__role")).toHaveTextContent(/talking with you/i);
+    expect(document.querySelector(".teach-studio__role").textContent).not.toMatch(/elsevier|cresswell|uk/i);
+    expect(document.querySelector(".teach-studio .persona-caption")).not.toBeInTheDocument();
+    expect(document.querySelector(".pv-header__role")).toHaveTextContent(/talking with you/i);
+  });
+});

@@ -7,6 +7,7 @@
 const {
   loadKnowledgeBase,
   retrieveRelevantDocs,
+  expandQuery,
   buildStudentContext,
   buildContextBlock,
   buildKeyFactsBlock,
@@ -176,6 +177,57 @@ describe("retrieveRelevantDocs — myCMU-Q portal content", () => {
     const results = retrieveRelevantDocs("How do I apply for an emergency student loan?");
     expectRelevant(results, { topicPattern: /emergency|loan|grant/i, filePattern: /emergency-student-loans/ });
   });
+
+  test("homesick rough night retrieves the situation guide", () => {
+    const results = retrieveRelevantDocs("I'm homesick and it's a rough night");
+    expectRelevant(results, { topicPattern: /homesick|rough night/i, filePattern: /rough-night-homesick/ });
+  });
+
+  test("quiet vs social study retrieves the situation guide", () => {
+    const results = retrieveRelevantDocs("quiet study vs social study at CMU-Q");
+    expectRelevant(results, { topicPattern: /quiet|social study/i, filePattern: /quiet-vs-social-study/ });
+  });
+
+  test("study-abroad questions still retrieve study-abroad pages", () => {
+    const results = retrieveRelevantDocs("How do I apply for external study abroad?");
+    expect(results.some((doc) => /study-abroad/.test(doc.file))).toBe(true);
+  });
+
+  test("quiet place to study prefers library spots and excludes study abroad", () => {
+    expect(expandQuery("Where's a quiet place to study on the CMU-Q campus?")).toMatch(
+      /library|study rooms|poetry garden/i
+    );
+    const query = "Where's a quiet place to study on the CMU-Q campus?";
+    const results = retrieveRelevantDocs(query, { limit: 5 });
+    const files = results.map((doc) => doc.file);
+    expect(files.some((file) => /quiet-vs-social-study|library\/overview/.test(file))).toBe(true);
+    expect(files.some((file) => /library\/overview/.test(file))).toBe(true);
+    expect(files.some((file) => /quiet-vs-social-study/.test(file))).toBe(true);
+    expect(files.join("\n")).not.toMatch(/study-abroad/);
+    expect(results.map((doc) => doc.topic).join(" ")).not.toMatch(/study abroad/i);
+    const confidence = computeConfidence(results.slice(0, 2));
+    expect(confidence.sources.every((source) => !/study-abroad/.test(source.file))).toBe(true);
+  });
+
+  test("joke requests retrieve the campus humor guide and skip policy dumps", () => {
+    expect(expandQuery("tell me a joke")).toMatch(/campus humor/i);
+    const jokeResults = retrieveRelevantDocs("tell me a joke", { limit: 3 });
+    expectRelevant(jokeResults, { topicPattern: /how scotty jokes/i, filePattern: /situations\/campus-humor/ });
+    expect(jokeResults[0].file).toMatch(/campus-humor/);
+    expect(jokeResults.every((doc) => /campus-humor/.test(doc.file))).toBe(true);
+
+    const laughResults = retrieveRelevantDocs("make me laugh", { limit: 3 });
+    expectRelevant(laughResults, { topicPattern: /how scotty jokes/i, filePattern: /situations\/campus-humor/ });
+
+    const registerResults = retrieveRelevantDocs("When is the add drop deadline?", { limit: 5 });
+    expect(registerResults.map((doc) => doc.file).join("\n")).not.toMatch(/campus-humor/);
+  });
+
+  test("first week slang expands and retrieves the situation guide", () => {
+    expect(expandQuery("first week")).toMatch(/orientation|academic success|registration/i);
+    const results = retrieveRelevantDocs("What should I do my first week at CMU-Q?");
+    expectRelevant(results, { topicPattern: /first week/i, filePattern: /situations\/first-week/ });
+  });
 });
 
 // ─── buildContextBlock ────────────────────────────────────────────────────────
@@ -298,12 +350,23 @@ describe("buildStudentContext", () => {
   };
 
   test("returns personalized paragraph for complete onboarding", () => {
-    const context = buildStudentContext(completeProfile);
+    const context = buildStudentContext(completeProfile, { now: new Date("2026-09-13") });
     expect(context).toMatch(/Computer Science/);
     expect(context).toMatch(/May 2027/);
+    expect(context).toMatch(/senior/);
     expect(context).toMatch(/visual/);
     expect(context).toMatch(/campus navigation/);
-    expect(context).toMatch(/whiteboard brainstorms and flashcards/i);
+    expect(context).not.toMatch(/whiteboard brainstorms and flashcards/i);
+    expect(context).toMatch(/Do not mention Course Tutor/);
+  });
+
+  test("names the student and tells Scotty to call them that", () => {
+    const context = buildStudentContext({
+      ...completeProfile,
+      preferredName: "Rym",
+    });
+    expect(context).toMatch(/speaking with Rym/);
+    expect(context).toMatch(/Call them Rym/);
   });
 
   test("returns empty string when onboarding is incomplete", () => {
@@ -312,10 +375,19 @@ describe("buildStudentContext", () => {
     expect(buildStudentContext(undefined)).toBe("");
   });
 
-  test("returns empty string when any profile field is missing", () => {
+  test("returns empty string without a major, even if other fields are present", () => {
     expect(buildStudentContext({ ...completeProfile, major: null })).toBe("");
-    expect(buildStudentContext({ ...completeProfile, graduationDate: "" })).toBe("");
-    expect(buildStudentContext({ ...completeProfile, learningStyle: "  " })).toBe("");
-    expect(buildStudentContext({ ...completeProfile, intendedUse: null })).toBe("");
+  });
+
+  test("still builds context when optional fields are missing", () => {
+    const context = buildStudentContext({
+      ...completeProfile,
+      graduationDate: "",
+      learningStyle: "  ",
+      intendedUse: null,
+    });
+    expect(context).toMatch(/Computer Science/);
+    expect(context).not.toMatch(/expected to graduate/);
+    expect(context).not.toMatch(/preferred learning style/);
   });
 });

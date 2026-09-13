@@ -1,9 +1,12 @@
 import { useEffect } from "react";
 import { CloseIcon } from "./Icons";
 import CanvasConnect from "./CanvasConnect";
+import { useAvatarZoom } from "../hooks/useAvatarZoom";
+import { COURSE_TUTOR_ENABLED } from "../config/features";
 import "./SettingsModal.css";
 
 function SettingsModal({ onClose, canvasConnection }) {
+  const { zoom, setZoom, resetZoom, minZoom, maxZoom } = useAvatarZoom();
   useEffect(() => {
     function handleKeyDown(event) {
       if (event.key === "Escape") onClose();
@@ -31,19 +34,35 @@ function SettingsModal({ onClose, canvasConnection }) {
         </header>
 
         <section className="settings-modal__section">
-          <h3 className="settings-modal__section-title">Persona look</h3>
+          <h3 className="settings-modal__section-title">Appearance</h3>
           <p className="settings-modal__hint">
-            Move and scale Scotty's mouth and eyes until they sit on the face the way you want.
+            Optional avatar size. The chat itself stays the same.
           </p>
-          <a className="settings-modal__link" href="/?facialAlign">
-            Open face editor
-          </a>
+          <label className="settings-modal__zoom">
+            <span className="settings-modal__zoom-label">Avatar size</span>
+            <div className="settings-modal__zoom-row">
+              <input
+                type="range"
+                min={minZoom}
+                max={maxZoom}
+                value={zoom}
+                onChange={(event) => setZoom(Number(event.target.value))}
+                aria-valuetext={`${zoom} percent`}
+              />
+              <span className="settings-modal__zoom-value">{zoom}%</span>
+              <button type="button" className="settings-modal__text-btn" onClick={resetZoom}>
+                Reset
+              </button>
+            </div>
+          </label>
         </section>
 
-        <section className="settings-modal__section">
-          <h3 className="settings-modal__section-title">Connect Canvas</h3>
-          <CanvasConnect {...canvasConnection} />
-        </section>
+        {COURSE_TUTOR_ENABLED && (
+          <section className="settings-modal__section">
+            <h3 className="settings-modal__section-title">Connect Canvas</h3>
+            <CanvasConnect {...canvasConnection} />
+          </section>
+        )}
       </div>
     </div>
   );

@@ -34,7 +34,6 @@ import PersonaMicControls from "./PersonaMicControls";
 import PersonaCaption from "./PersonaCaption";
 import ScottyHeadbandFrame from "./ScottyHeadbandFrame";
 import ScottyAvatar from "./ScottyAvatar";
-import AvatarScaleHandle from "./AvatarScaleHandle";
 import SourceReader from "./SourceReader";
 import {
   QuizIcon,
@@ -152,13 +151,13 @@ function ClassWorkspace({
   const [studioView, setStudioView] = useState("cards");
   const [generatingActivityId, setGeneratingActivityId] = useState(null);
   const [studioError, setStudioError] = useState("");
-  const [interactionMode, setInteractionMode] = useState("persona");
+  const [interactionMode, setInteractionMode] = useState("chat");
   const [activeReaderSource, setActiveReaderSource] = useState(null);
   const fileInputRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const workspaceRef = useRef(null);
   const { widths: paneWidths, startDrag: startPaneDrag } = usePaneResize(workspaceRef);
-  const { zoom, setZoom, resetZoom, avatarStyle, minZoom, maxZoom } = useAvatarZoom();
+  const { avatarStyle } = useAvatarZoom();
 
   const allMaterials = useMemo(
     () => courseContext?.materials ?? [],
@@ -348,18 +347,34 @@ function ClassWorkspace({
     [onSend, lectureTopic, scopedContext, tutorActivity, isDesktop, courseContext?.courseName]
   );
 
+  const [composerText, setComposerText] = useState("");
+
   const handleVoiceResult = useCallback(
-    (transcript) => {
+    (spoken) => {
       stopSpeech?.();
       voiceModeRef.current = true;
-      sendTutorMessage(transcript);
+      sendTutorMessage(spoken);
+      setComposerText("");
     },
     [stopSpeech, voiceModeRef, sendTutorMessage]
   );
 
-  const { listening, isFinalizing, toggle: toggleMic, stop: stopMic } = useMicInput({
+  const {
+    listening,
+    reviewing,
+    isFinalizing,
+    transcript,
+    setTranscript,
+    toggle: toggleMic,
+    stop: stopMic,
+    reset: resetMic,
+  } = useMicInput({
     onResult: handleVoiceResult,
   });
+
+  useEffect(() => {
+    if (listening || reviewing) setComposerText(transcript);
+  }, [listening, reviewing, transcript]);
 
   useEffect(() => {
     stopMic();
@@ -369,6 +384,21 @@ function ClassWorkspace({
   useEffect(() => {
     onListeningChange?.(listening);
   }, [listening, onListeningChange]);
+
+  const handleComposerChange = useCallback((next) => {
+    setComposerText(next);
+    if (listening || reviewing) setTranscript(next);
+  }, [listening, reviewing, setTranscript]);
+
+  const handleComposerSend = useCallback((text) => {
+    if (reviewing) {
+      stopSpeech?.();
+      voiceModeRef.current = true;
+    }
+    sendTutorMessage(text);
+    setComposerText("");
+    resetMic();
+  }, [resetMic, reviewing, sendTutorMessage, stopSpeech, voiceModeRef]);
 
   const handleMicClick = useCallback(() => {
     if (isLoading || isPreparingSpeech || isFinalizing) return;
@@ -422,10 +452,12 @@ function ClassWorkspace({
   const micLabel = isLoading || isPreparingSpeech || isFinalizing
     ? "Thinking…"
     : listening
-      ? "Tap when you're done"
+      ? "Listening… tap again when you're done"
+      : reviewing
+        ? "Edit if needed, then send — or tap the mic"
       : isSpeaking
         ? "Tap to stop"
-        : "Tap to speak";
+        : "Tap the mic";
 
   useEffect(() => {
     if (!showChatHistory) return undefined;
@@ -1030,30 +1062,6 @@ function ClassWorkspace({
             )}
           </div>
           <div className="ws-chat__header-actions">
-            <div className="ws-chat__mode-tabs" role="tablist" aria-label="Course tutor input mode">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={interactionMode === "persona"}
-                className={`ws-chat__mode-tab${
-                  interactionMode === "persona" ? " ws-chat__mode-tab--active" : ""
-                }`}
-                onClick={() => setInteractionMode("persona")}
-              >
-                Persona
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={interactionMode === "chat"}
-                className={`ws-chat__mode-tab${
-                  interactionMode === "chat" ? " ws-chat__mode-tab--active" : ""
-                }`}
-                onClick={() => setInteractionMode("chat")}
-              >
-                Chat
-              </button>
-            </div>
             {onToggleMute && (
               <button
                 type="button"
@@ -1136,19 +1144,9 @@ function ClassWorkspace({
               </ScottyHeadbandFrame>
             </div>
 
-            {interactionMode === "persona" && (
-              <AvatarScaleHandle
-                zoom={zoom}
-                setZoom={setZoom}
-                minZoom={minZoom}
-                maxZoom={maxZoom}
-                onReset={resetZoom}
-              />
-            )}
-
             {showPersonaStage && (
               <div className="pv-identity">
-                <p className="pv-identity__name brand-display">My Tartan</p>
+                <p className="pv-identity__name brand-display">Scotty</p>
                 <p className="pv-identity__role">
                   <span className="pv-identity__dot" />
                   Course Tutor
@@ -1171,9 +1169,7 @@ function ClassWorkspace({
               !isFinalizing &&
               !isSpeaking && (
               <p className="pv-idle-hint">
-                {interactionMode === "chat"
-                  ? "Type or ask Scotty anything about your sources"
-                  : "Tap the mic and talk with Scotty about your sources"}
+                Ask Scotty about your sources
               </p>
             )}
 
@@ -1198,14 +1194,16 @@ function ClassWorkspace({
           <p className="ws-chat__scope">{sourceCountLabel}</p>
           <PersonaMicControls
             listening={listening}
+            reviewing={reviewing}
             isLoading={isLoading || isPreparingSpeech || isFinalizing}
             isSpeaking={isSpeaking}
             micLabel={micLabel}
             onMicClick={handleMicClick}
-            onSend={sendTutorMessage}
+            onSend={handleComposerSend}
             voiceModeRef={voiceModeRef}
-            micOnly={interactionMode === "persona"}
-            placeholder="Ask Scotty about your sources…"
+            placeholder={listening ? "Listening…" : reviewing ? "Edit this, then send" : "or type here"}
+            value={composerText}
+            onChange={handleComposerChange}
           />
         </footer>
       </main>

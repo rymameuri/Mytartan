@@ -3,7 +3,7 @@
   inset: 0;
   z-index: 40;
   border: none;
-  background: rgba(92, 21, 30, 0.55);
+  background: rgba(28, 25, 23, 0.28);
   cursor: pointer;
 }
 
@@ -17,12 +17,11 @@
   width: min(300px, 88vw);
   height: 100%;
   padding: 16px 12px 20px;
-  background: rgba(122, 28, 40, 0.94);
-  backdrop-filter: blur(12px);
-  border-right: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.2);
+  background: var(--app-sidebar);
+  border-right: 1px solid var(--app-border);
+  box-shadow: none;
   animation: side-menu-slide-in 0.2s ease-out;
-  color: var(--tartan-white);
+  color: var(--app-text);
 }
 
 .side-menu--persistent {
@@ -59,12 +58,12 @@
 }
 
 .side-menu__collapse-btn {
-  color: var(--tartan-text-on-dark);
+  color: var(--app-text-secondary);
 }
 
 .side-menu__collapse-btn:hover {
-  background: rgba(255, 255, 255, 0.12);
-  color: var(--tartan-white);
+  background: var(--app-hover);
+  color: var(--app-text);
 }
 
 .side-menu__btn-label {
@@ -87,7 +86,6 @@
 }
 
 .side-menu--collapsed .side-menu__new-chat,
-.side-menu--collapsed .side-menu__tutor-btn,
 .side-menu--collapsed .side-menu__new-project {
   width: 44px;
   height: 44px;
@@ -95,11 +93,6 @@
   margin-right: auto;
   padding: 0;
   justify-content: center;
-}
-
-.side-menu--collapsed .side-menu__tutor-icon {
-  font-size: 1.125rem;
-  line-height: 1;
 }
 
 .side-menu--collapsed .side-menu__conv-btn {
@@ -131,12 +124,6 @@
   justify-content: center;
 }
 
-.side-menu__tutor-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
 @keyframes side-menu-slide-in {
   from { transform: translateX(-100%); }
   to { transform: translateX(0); }
@@ -152,17 +139,19 @@
 
 .side-menu__title {
   margin: 0;
-  font-size: 1.125rem;
-  -webkit-text-stroke: 0.75px var(--tartan-maroon-deep);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--app-text);
 }
 
 .side-menu__header .icon-btn {
-  color: var(--tartan-text-on-dark);
+  color: var(--app-text-secondary);
 }
 
 .side-menu__header .icon-btn:hover {
-  background: rgba(255, 255, 255, 0.12);
-  color: var(--tartan-white);
+  background: var(--app-hover);
+  color: var(--app-text);
 }
 
 .side-menu__new-chat {
@@ -172,45 +161,21 @@
   gap: 8px;
   width: 100%;
   margin-bottom: 12px;
-  padding: 11px 16px;
-  border: 2px solid rgba(255, 255, 255, 0.35);
-  border-radius: 999px;
-  background: var(--tartan-white);
-  color: var(--tartan-maroon);
-  font-family: var(--font-display);
-  font-size: 0.9375rem;
-  font-weight: 600;
+  padding: 9px 14px;
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
+  background: var(--app-surface);
+  color: var(--app-text);
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 550;
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+  transition: background 0.15s ease, border-color 0.15s ease;
 }
 
 .side-menu__new-chat:hover {
-  background: var(--tartan-maroon);
-  color: var(--tartan-white);
-  transform: translateY(-1px);
-}
-
-.side-menu__tutor-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  margin-bottom: 12px;
-  padding: 10px 16px;
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
-  color: var(--tartan-white);
-  font-family: var(--font-display);
-  font-size: 0.9375rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s ease, transform 0.15s ease;
-}
-
-.side-menu__tutor-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
-  transform: translateY(-1px);
+  background: var(--ws-surface-hover);
+  border-color: var(--ws-border-strong);
 }
 
 .side-menu__new-project {
@@ -223,7 +188,7 @@
   border: none;
   border-radius: 10px;
   background: transparent;
-  color: var(--tartan-text-muted-on-dark);
+  color: var(--app-text-muted);
   font-family: inherit;
   font-size: 0.875rem;
   font-weight: 500;
@@ -233,8 +198,8 @@
 }
 
 .side-menu__new-project:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--tartan-white);
+  background: var(--app-hover);
+  color: var(--app-text);
 }
 
 .side-menu__scroll {
@@ -263,7 +228,7 @@
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--tartan-text-faint-on-dark);
+  color: var(--app-text-muted);
 }
 
 .side-menu__section-header .side-menu__section-title {
@@ -279,14 +244,14 @@
   border: none;
   border-radius: 8px;
   background: transparent;
-  color: var(--tartan-text-muted-on-dark);
+  color: var(--app-text-secondary);
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease;
 }
 
 .side-menu__section-action:hover {
-  background: rgba(255, 255, 255, 0.12);
-  color: var(--tartan-white);
+  background: var(--app-hover);
+  color: var(--app-text);
 }
 
 .side-menu__conv-list {
@@ -298,7 +263,7 @@
 .side-menu__conv-list--nested {
   margin: 2px 0 8px 12px;
   padding-left: 8px;
-  border-left: 2px solid rgba(255, 255, 255, 0.15);
+  border-left: 2px solid var(--app-border);
 }
 
 .side-menu__conv-item {
@@ -322,7 +287,7 @@
   border: none;
   border-radius: 10px;
   background: transparent;
-  color: var(--tartan-text-on-dark);
+  color: var(--app-text);
   font-family: inherit;
   font-size: 0.875rem;
   font-weight: 500;
@@ -332,12 +297,12 @@
 }
 
 .side-menu__conv-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--app-hover);
 }
 
 .side-menu__conv-btn--active {
-  background: rgba(255, 255, 255, 0.16);
-  color: var(--tartan-white);
+  background: var(--app-surface);
+  color: var(--app-text);
   font-weight: 600;
 }
 
@@ -361,7 +326,7 @@
   border: none;
   border-radius: 8px;
   background: transparent;
-  color: var(--tartan-text-muted-on-dark);
+  color: var(--app-text-secondary);
   cursor: pointer;
   opacity: 0;
   transition: opacity 0.15s ease, background 0.15s ease;
@@ -370,8 +335,8 @@
 .side-menu__conv-menu-btn:hover,
 .side-menu__conv-actions:focus-within .side-menu__conv-menu-btn {
   opacity: 1;
-  background: rgba(255, 255, 255, 0.12);
-  color: var(--tartan-white);
+  background: var(--app-hover);
+  color: var(--app-text);
 }
 
 .side-menu__dropdown {
@@ -383,15 +348,15 @@
   margin-top: 4px;
   padding: 6px;
   border-radius: 12px;
-  background: var(--tartan-white);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.18);
-  border: 1px solid rgba(156, 39, 51, 0.1);
+  background: var(--app-surface);
+  box-shadow: 0 8px 24px rgba(28, 25, 23, 0.1);
+  border: 1px solid var(--app-border);
 }
 
 .side-menu__dropdown-group {
   margin-bottom: 4px;
   padding-bottom: 4px;
-  border-bottom: 1px solid rgba(156, 39, 51, 0.08);
+  border-bottom: 1px solid var(--app-border);
 }
 
 .side-menu__dropdown-label {
@@ -401,7 +366,7 @@
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: #888888;
+  color: var(--app-text-muted);
 }
 
 .side-menu__dropdown-item {
@@ -413,7 +378,7 @@
   border: none;
   border-radius: 8px;
   background: transparent;
-  color: #222222;
+  color: var(--app-text);
   font-family: inherit;
   font-size: 0.8125rem;
   font-weight: 500;
@@ -458,7 +423,7 @@
   border: none;
   border-radius: 10px;
   background: transparent;
-  color: var(--tartan-text-on-dark);
+  color: var(--app-text);
   font-family: inherit;
   font-size: 0.875rem;
   font-weight: 600;
@@ -468,7 +433,7 @@
 }
 
 .side-menu__project-toggle:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--app-hover);
 }
 
 .side-menu__project-name {
@@ -483,8 +448,8 @@
   height: 20px;
   padding: 0 6px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.15);
-  color: var(--tartan-text-on-dark);
+  background: var(--app-surface);
+  color: var(--app-text-secondary);
   font-size: 0.6875rem;
   font-weight: 700;
   line-height: 20px;
@@ -501,7 +466,7 @@
   border: none;
   border-radius: 10px;
   background: transparent;
-  color: var(--tartan-text-muted-on-dark);
+  color: var(--app-text-secondary);
   font-family: inherit;
   font-size: 0.8125rem;
   font-weight: 600;
@@ -511,8 +476,8 @@
 }
 
 .side-menu__topics-toggle:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--tartan-white);
+  background: var(--app-hover);
+  color: var(--app-text);
 }
 
 .side-menu__topic-group {
@@ -527,7 +492,7 @@
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--tartan-text-faint-on-dark);
+  color: var(--app-text-muted);
 }
 
 .side-menu__list {
@@ -543,7 +508,7 @@
   border: none;
   border-radius: 8px;
   background: transparent;
-  color: var(--tartan-text-muted-on-dark);
+  color: var(--app-text-secondary);
   font-family: inherit;
   font-size: 0.8125rem;
   font-weight: 500;
@@ -553,22 +518,22 @@
 }
 
 .side-menu__item:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--tartan-white);
+  background: var(--app-hover);
+  color: var(--app-text);
 }
 
 .side-menu__project-empty {
   margin: 4px 0 8px 20px;
   padding: 0 4px;
   font-size: 0.75rem;
-  color: var(--tartan-text-faint-on-dark);
+  color: var(--app-text-muted);
 }
 
 .side-menu__profile {
   flex-shrink: 0;
   margin-top: auto;
   padding: 12px 4px;
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  border-top: 1px solid var(--app-border);
 }
 
 .side-menu__profile-info {
@@ -582,7 +547,7 @@
 .side-menu__profile-email {
   font-size: 0.8125rem;
   font-weight: 500;
-  color: var(--tartan-text-on-dark);
+  color: var(--app-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -590,7 +555,7 @@
 
 .side-menu__profile-major {
   font-size: 0.75rem;
-  color: var(--tartan-text-muted-on-dark);
+  color: var(--app-text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -598,11 +563,11 @@
 
 .side-menu__logout {
   appearance: none;
-  border: 1px solid rgba(255, 255, 255, 0.22);
+  border: 1px solid var(--app-border);
   border-radius: 8px;
   padding: 6px 12px;
   background: transparent;
-  color: var(--tartan-text-muted-on-dark);
+  color: var(--app-text-secondary);
   font: inherit;
   font-size: 0.75rem;
   font-weight: 500;
@@ -611,32 +576,17 @@
 }
 
 .side-menu__logout:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.35);
-  color: var(--tartan-white);
-}
-
-.side-menu__footer {
-  flex-shrink: 0;
-  margin: 12px 0 0;
-  padding: 12px 4px 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
-  font-size: 0.75rem;
-  line-height: 1.5;
-  color: var(--tartan-text-faint-on-dark);
-}
-
-.side-menu__footer a {
-  color: var(--tartan-white);
-  text-decoration: none;
-}
-
-.side-menu__footer a:hover {
-  text-decoration: underline;
+  background: var(--app-hover);
+  border-color: var(--ws-border-strong);
+  color: var(--app-text);
 }
 
 @media (max-width: 899px) {
   .side-menu__conv-menu-btn {
     opacity: 1;
+  }
+
+  .side-menu {
+    padding-bottom: 12px;
   }
 }

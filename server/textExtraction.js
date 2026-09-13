@@ -1,4 +1,5 @@
 const mammoth = require("mammoth");
+const { extractPptxTextFromBuffer } = require("./pptxText");
 
 const MAX_TEXT_FILE_BYTES = 2 * 1024 * 1024;
 const MAX_BINARY_FILE_BYTES = 10 * 1024 * 1024;
@@ -66,6 +67,12 @@ async function extractTextFromBuffer(buffer, fileName, { mimeType } = {}) {
   const isDocx =
     extension === "docx" ||
     mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  const isPptx =
+    extension === "pptx" ||
+    mimeType === "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+  const isImage =
+    ["png", "jpg", "jpeg", "gif", "webp", "heic", "heif"].includes(extension) ||
+    String(mimeType || "").startsWith("image/");
 
   if (isPdf) {
     if (size > MAX_BINARY_FILE_BYTES) {
@@ -91,6 +98,26 @@ async function extractTextFromBuffer(buffer, fileName, { mimeType } = {}) {
     } catch (err) {
       return { skipReason: err.message || "Could not extract DOCX text" };
     }
+  }
+
+  if (isPptx) {
+    if (size > MAX_BINARY_FILE_BYTES) {
+      return {
+        skipReason: `PowerPoint file too large (max ${formatSizeLimit(MAX_BINARY_FILE_BYTES)})`,
+      };
+    }
+    try {
+      return { text: extractPptxTextFromBuffer(buffer) };
+    } catch (err) {
+      return { skipReason: err.message || "Could not extract PPTX text" };
+    }
+  }
+
+  if (isImage) {
+    return {
+      skipReason:
+        "Can't read text from images. Paste the notes or upload a PDF, PPTX, or Word file.",
+    };
   }
 
   if (size > MAX_TEXT_FILE_BYTES) {

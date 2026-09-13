@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import ScottyPattern from "../ScottyPattern";
 import { useAuth } from "../../context/AuthContext";
 import { CMUQ_MAJORS } from "../../data/cmuqMajors";
 import "./OnboardingFlow.css";
@@ -13,7 +12,7 @@ const LEARNING_STYLES = [
 
 const USE_CASES = [
   "General campus questions",
-  "Course tutoring",
+  "Someone to talk to",
   "Finding my way around campus",
   "A mix of everything",
 ];
@@ -38,6 +37,7 @@ const TOTAL_STEPS = 4;
 function OnboardingFlow() {
   const { updateProfile } = useAuth();
   const [step, setStep] = useState(1);
+  const [preferredName, setPreferredName] = useState("");
   const [learningStyle, setLearningStyle] = useState("");
   const [useCase, setUseCase] = useState("");
   const [major, setMajor] = useState("");
@@ -59,10 +59,10 @@ function OnboardingFlow() {
   }, [major]);
 
   function canContinue() {
-    if (step === 1) return Boolean(learningStyle);
-    if (step === 2) return Boolean(useCase);
-    if (step === 3) return major.trim().length > 0;
-    if (step === 4) return Boolean(gradMonth && gradYear);
+    if (step === 1) return preferredName.trim().length > 0;
+    if (step === 2) return major.trim().length > 0;
+    if (step === 3) return Boolean(gradMonth && gradYear);
+    if (step === 4) return Boolean(useCase && learningStyle);
     return false;
   }
 
@@ -79,6 +79,7 @@ function OnboardingFlow() {
     try {
       const monthLabel = MONTHS.find((m) => m.value === gradMonth)?.label ?? gradMonth;
       await updateProfile({
+        preferredName: preferredName.trim(),
         learningStyle,
         intendedUse: useCase,
         major: major.trim(),
@@ -102,10 +103,9 @@ function OnboardingFlow() {
 
   return (
     <div className="onboarding">
-      <ScottyPattern />
-
       <div className="onboarding__content">
         <header className="onboarding__header">
+          <p className="onboarding__kicker">So Scotty can actually know you</p>
           <p className="onboarding__step">Step {step} of {TOTAL_STEPS}</p>
           <div className="onboarding__progress" aria-hidden="true">
             {Array.from({ length: TOTAL_STEPS }, (_, i) => (
@@ -122,43 +122,28 @@ function OnboardingFlow() {
         <main className="onboarding__main">
           {step === 1 && (
             <section className="onboarding__section">
-              <h1 className="onboarding__question">What is your learning style?</h1>
-              <div className="onboarding__options">
-                {LEARNING_STYLES.map((option) => (
-                  <button
-                    key={option}
-                    type="button"
-                    className={`onboarding__option${learningStyle === option ? " onboarding__option--selected" : ""}`}
-                    onClick={() => setLearningStyle(option)}
-                  >
-                    {option}
-                  </button>
-                ))}
-              </div>
+              <h1 className="onboarding__question">What should Scotty call you?</h1>
+              <p className="onboarding__why">
+                I’ll greet you by this name and stop asking who you are.
+              </p>
+              <input
+                type="text"
+                className="onboarding__input"
+                value={preferredName}
+                onChange={(e) => setPreferredName(e.target.value)}
+                placeholder="e.g. Rym"
+                autoComplete="nickname"
+                maxLength={40}
+              />
             </section>
           )}
 
           {step === 2 && (
             <section className="onboarding__section">
-              <h1 className="onboarding__question">What do you hope to use MyTartan for?</h1>
-              <div className="onboarding__options">
-                {USE_CASES.map((option) => (
-                  <button
-                    key={option}
-                    type="button"
-                    className={`onboarding__option${useCase === option ? " onboarding__option--selected" : ""}`}
-                    onClick={() => setUseCase(option)}
-                  >
-                    {option}
-                  </button>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {step === 3 && (
-            <section className="onboarding__section">
               <h1 className="onboarding__question">What is your major?</h1>
+              <p className="onboarding__why">
+                I’ll point you to the right CMU-Q advisor and keep answers in your program.
+              </p>
               <div className="onboarding__field-wrap">
                 <input
                   type="text"
@@ -190,9 +175,12 @@ function OnboardingFlow() {
             </section>
           )}
 
-          {step === 4 && (
+          {step === 3 && (
             <section className="onboarding__section">
               <h1 className="onboarding__question">When are you graduating?</h1>
+              <p className="onboarding__why">
+                First-year energy is different from senior year. I’ll match that, and pick year-aware referrals.
+              </p>
               <div className="onboarding__date-row">
                 <label className="onboarding__date-field">
                   <span className="onboarding__label">Month</span>
@@ -228,6 +216,43 @@ function OnboardingFlow() {
             </section>
           )}
 
+          {step === 4 && (
+            <section className="onboarding__section">
+              <h1 className="onboarding__question">How should I show up for you?</h1>
+              <p className="onboarding__why">
+                These two picks change my first move — campus facts, company, or a map — and how I explain things.
+              </p>
+
+              <h2 className="onboarding__subhead">What do you want most?</h2>
+              <div className="onboarding__options">
+                {USE_CASES.map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    className={`onboarding__option${useCase === option ? " onboarding__option--selected" : ""}`}
+                    onClick={() => setUseCase(option)}
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
+
+              <h2 className="onboarding__subhead">How do you learn best?</h2>
+              <div className="onboarding__options">
+                {LEARNING_STYLES.map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    className={`onboarding__option${learningStyle === option ? " onboarding__option--selected" : ""}`}
+                    onClick={() => setLearningStyle(option)}
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+
           {error && (
             <p className="onboarding__error" role="alert">
               {error}
@@ -247,7 +272,7 @@ function OnboardingFlow() {
             onClick={handleNext}
             disabled={!canContinue() || submitting}
           >
-            {submitting ? "Saving…" : step === TOTAL_STEPS ? "Finish" : "Continue"}
+            {submitting ? "Saving…" : step === TOTAL_STEPS ? "Meet Scotty" : "Continue"}
           </button>
         </footer>
       </div>

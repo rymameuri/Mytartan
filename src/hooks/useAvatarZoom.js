@@ -6,6 +6,7 @@ const STORAGE_KEY = "tartan-avatar-zoom";
 const DEFAULT_ZOOM = 100;
 const MIN_ZOOM = 85;
 const MAX_ZOOM = 130;
+const ZOOM_EVENT = "tartan-avatar-zoom";
 
 function readStoredZoom(userId) {
   try {
@@ -22,13 +23,23 @@ function readStoredZoom(userId) {
 export function useAvatarZoom() {
   const { user } = useAuth();
   const userId = user?.id;
-  const [zoom, setZoom] = useState(() => readStoredZoom(userId));
+  const [zoom, setZoomState] = useState(() => readStoredZoom(userId));
   const skipNextPersist = useRef(false);
 
   useEffect(() => {
     skipNextPersist.current = true;
-    setZoom(readStoredZoom(userId));
+    setZoomState(readStoredZoom(userId));
   }, [userId]);
+
+  useEffect(() => {
+    function handleZoomEvent(event) {
+      const next = event.detail?.zoom;
+      if (typeof next !== "number") return;
+      setZoomState((prev) => (prev === next ? prev : next));
+    }
+    window.addEventListener(ZOOM_EVENT, handleZoomEvent);
+    return () => window.removeEventListener(ZOOM_EVENT, handleZoomEvent);
+  }, []);
 
   useEffect(() => {
     if (skipNextPersist.current) {
@@ -42,9 +53,21 @@ export function useAvatarZoom() {
     }
   }, [zoom, userId]);
 
+  const setZoom = useCallback((next) => {
+    setZoomState((prev) => {
+      const value = typeof next === "function" ? next(prev) : next;
+      const clamped = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Number(value)));
+      if (Number.isNaN(clamped) || clamped === prev) return prev;
+      queueMicrotask(() => {
+        window.dispatchEvent(new CustomEvent(ZOOM_EVENT, { detail: { zoom: clamped } }));
+      });
+      return clamped;
+    });
+  }, []);
+
   const resetZoom = useCallback(() => {
     setZoom(DEFAULT_ZOOM);
-  }, []);
+  }, [setZoom]);
 
   const avatarStyle = {
     "--avatar-scale": (zoom / 100).toFixed(2),

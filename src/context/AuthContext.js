@@ -76,6 +76,43 @@ export function AuthProvider({ children }) {
     return data;
   }, [persistAuth]);
 
+  const requestPasswordReset = useCallback(async (email) => {
+    return authRequest("/api/auth/forgot-password", {
+      method: "POST",
+      body: { email },
+    });
+  }, []);
+
+  const resetPassword = useCallback(async (token, password) => {
+    return authRequest("/api/auth/reset-password", {
+      method: "POST",
+      body: { token, password },
+    });
+  }, []);
+
+  const verifyEmail = useCallback(async (token) => {
+    const data = await authRequest("/api/auth/verify-email", {
+      method: "POST",
+      body: { token },
+    });
+    if (data.user && data.token) {
+      persistAuth(data.user, data.token);
+    }
+    return data;
+  }, [persistAuth]);
+
+  const resendVerification = useCallback(async () => {
+    if (!auth.token) throw new Error("Not authenticated");
+    return authRequest("/api/auth/resend-verification", {
+      method: "POST",
+      token: auth.token,
+    });
+  }, [auth.token]);
+
+  const fetchMailStatus = useCallback(async () => {
+    return authRequest("/api/auth/mail-status");
+  }, []);
+
   const logout = useCallback(async () => {
     try {
       if (auth.token) {
@@ -114,8 +151,24 @@ export function AuthProvider({ children }) {
       signup,
       logout,
       updateProfile,
+      requestPasswordReset,
+      resetPassword,
+      verifyEmail,
+      resendVerification,
+      fetchMailStatus,
     }),
-    [auth, login, signup, logout, updateProfile]
+    [
+      auth,
+      login,
+      signup,
+      logout,
+      updateProfile,
+      requestPasswordReset,
+      resetPassword,
+      verifyEmail,
+      resendVerification,
+      fetchMailStatus,
+    ]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -79,7 +79,7 @@
 }
 
 .persona-mic-controls .pmc-label {
-  color: #8a7070;
+  color: var(--tartan-text-on-dark);
 }
 
 .pmc-label--live {

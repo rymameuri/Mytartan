@@ -4,32 +4,39 @@ import "./PersonaMicControls.css";
 
 function PersonaMicControls({
   listening = false,
+  reviewing = false,
   isLoading = false,
   isSpeaking = false,
   micLabel,
   onMicClick,
   onSend,
   voiceModeRef,
-  placeholder = "Ask MyTartan anything...",
+  placeholder = "or type here",
   inputOnly = false,
   micOnly = false,
+  showComposerMic = false,
+  allowAttach = false,
+  value,
+  onChange,
 }) {
   const label =
     micLabel ??
     (isLoading
       ? "Thinking…"
       : listening
-        ? "Listening…"
+        ? "Listening… tap again when you're done"
+        : reviewing
+          ? "Edit if needed, then send — or tap the mic"
         : isSpeaking
           ? "Tap to stop"
-          : "Tap to speak to Scotty");
+          : "Tap the mic");
 
   return (
     <div className="persona-mic-controls">
       {!inputOnly && (
         <>
           <div className={`pmc-wrap${listening ? " pmc-wrap--active" : ""}`}>
-            {listening && (
+            {(listening || reviewing) && (
               <>
                 <span className="pmc-sonar pmc-sonar--1" aria-hidden="true" />
                 <span className="pmc-sonar pmc-sonar--2" aria-hidden="true" />
@@ -38,11 +45,17 @@ function PersonaMicControls({
             )}
             <button
               type="button"
-              className={`pmc-btn${listening ? " pmc-btn--active" : ""}`}
+              className={`pmc-btn${listening || reviewing ? " pmc-btn--active" : ""}`}
               onClick={onMicClick}
               disabled={isLoading}
               aria-label={
-                isSpeaking ? "Stop speaking" : listening ? "Stop listening" : "Speak to Scotty"
+                isSpeaking
+                  ? "Stop speaking"
+                  : listening
+                    ? "Stop listening"
+                    : reviewing
+                      ? "Send voice note"
+                      : "Speak to Scotty"
               }
             >
               <MicIcon active={listening} />
@@ -50,7 +63,7 @@ function PersonaMicControls({
           </div>
           <p
             className={`pmc-label${isLoading ? " pmc-label--muted" : ""}${
-              listening ? " pmc-label--live" : ""
+              listening || reviewing ? " pmc-label--live" : ""
             }`}
           >
             {label}
@@ -65,6 +78,13 @@ function PersonaMicControls({
             voiceModeRef={voiceModeRef}
             compact
             placeholder={placeholder}
+            showMic={showComposerMic}
+            allowAttach={allowAttach}
+            onMicClick={onMicClick}
+            micActive={listening}
+            reviewing={reviewing}
+            value={value}
+            onChange={onChange}
           />
         </div>
       )}

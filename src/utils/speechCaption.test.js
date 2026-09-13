@@ -6,10 +6,21 @@ import {
   captionForCharIndex,
   wordIndexForPlaybackProgress,
   captionForPlaybackProgress,
+  speechWordWeight,
+  msForCaptionStep,
 } from "./speechCaption";
 
 test("normalizeSpeechCaption collapses whitespace", () => {
   expect(normalizeSpeechCaption("  Hello   world  ")).toBe("Hello world");
+});
+
+test("normalizeSpeechCaption hides ElevenLabs break tags", () => {
+  expect(normalizeSpeechCaption('Okay. <break time="0.4s"/> Next beat.')).toBe("Okay. Next beat.");
+});
+
+test("sentence-ending words hold longer in captions", () => {
+  expect(speechWordWeight("Building.")).toBeGreaterThan(speechWordWeight("library"));
+  expect(msForCaptionStep("Building.", 400)).toBeGreaterThan(msForCaptionStep("library", 400));
 });
 
 test("splitIntoCaptionLines keeps short sentences on one line", () => {
@@ -60,6 +71,14 @@ test("wordIndexForPlaybackProgress tracks audio clock", () => {
 test("wordIndexForPlaybackProgress lags behind the audio clock", () => {
   expect(wordIndexForPlaybackProgress(12, 5, 10, 0.28)).toBe(5);
   expect(wordIndexForPlaybackProgress(12, 0.2, 10)).toBe(0);
+});
+
+test("weighted playback progress holds on a sentence stop", () => {
+  const words = ["Library", "first.", "Poetry", "Garden", "next."];
+  const weights = words.map(speechWordWeight);
+  expect(
+    wordIndexForPlaybackProgress(words.length, 1.2, 10, 0, weights)
+  ).toBeLessThanOrEqual(1);
 });
 
 test("captionForPlaybackProgress only shows words already spoken", () => {

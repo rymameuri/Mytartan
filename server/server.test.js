@@ -56,6 +56,29 @@ describe("GET /api/kb/status", () => {
     expect(res.body).toHaveProperty("lastQuery");
     expect(res.body.lastQuery).toHaveProperty("usedQueryRewriting");
     expect(res.body.lastQuery).toHaveProperty("usedReranking");
+    expect(res.body).toHaveProperty("transcribeAvailable");
+  });
+});
+
+describe("GET /api/tts/status", () => {
+  test("reports whether ElevenLabs keys are configured", async () => {
+    const res = await request(app).get("/api/tts/status");
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(
+      expect.objectContaining({
+        configured: expect.any(Boolean),
+        provider: expect.stringMatching(/^(elevenlabs|none)$/),
+      })
+    );
+  });
+});
+
+describe("POST /api/transcribe", () => {
+  test("returns 501 when no gateway transcription is configured", async () => {
+    const res = await request(app)
+      .post("/api/transcribe")
+      .send({ audio: Buffer.from("not-real-audio-but-long-enough-pad").toString("base64") });
+    expect(res.status).toBe(501);
   });
 });
 
@@ -187,7 +210,7 @@ describe("POST /api/chat — input validation", () => {
     }
   });
 
-  test("tells user to check myCMU-Q Student Affairs when a campus-fact query has no KB match", async () => {
+  test("unknown campus fact says so once without dumping the contact directory", async () => {
     const res = await request(app)
       .post("/api/chat")
       .send({
@@ -196,9 +219,11 @@ describe("POST /api/chat — input validation", () => {
       });
 
     expect(res.status).toBe(200);
-    expect(res.body.reply).toMatch(/don't have that one/i);
-    expect(res.body.reply).toMatch(/mycmuq-student-affairs/i);
-    expect(res.body.reply).toMatch(/\nhttps:\/\/sites\.google\.com/);
+    expect(res.body.reply).toMatch(/don't have the official answer/i);
+    expect(res.body.reply).not.toMatch(/mycmuq-student-affairs/i);
+    expect((res.body.reply.match(/@[a-z0-9.-]+/gi) || []).length).toBeLessThanOrEqual(3);
+    expect(res.body.reply).not.toMatch(/hbouamor@/);
+    expect(res.body.reply).not.toMatch(/atorinab@/);
     expect(res.body.confidence).toMatchObject({ sourceCount: 0, score: 0 });
   });
 
@@ -225,7 +250,10 @@ describe("POST /api/chat — input validation", () => {
       });
 
     expect(res.status).toBe(200);
-    expect(res.body.reply).toBe(LOW_CONFIDENCE_REPLY);
+    expect(res.body.reply).toMatch(/don't have the official answer/i);
+    expect((res.body.reply.match(/@[a-z0-9.-]+/gi) || []).length).toBeLessThanOrEqual(3);
+    expect(res.body.reply).not.toMatch(/hbouamor@/);
+    expect(res.body.reply).not.toMatch(/atorinab@/);
     expect(res.body.confidence.score).toBeLessThan(LOW_CONFIDENCE_THRESHOLD);
   });
 
@@ -256,6 +284,117 @@ describe("POST /api/chat — input validation", () => {
 
     expect(res.status).not.toBe(400);
   });
+
+  test("CS profile unknown academic refers CS advising, not every office", async () => {
+    const email = `cs-referral-${Date.now()}@example.com`;
+    const signupRes = await request(app)
+      .post("/api/auth/signup")
+      .send({ email, password: "testpass123" });
+    await request(app)
+      .patch("/api/auth/profile")
+      .set("Authorization", `Bearer ${signupRes.body.token}`)
+      .send({
+        major: "Computer Science",
+        graduationDate: "May 2030",
+        learningStyle: "visual",
+        intendedUse: "campus navigation",
+      });
+
+    const res = await request(app)
+      .post("/api/chat")
+      .set("Authorization", `Bearer ${signupRes.body.token}`)
+      .send({
+        messages: [{ role: "user", content: "heygen xyzzy quuxington" }],
+        mode: "qa",
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.reply).toMatch(/don't have the official answer/i);
+    expect(res.body.reply).toMatch(/rdriley@andrew\.cmu\.edu/);
+    expect(res.body.reply).toMatch(/ddourado@andrew\.cmu\.edu/);
+    expect(res.body.reply).not.toMatch(/hbouamor@/);
+    expect(res.body.reply).not.toMatch(/atorinab@/);
+    expect(res.body.reply).not.toMatch(/srian@/);
+    expect((res.body.reply.match(/@[a-z0-9.-]+/gi) || []).length).toBeLessThanOrEqual(3);
+  });
+
+  test("IS profile unknown academic refers IS advising, not CS", async () => {
+    const email = `is-referral-${Date.now()}@example.com`;
+    const signupRes = await request(app)
+      .post("/api/auth/signup")
+      .send({ email, password: "testpass123" });
+    await request(app)
+      .patch("/api/auth/profile")
+      .set("Authorization", `Bearer ${signupRes.body.token}`)
+      .send({
+        major: "Information Systems",
+        graduationDate: "May 2028",
+        learningStyle: "reading",
+        intendedUse: "campus navigation",
+      });
+
+    const res = await request(app)
+      .post("/api/chat")
+      .set("Authorization", `Bearer ${signupRes.body.token}`)
+      .send({
+        messages: [{ role: "user", content: "heygen xyzzy quuxington" }],
+        mode: "qa",
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.reply).toMatch(/hbouamor@andrew\.cmu\.edu/);
+    expect(res.body.reply).not.toMatch(/rdriley@/);
+    expect(res.body.reply).not.toMatch(/atorinab@/);
+    expect((res.body.reply.match(/@[a-z0-9.-]+/gi) || []).length).toBeLessThanOrEqual(3);
+  });
+
+  test("mental-health message hands off to CaPS without fake therapy or a directory", async () => {
+    const res = await request(app)
+      .post("/api/chat")
+      .send({
+        messages: [{ role: "user", content: "I'm really struggling mentally" }],
+        mode: "qa",
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.reply).toMatch(/I'm here with you/);
+    expect(res.body.reply).toMatch(/not a counselor/i);
+    expect(res.body.reply).toMatch(/atorinab@andrew\.cmu\.edu/);
+    expect(res.body.reply).not.toMatch(/rdriley@/);
+    expect(res.body.reply).not.toMatch(/hbouamor@/);
+    expect(res.body.reply).not.toMatch(/diagnos/i);
+    expect((res.body.reply.match(/@[a-z0-9.-]+/gi) || []).length).toBe(1);
+  });
+
+  test("midterm stress stays supportive and names ARC, not CaPS or every office", async () => {
+    const res = await request(app)
+      .post("/api/chat")
+      .send({
+        messages: [{ role: "user", content: "I have three midterms and I cannot think" }],
+        mode: "qa",
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.reply).toMatch(/that's a lot/i);
+    expect(res.body.reply).toMatch(/mariamma@andrew\.cmu\.edu/);
+    expect(res.body.reply).not.toMatch(/atorinab@/);
+    expect(res.body.reply).not.toMatch(/rdriley@/);
+    expect(res.body.reply).not.toMatch(/hbouamor@/);
+    expect((res.body.reply.match(/@[a-z0-9.-]+/gi) || []).length).toBeLessThanOrEqual(3);
+  });
+
+  test("ugh midterms is supportive, not a campus-fact miss", async () => {
+    const res = await request(app)
+      .post("/api/chat")
+      .send({
+        messages: [{ role: "user", content: "ugh midterms" }],
+        mode: "qa",
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.reply).toMatch(/that's a lot|i'm here/i);
+    expect(res.body.reply).not.toMatch(/don't have the official answer/i);
+  });
 });
 
 describe("isSmallTalk", () => {
@@ -282,6 +421,18 @@ describe("isSmallTalk", () => {
     expect(isCampusFactQuery("financial aid")).toBe(true);
     expect(isCampusFactQuery("I'm so done with this week")).toBe(false);
     expect(isCampusFactQuery("tell me a joke")).toBe(false);
+  });
+
+  test("joke request without AI uses one dry campus beat, not a dad joke", async () => {
+    const res = await request(app)
+      .post("/api/chat")
+      .send({
+        messages: [{ role: "user", content: "tell me a joke" }],
+        mode: "qa",
+      });
+    expect(res.status).toBe(200);
+    expect(res.body.reply).toMatch(/Stellic has more pages/i);
+    expect(res.body.reply).not.toMatch(/chicken|knock.?knock|pawsitive|ruff|camel/i);
   });
 
   test("classifies greetings and pleasantries as small talk", () => {
@@ -312,6 +463,13 @@ describe("isSmallTalk", () => {
 
   test("does not classify longer messages as small talk", () => {
     expect(isSmallTalk("hi there I wanted to ask about registration deadlines")).toBe(false);
+  });
+
+  test("does not classify study-action asks as small talk", () => {
+    expect(isSmallTalk("create a quiz for this")).toBe(false);
+    expect(isSmallTalk("quiz me on this")).toBe(false);
+    expect(isSmallTalk("whiteboard this")).toBe(false);
+    expect(isSmallTalk("cheat sheet from this")).toBe(false);
   });
 });
 

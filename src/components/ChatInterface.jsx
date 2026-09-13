@@ -78,8 +78,8 @@ function ChatInterface({ messages, isLoading, showHero, mascot, avatarRef, voice
           <span className="chat-id-bar__status" />
         </div>
         <div className="chat-id-bar__text">
-          <span className="chat-id-bar__name brand-display">My Tartan</span>
-          <span className="chat-id-bar__sub">CMU-Q Student Assistant</span>
+          <span className="chat-id-bar__name brand-display">Scotty</span>
+          <span className="chat-id-bar__sub">Your CMU-Q classmate · MyTartan</span>
         </div>
       </div>
 
@@ -88,9 +88,9 @@ function ChatInterface({ messages, isLoading, showHero, mascot, avatarRef, voice
         {showHero ? (
           <div className="chat-hero">
             <div className="chat-hero__mascot">{mascot}</div>
-            <p className="chat-hero__greeting brand-display">Hi, I&apos;m MyTartan!</p>
+            <p className="chat-hero__greeting brand-display">Hi, I&apos;m Scotty!</p>
             <p className="chat-hero__sub">
-              Ask me anything about CMU-Q — academics, campus life, policies, or resources.
+              Your CMU-Q classmate on MyTartan. Ask about campus, or just talk.
             </p>
           </div>
         ) : (

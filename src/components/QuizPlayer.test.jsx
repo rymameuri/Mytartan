@@ -61,3 +61,33 @@ test("QuizPlayer lets student answer and submit quiz", () => {
     })
   );
 });
+
+test("immediate reveal teaches one question at a time", () => {
+  const onAnswer = jest.fn();
+  const onComplete = jest.fn();
+  render(
+    <QuizPlayer
+      questions={sampleQuestions}
+      title="Quiz · Recursion"
+      revealMode="immediate"
+      onAnswer={onAnswer}
+      onComplete={onComplete}
+    />
+  );
+
+  fireEvent.click(screen.getByLabelText(/First line/i));
+  expect(onAnswer).toHaveBeenCalledWith(
+    expect.objectContaining({ correct: false, selected: "A", index: 0 })
+  );
+  expect(screen.getByLabelText(/First line/i).closest("label").className).toMatch(/wrong/);
+  expect(screen.getByLabelText(/Stopping condition/i).closest("label").className).toMatch(/correct/);
+  expect(screen.queryByRole("button", { name: /Previous/i })).not.toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("button", { name: /Next beat/i }));
+  expect(screen.getByText(/Question 2 of 2/i)).toBeInTheDocument();
+  fireEvent.click(screen.getByLabelText(/Active calls/i));
+  expect(onAnswer).toHaveBeenCalledWith(expect.objectContaining({ correct: true, index: 1 }));
+  fireEvent.click(screen.getByRole("button", { name: /See results/i }));
+  expect(onComplete).toHaveBeenCalledTimes(1);
+  expect(screen.getByText(/Your score/i)).toBeInTheDocument();
+});

@@ -25,8 +25,8 @@ export function linkLabelForUrl(href) {
 }
 
 /**
- * Em dashes, ellipses, and similar marks make TTS hitch.
- * Keep hyphenated words like CMU-Q; only flatten pause punctuation.
+ * Shape chat text so TTS can breathe: clause dashes become sentence stops,
+ * not commas. Keep hyphenated words like CMU-Q.
  */
 export function flattenSpeechPauses(text) {
   if (!text || typeof text !== "string") return "";
@@ -35,10 +35,12 @@ export function flattenSpeechPauses(text) {
     .replace(/(\d+)\s*[–—]\s*(\d+)/g, "$1 to $2")
     .replace(/\u2026/g, ".")
     .replace(/\.{3,}/g, ".")
-    .replace(/\s*[—–]\s*/g, ", ")
-    .replace(/\s+--\s+/g, ", ")
-    .replace(/[ \t]*;[ \t]*/g, ", ")
+    .replace(/\s*[—–]\s*/g, ". ")
+    .replace(/\s+--\s+/g, ". ")
+    .replace(/[ \t]*;[ \t]*/g, ". ")
     .replace(/([A-Za-z])\s*:\s+([A-Za-z])/g, "$1, $2")
+    .replace(/([.!?])\s+([a-z])/g, (_, mark, letter) => `${mark} ${letter.toUpperCase()}`)
+    .replace(/([.!?]){2,}/g, "$1")
     .replace(/(,\s*){2,}/g, ", ")
     .replace(/\s+([,.!?])/g, "$1")
     .replace(/\s+/g, " ")
