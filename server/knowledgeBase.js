@@ -692,6 +692,14 @@ function scoreDocumentTfidf(doc, queryTokens, queryLower) {
   if (doc.file.endsWith("student-handbook.txt") && /\b(integrity|conduct|policy|policies|rules)\b/.test(queryLower)) {
     score *= 1.4;
   }
+  if (
+    doc.file.startsWith("situations/") &&
+    /\b(homesick|rough night|midterms? week|first week|orientation|quiet study|social study|study room|choosing a minor|pick a minor|declare a minor)\b/.test(
+      queryLower
+    )
+  ) {
+    score *= 1.65;
+  }
 
   return score;
 }

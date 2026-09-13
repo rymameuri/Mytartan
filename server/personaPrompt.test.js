@@ -38,6 +38,8 @@ describe("personaPrompt", () => {
     expect(prompt).toMatch(/Just chatting:/);
     expect(prompt).toMatch(/Lonely \/ company:/);
     expect(prompt).toMatch(/Overwhelm \/ midterms:/);
+    expect(prompt).toMatch(/Homesick \/ rough night:/);
+    expect(prompt).toMatch(/First week lost:/);
     expect(prompt).toMatch(/Bored tonight:/);
     expect(prompt).toMatch(/Serious financial aid:/);
     expect(prompt).toMatch(/Socratic tutor:/);
@@ -122,5 +124,13 @@ describe("personaPrompt", () => {
     const prompt = buildPersonaPrompt("qa", { role: "teacher" });
     expect(prompt).toMatch(/ROLE — TEACHER/);
     expect(prompt).toMatch(/Socratic/);
+  });
+
+  test("first-place voice is a trusted classmate, not a brochure", () => {
+    const prompt = buildPersonaPrompt("qa");
+    expect(prompt).toMatch(/FIRST PLACE THEY'D GO/);
+    expect(prompt).toMatch(/trusted classmate/i);
+    expect(prompt).toMatch(/one concrete next step/i);
+    expect(prompt).toMatch(/Never invent policy/);
   });
 });

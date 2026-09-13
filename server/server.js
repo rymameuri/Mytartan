@@ -32,6 +32,7 @@ const {
   formatReferralBlock,
   buildUnknownFactReply,
   buildSupportiveReferralReply,
+  buildAcademicSupportReply,
 } = require("./contactMap");
 const { generateTutorSpeechScript } = require("./tutorSpeech");
 const { generateQuizRecap } = require("./tutorQuizRecap");
@@ -1258,6 +1259,18 @@ async function handleChatRequest(req, res, { stream = false } = {}) {
     !canvasConnection
   ) {
     return sendChatReply(res, buildUnknownFactReply(referralContacts), { stream, replyMeta });
+  }
+
+  if (intent.topic === "academic_support" && !hasAiKey()) {
+    return sendChatReply(res, buildAcademicSupportReply(referralContacts), {
+      stream,
+      replyMeta: buildReplyMeta({
+        mode,
+        userQuery,
+        confidence: computeConfidence(docs),
+        keyFacts,
+      }),
+    });
   }
 
   if (intent.topic === "mental_health" && !hasAiKey()) {

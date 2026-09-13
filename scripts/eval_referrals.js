@@ -1,14 +1,19 @@
 #!/usr/bin/env node
 /**
- * Lightweight referral eval: intent + contact selection only (no LLM).
+ * Referral + situation eval: intent, contact selection, optional RAG gate (no LLM).
  *
  * Usage: node scripts/eval_referrals.js [--dataset=eval/referral-cases.json]
  */
 
 const fs = require("fs");
 const path = require("path");
-const { classifyIntent } = require("../server/intentRouter");
+const { classifyIntent, shouldSelectReferrals } = require("../server/intentRouter");
 const { selectContacts } = require("../server/contactMap");
+const {
+  loadKnowledgeBase,
+  retrieveRelevantDocs,
+  computeConfidence,
+} = require("../server/knowledgeBase");
 
 function parseArgs() {
   const args = { dataset: path.join(__dirname, "..", "eval", "referral-cases.json") };
@@ -25,6 +30,11 @@ function emailsOf(contacts) {
 function main() {
   const { dataset } = parseArgs();
   const cases = JSON.parse(fs.readFileSync(dataset, "utf8"));
+  const needsRetrieval = cases.some((entry) => entry.expectRetrieval);
+  if (needsRetrieval) {
+    loadKnowledgeBase();
+  }
+
   let failed = 0;
 
   console.log("\nTartan Scotty referral eval");
@@ -33,11 +43,14 @@ function main() {
   for (const entry of cases) {
     const intent = classifyIntent(entry.query, entry.appMode || "qa");
     const topic = intent.topic === "general" ? "academics" : intent.topic;
-    const contacts = selectContacts({
-      profile: entry.profile || {},
-      topic,
-      now: entry.now ? new Date(entry.now) : new Date(),
-    });
+    const willRefer = shouldSelectReferrals(intent);
+    const contacts = willRefer
+      ? selectContacts({
+          profile: entry.profile || {},
+          topic,
+          now: entry.now ? new Date(entry.now) : new Date(),
+        })
+      : [];
     const emails = emailsOf(contacts);
     const problems = [];
 
@@ -45,6 +58,9 @@ function main() {
       if (intent[key] !== value) {
         problems.push(`intent.${key} expected ${value}, got ${intent[key]}`);
       }
+    }
+    if (typeof entry.expectShouldRefer === "boolean" && willRefer !== entry.expectShouldRefer) {
+      problems.push(`shouldSelectReferrals expected ${entry.expectShouldRefer}, got ${willRefer}`);
     }
     if (contacts.length > (entry.maxContacts || 3)) {
       problems.push(`selected ${contacts.length} contacts, max ${entry.maxContacts || 3}`);
@@ -54,6 +70,23 @@ function main() {
     }
     for (const email of entry.mustExcludeEmails || []) {
       if (emails.includes(email)) problems.push(`should not include ${email}`);
+    }
+
+    if (entry.expectRetrieval) {
+      const docs = retrieveRelevantDocs(entry.query, { limit: entry.expectRetrieval.limit || 3 });
+      const confidence = computeConfidence(docs);
+      const minDocs = entry.expectRetrieval.minDocs ?? 1;
+      const minConfidence = entry.expectRetrieval.minConfidence ?? 40;
+      if (docs.length < minDocs) {
+        problems.push(`retrieval expected >= ${minDocs} docs, got ${docs.length}`);
+      }
+      if (confidence.score < minConfidence) {
+        problems.push(`confidence ${confidence.score} < ${minConfidence} (would force I-don't-know)`);
+      }
+      for (const needle of entry.expectRetrieval.fileIncludes || []) {
+        const hit = docs.some((doc) => doc.file.toLowerCase().includes(needle.toLowerCase()));
+        if (!hit) problems.push(`retrieval missed file matching ${needle}`);
+      }
     }
 
     const status = problems.length ? "FAIL" : "PASS";

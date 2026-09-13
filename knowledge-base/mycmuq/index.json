@@ -1,6 +1,6 @@
 {
   "source": "sites.google.com/andrew.cmu.edu/mycmuq",
-  "generated": "2026-06-24",
+  "generated": "2026-09-13",
   "description": "myCMU-Q portal content. Replaces Scotty and Andy web portals. Each file maps to one portal page or sub-page for easy updates.",
   "structure": {
     "portal/": "Portal home and directory",

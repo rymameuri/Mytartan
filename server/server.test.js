@@ -342,6 +342,23 @@ describe("POST /api/chat — input validation", () => {
     expect(res.body.reply).not.toMatch(/diagnos/i);
     expect((res.body.reply.match(/@[a-z0-9.-]+/gi) || []).length).toBe(1);
   });
+
+  test("midterm stress stays supportive and names ARC, not CaPS or every office", async () => {
+    const res = await request(app)
+      .post("/api/chat")
+      .send({
+        messages: [{ role: "user", content: "I have three midterms and I cannot think" }],
+        mode: "qa",
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.reply).toMatch(/that's a lot/i);
+    expect(res.body.reply).toMatch(/mariamma@andrew\.cmu\.edu/);
+    expect(res.body.reply).not.toMatch(/atorinab@/);
+    expect(res.body.reply).not.toMatch(/rdriley@/);
+    expect(res.body.reply).not.toMatch(/hbouamor@/);
+    expect((res.body.reply.match(/@[a-z0-9.-]+/gi) || []).length).toBeLessThanOrEqual(3);
+  });
 });
 
 describe("isSmallTalk", () => {

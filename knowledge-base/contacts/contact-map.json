@@ -127,7 +127,7 @@
       "name": "Damian Dourado",
       "role": "Director, Student Academic Success",
       "email": "ddourado@andrew.cmu.edu",
-      "topics": ["academics"],
+      "topics": ["academics", "registration", "academic_support"],
       "majors": ["any"],
       "yearBands": ["freshman", "sophomore"],
       "priority": 8,
@@ -139,11 +139,23 @@
       "name": "Mariamma Thomas",
       "role": "Director, Academic Support Programs",
       "email": "mariamma@andrew.cmu.edu",
-      "topics": ["academics"],
+      "topics": ["academics", "academic_support"],
       "majors": ["any"],
       "yearBands": ["any"],
       "priority": 5,
       "when": "Academic Resource Center, Supplemental Instruction",
+      "source": "knowledge-base/mycmuq/offices/education-office/academic-resource-center/frequently-asked-questions.txt"
+    },
+    {
+      "id": "arc-afthab",
+      "name": "Afthab Azeez",
+      "role": "Coordinator, Academic Support Programs",
+      "email": "afthaba@andrew.cmu.edu",
+      "topics": ["academic_support"],
+      "majors": ["any"],
+      "yearBands": ["any"],
+      "priority": 4,
+      "when": "ARC sessions and academic support logistics",
       "source": "knowledge-base/mycmuq/offices/education-office/academic-resource-center/frequently-asked-questions.txt"
     },
     {
@@ -169,6 +181,18 @@
       "priority": 8,
       "when": "clubs and student activities",
       "source": "knowledge-base/mycmuq/offices/student-affairs/student-government-clubs/club-guidelines.txt"
+    },
+    {
+      "id": "student-engagement-juan",
+      "name": "Juan Sam",
+      "role": "Program Director, Student Engagement",
+      "email": "juans@andrew.cmu.edu",
+      "topics": ["campus_life"],
+      "majors": ["any"],
+      "yearBands": ["any"],
+      "priority": 5,
+      "when": "student engagement and getting involved",
+      "source": "knowledge-base/mycmuq/offices/student-affairs/overview.txt"
     },
     {
       "id": "career-mohammed",

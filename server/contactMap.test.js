@@ -20,6 +20,8 @@ const FRESHMAN_EMAIL = "ddourado@andrew.cmu.edu";
 const ARC_EMAIL = "mariamma@andrew.cmu.edu";
 const AID_EMAIL = "srian@andrew.cmu.edu";
 const EMERGENCY_AID_EMAIL = "drehal@andrew.cmu.edu";
+const ENROLLMENT_EMAIL = "jfn@andrew.cmu.edu";
+const CAMPUS_EMAIL = "nabdelha@andrew.cmu.edu";
 
 const DIRECTORY_EMAILS = [
   CS_EMAIL,
@@ -165,6 +167,59 @@ describe("selectContacts", () => {
     expect(cs).not.toContain(CS_EMAIL);
     expect(is).not.toContain(IS_EMAIL);
     expect(cs.length).toBeLessThanOrEqual(3);
+  });
+
+  test("BA unknown academic gets BA people, not CS or IS", () => {
+    const emails = emailsOf(selectContacts({
+      profile: { major: "Business Administration", graduationDate: "May 2028" },
+      topic: "academics",
+      now: NOW,
+    }));
+    expect(emails).toContain(BA_EMAIL);
+    expect(emails).not.toContain(CS_EMAIL);
+    expect(emails).not.toContain(IS_EMAIL);
+    expect(emails).not.toContain(CAPS_EMAIL);
+  });
+
+  test("freshman registration includes enrollment and first-year success, not area heads", () => {
+    const emails = emailsOf(selectContacts({
+      profile: { major: "Computer Science", graduationDate: "May 2030" },
+      topic: "registration",
+      now: NOW,
+    }));
+    expect(emails).toContain(ENROLLMENT_EMAIL);
+    expect(emails).toContain(FRESHMAN_EMAIL);
+    expect(emails).not.toContain(CS_EMAIL);
+    expect(emails).not.toContain(IS_EMAIL);
+    expect(emails).not.toContain(CAPS_EMAIL);
+  });
+
+  test("midterm academic-support mix is ARC, not CaPS or other majors", () => {
+    const emails = emailsOf(selectContacts({
+      profile: { major: "Computer Science", graduationDate: "May 2030" },
+      topic: "academic_support",
+      now: NOW,
+    }));
+    expect(emails).toContain(ARC_EMAIL);
+    expect(emails).toContain(FRESHMAN_EMAIL);
+    expect(emails).not.toContain(CAPS_EMAIL);
+    expect(emails).not.toContain(CS_EMAIL);
+    expect(emails).not.toContain(IS_EMAIL);
+  });
+
+  test("campus life does not dump academic offices", () => {
+    const emails = emailsOf(selectContacts({
+      profile: { major: "Computer Science", graduationDate: "May 2030" },
+      topic: "campus_life",
+      now: NOW,
+    }));
+    expect(emails).toContain(CAMPUS_EMAIL);
+    expect(emails).not.toContain(CS_EMAIL);
+    expect(emails).not.toContain(IS_EMAIL);
+    expect(emails).not.toContain(BA_EMAIL);
+    expect(emails).not.toContain(CAPS_EMAIL);
+    expect(emails).not.toContain(AID_EMAIL);
+    expect(emails.length).toBeLessThanOrEqual(3);
   });
 
   test("does not invent contacts missing from the map", () => {

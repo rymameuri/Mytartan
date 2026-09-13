@@ -7,6 +7,7 @@
 const {
   loadKnowledgeBase,
   retrieveRelevantDocs,
+  expandQuery,
   buildStudentContext,
   buildContextBlock,
   buildKeyFactsBlock,
@@ -175,6 +176,22 @@ describe("retrieveRelevantDocs — myCMU-Q portal content", () => {
   test("emergency loan question retrieves emergency grants page", () => {
     const results = retrieveRelevantDocs("How do I apply for an emergency student loan?");
     expectRelevant(results, { topicPattern: /emergency|loan|grant/i, filePattern: /emergency-student-loans/ });
+  });
+
+  test("homesick rough night retrieves the situation guide", () => {
+    const results = retrieveRelevantDocs("I'm homesick and it's a rough night");
+    expectRelevant(results, { topicPattern: /homesick|rough night/i, filePattern: /rough-night-homesick/ });
+  });
+
+  test("quiet vs social study retrieves the situation guide", () => {
+    const results = retrieveRelevantDocs("quiet study vs social study at CMU-Q");
+    expectRelevant(results, { topicPattern: /quiet|social study/i, filePattern: /quiet-vs-social-study/ });
+  });
+
+  test("first week slang expands and retrieves the situation guide", () => {
+    expect(expandQuery("first week")).toMatch(/orientation|academic success|registration/i);
+    const results = retrieveRelevantDocs("What should I do my first week at CMU-Q?");
+    expectRelevant(results, { topicPattern: /first week/i, filePattern: /situations\/first-week/ });
   });
 });
 

@@ -144,6 +144,14 @@ function buildSupportiveReferralReply(contacts = []) {
   return `I'm here with you. I'm not a counselor, but ${first} is. You can email them when you're ready. We can also just stay in this chat.`;
 }
 
+function buildAcademicSupportReply(contacts = []) {
+  if (!contacts.length) {
+    return "That's a lot. You don't have to solve the whole week tonight. Which exam is first, and we'll pick one 45-minute block.";
+  }
+  const first = formatContactLine(contacts[0]);
+  return `That's a lot. You don't have to solve the whole week tonight. If you want a campus person after we pick the first exam, start with ${first}. Not a pile of offices.`;
+}
+
 module.exports = {
   loadContactMap,
   resetContactMapCache,
@@ -153,4 +161,5 @@ module.exports = {
   formatReferralBlock,
   buildUnknownFactReply,
   buildSupportiveReferralReply,
+  buildAcademicSupportReply,
 };

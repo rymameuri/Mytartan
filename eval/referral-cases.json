@@ -15,8 +15,12 @@
     "mustIncludeEmails": ["rdriley@andrew.cmu.edu", "ddourado@andrew.cmu.edu"],
     "mustExcludeEmails": [
       "hbouamor@andrew.cmu.edu",
+      "caoun@andrew.cmu.edu",
+      "aindaco@andrew.cmu.edu",
+      "mfarooqi@andrew.cmu.edu",
       "atorinab@andrew.cmu.edu",
-      "srian@andrew.cmu.edu"
+      "srian@andrew.cmu.edu",
+      "nabdelha@andrew.cmu.edu"
     ],
     "maxContacts": 3
   },
@@ -36,7 +40,9 @@
     "mustIncludeEmails": ["srian@andrew.cmu.edu"],
     "mustExcludeEmails": [
       "rdriley@andrew.cmu.edu",
+      "greis@andrew.cmu.edu",
       "hbouamor@andrew.cmu.edu",
+      "aindaco@andrew.cmu.edu",
       "atorinab@andrew.cmu.edu"
     ],
     "maxContacts": 3
@@ -58,8 +64,189 @@
     "mustExcludeEmails": [
       "rdriley@andrew.cmu.edu",
       "hbouamor@andrew.cmu.edu",
+      "aindaco@andrew.cmu.edu",
+      "srian@andrew.cmu.edu",
+      "mariamma@andrew.cmu.edu"
+    ],
+    "maxContacts": 1
+  },
+  {
+    "id": "ba-unknown-academic",
+    "query": "What are the quantum physics lab hours?",
+    "profile": {
+      "major": "Business Administration",
+      "graduationDate": "May 2028"
+    },
+    "now": "2026-09-13",
+    "expectIntent": {
+      "role": "campus_assistant",
+      "topic": "academics",
+      "intent": "academic_fact"
+    },
+    "mustIncludeEmails": ["aindaco@andrew.cmu.edu"],
+    "mustExcludeEmails": [
+      "rdriley@andrew.cmu.edu",
+      "greis@andrew.cmu.edu",
+      "hbouamor@andrew.cmu.edu",
+      "caoun@andrew.cmu.edu",
+      "atorinab@andrew.cmu.edu",
+      "srian@andrew.cmu.edu",
+      "nabdelha@andrew.cmu.edu"
+    ],
+    "maxContacts": 3
+  },
+  {
+    "id": "freshman-registration-confusion",
+    "query": "I don't understand how registration works and Stellic looks wrong",
+    "profile": {
+      "major": "Computer Science",
+      "graduationDate": "May 2030"
+    },
+    "now": "2026-09-13",
+    "expectIntent": {
+      "role": "campus_assistant",
+      "topic": "registration",
+      "intent": "academic_fact"
+    },
+    "mustIncludeEmails": ["jfn@andrew.cmu.edu", "ddourado@andrew.cmu.edu"],
+    "mustExcludeEmails": [
+      "rdriley@andrew.cmu.edu",
+      "greis@andrew.cmu.edu",
+      "hbouamor@andrew.cmu.edu",
+      "aindaco@andrew.cmu.edu",
+      "atorinab@andrew.cmu.edu",
+      "nabdelha@andrew.cmu.edu"
+    ],
+    "maxContacts": 3
+  },
+  {
+    "id": "midterm-stress-academic-blend",
+    "query": "I have three midterms and I cannot think",
+    "profile": {
+      "major": "Computer Science",
+      "graduationDate": "May 2030"
+    },
+    "now": "2026-09-13",
+    "expectIntent": {
+      "role": "emotional_support",
+      "topic": "academic_support",
+      "intent": "emotional_support"
+    },
+    "expectShouldRefer": true,
+    "mustIncludeEmails": ["mariamma@andrew.cmu.edu", "ddourado@andrew.cmu.edu"],
+    "mustExcludeEmails": [
+      "atorinab@andrew.cmu.edu",
+      "rdriley@andrew.cmu.edu",
+      "hbouamor@andrew.cmu.edu",
+      "aindaco@andrew.cmu.edu",
+      "srian@andrew.cmu.edu",
+      "nabdelha@andrew.cmu.edu"
+    ],
+    "maxContacts": 3
+  },
+  {
+    "id": "midterm-stress-mental-health-coded",
+    "query": "I'm really struggling mentally with midterms",
+    "profile": {
+      "major": "Computer Science",
+      "graduationDate": "May 2030"
+    },
+    "now": "2026-09-13",
+    "expectIntent": {
+      "role": "emotional_support",
+      "topic": "mental_health",
+      "intent": "emotional_support"
+    },
+    "mustIncludeEmails": ["atorinab@andrew.cmu.edu"],
+    "mustExcludeEmails": [
+      "rdriley@andrew.cmu.edu",
+      "mariamma@andrew.cmu.edu",
+      "hbouamor@andrew.cmu.edu",
       "srian@andrew.cmu.edu"
     ],
     "maxContacts": 1
+  },
+  {
+    "id": "bored-whats-on-campus",
+    "query": "I'm bored, what's on campus tonight?",
+    "profile": {
+      "major": "Computer Science",
+      "graduationDate": "May 2030"
+    },
+    "now": "2026-09-13",
+    "expectIntent": {
+      "role": "campus_assistant",
+      "topic": "campus_life",
+      "intent": "campus_life"
+    },
+    "mustIncludeEmails": ["nabdelha@andrew.cmu.edu"],
+    "mustExcludeEmails": [
+      "rdriley@andrew.cmu.edu",
+      "greis@andrew.cmu.edu",
+      "hbouamor@andrew.cmu.edu",
+      "caoun@andrew.cmu.edu",
+      "aindaco@andrew.cmu.edu",
+      "mfarooqi@andrew.cmu.edu",
+      "srian@andrew.cmu.edu",
+      "jfn@andrew.cmu.edu",
+      "atorinab@andrew.cmu.edu",
+      "mariamma@andrew.cmu.edu"
+    ],
+    "maxContacts": 3
+  },
+  {
+    "id": "dont-dump-directory-cs-academic",
+    "query": "heygen xyzzy quuxington department hours",
+    "profile": {
+      "major": "Computer Science",
+      "graduationDate": "May 2027"
+    },
+    "now": "2026-09-13",
+    "expectIntent": {
+      "role": "campus_assistant",
+      "topic": "academics",
+      "intent": "academic_fact"
+    },
+    "mustIncludeEmails": ["rdriley@andrew.cmu.edu"],
+    "mustExcludeEmails": [
+      "hbouamor@andrew.cmu.edu",
+      "caoun@andrew.cmu.edu",
+      "aindaco@andrew.cmu.edu",
+      "mfarooqi@andrew.cmu.edu",
+      "atorinab@andrew.cmu.edu",
+      "srian@andrew.cmu.edu",
+      "drehal@andrew.cmu.edu",
+      "nabdelha@andrew.cmu.edu",
+      "juans@andrew.cmu.edu",
+      "mohammem@andrew.cmu.edu",
+      "meredit2@andrew.cmu.edu",
+      "jfn@andrew.cmu.edu"
+    ],
+    "maxContacts": 3
+  },
+  {
+    "id": "known-kb-stuco-not-forced-referral",
+    "query": "What is StuCo?",
+    "profile": {
+      "major": "Information Systems",
+      "graduationDate": "May 2028"
+    },
+    "now": "2026-09-13",
+    "expectIntent": {
+      "role": "campus_assistant",
+      "topic": "academics",
+      "intent": "academic_fact"
+    },
+    "expectRetrieval": {
+      "minDocs": 1,
+      "minConfidence": 40,
+      "fileIncludes": ["stuco"]
+    },
+    "mustExcludeEmails": [
+      "atorinab@andrew.cmu.edu",
+      "rdriley@andrew.cmu.edu",
+      "aindaco@andrew.cmu.edu"
+    ],
+    "maxContacts": 3
   }
 ]

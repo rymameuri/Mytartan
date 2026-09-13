@@ -10,7 +10,10 @@ const TUTOR_PATTERN =
   /\b(explain|help me understand|walk me through|homework|teach me|what does .+ mean|how does .+ work)\b/i;
 
 const CAMPUS_LIFE_PATTERN =
-  /\b(tonight|bored|hang out|what to do|events?|club fair|food trucks?)\b/i;
+  /\b(tonight|bored|hang out|what to do|events?|club fair|food trucks?|what'?s on campus|anything (?:fun|happening) on campus)\b/i;
+
+const ACADEMIC_STRESS_PATTERN =
+  /\b((?:midterms?|finals?|exams?).{0,48}(?:stressed|overwhelmed|cannot think|can't think|fried|too many|so many)|(?:stressed|overwhelmed|fried|cannot think|can't think).{0,48}(?:midterms?|finals?|exams?))\b/i;
 
 const FINANCIAL_PATTERN =
   /\b(financial aid|scholarship|tuition|fafsa|grant|emergency loan)\b/i;
@@ -51,16 +54,20 @@ function classifyIntent(query, appMode = "qa") {
     return { role: "campus_assistant", topic: "international", intent: "academic_fact" };
   }
 
+  if (ACADEMIC_STRESS_PATTERN.test(text)) {
+    return { role: "emotional_support", topic: "academic_support", intent: "emotional_support" };
+  }
+
+  if (CAMPUS_LIFE_PATTERN.test(text)) {
+    return { role: "campus_assistant", topic: "campus_life", intent: "campus_life" };
+  }
+
   if (hasContentKeywords(text)) {
     return { role: "campus_assistant", topic: "academics", intent: "academic_fact" };
   }
 
   if (TUTOR_PATTERN.test(text)) {
     return { role: "teacher", topic: "academics", intent: "tutor" };
-  }
-
-  if (CAMPUS_LIFE_PATTERN.test(text)) {
-    return { role: "campus_assistant", topic: "campus_life", intent: "campus_life" };
   }
 
   if (EMOTIONAL_PATTERN.test(text)) {
@@ -72,7 +79,7 @@ function classifyIntent(query, appMode = "qa") {
 
 function shouldSelectReferrals(intent) {
   if (!intent) return false;
-  if (intent.topic === "mental_health") return true;
+  if (intent.topic === "mental_health" || intent.topic === "academic_support") return true;
   if (intent.role === "emotional_support") return false;
   if (intent.intent === "tutor") return false;
   return true;

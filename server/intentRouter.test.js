@@ -55,4 +55,27 @@ describe("classifyIntent", () => {
     expect(intent.topic).toBe("campus_life");
     expect(intent.intent).toBe("campus_life");
   });
+
+  test("bored plus on-campus is campus life, not an academic-fact dump", () => {
+    const intent = classifyIntent("I'm bored, what's on campus tonight?");
+    expect(intent.topic).toBe("campus_life");
+    expect(intent.intent).toBe("campus_life");
+    expect(shouldSelectReferrals(intent)).toBe(true);
+  });
+
+  test("midterm stress is supportive academic mix, not CaPS", () => {
+    const intent = classifyIntent("I have three midterms and I cannot think");
+    expect(intent).toEqual({
+      role: "emotional_support",
+      topic: "academic_support",
+      intent: "emotional_support",
+    });
+    expect(shouldSelectReferrals(intent)).toBe(true);
+  });
+
+  test("stressed about midterms stays academic-support", () => {
+    const intent = classifyIntent("I'm stressed about midterms");
+    expect(intent.topic).toBe("academic_support");
+    expect(intent.role).toBe("emotional_support");
+  });
 });

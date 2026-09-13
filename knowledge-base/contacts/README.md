@@ -7,6 +7,8 @@ Structured referrals for Scotty. **Only contacts attested in existing knowledge-
 - This JSON is **not** ingested into RAG (the KB loader only reads `.txt`).
 - Server selection (`server/contactMap.js`) returns at most 1–3 matches for the student's major, year band, and topic.
 
+Added from existing KB pages (not invented): Afthab Azeez (`afthaba@`) for academic support; Juan Sam (`juans@`) for campus life.
+
 ## TODO (not in KB, so omitted)
 
 - Biological Sciences Area Head emails (names appear in `departments/biological-sciences/team.txt` with no addresses)
