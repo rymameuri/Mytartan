@@ -209,6 +209,20 @@ describe("retrieveRelevantDocs — myCMU-Q portal content", () => {
     expect(confidence.sources.every((source) => !/study-abroad/.test(source.file))).toBe(true);
   });
 
+  test("joke requests retrieve the campus humor guide and skip policy dumps", () => {
+    expect(expandQuery("tell me a joke")).toMatch(/campus humor/i);
+    const jokeResults = retrieveRelevantDocs("tell me a joke", { limit: 3 });
+    expectRelevant(jokeResults, { topicPattern: /how scotty jokes/i, filePattern: /situations\/campus-humor/ });
+    expect(jokeResults[0].file).toMatch(/campus-humor/);
+    expect(jokeResults.every((doc) => /campus-humor/.test(doc.file))).toBe(true);
+
+    const laughResults = retrieveRelevantDocs("make me laugh", { limit: 3 });
+    expectRelevant(laughResults, { topicPattern: /how scotty jokes/i, filePattern: /situations\/campus-humor/ });
+
+    const registerResults = retrieveRelevantDocs("When is the add drop deadline?", { limit: 5 });
+    expect(registerResults.map((doc) => doc.file).join("\n")).not.toMatch(/campus-humor/);
+  });
+
   test("first week slang expands and retrieves the situation guide", () => {
     expect(expandQuery("first week")).toMatch(/orientation|academic success|registration/i);
     const results = retrieveRelevantDocs("What should I do my first week at CMU-Q?");

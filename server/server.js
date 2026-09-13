@@ -231,6 +231,14 @@ function formatApiError(err, fallback = "Request failed") {
 const NO_KB_MATCH_REPLY = buildUnknownFactReply([]);
 
 const CASUAL_NO_AI_REPLY = "I'm here. What's going on?";
+const HUMOR_NO_AI_REPLY =
+  "Stellic has more pages than you have hours this week. Want a real next step, or was that enough?";
+
+function isJokeRequest(message) {
+  return /\b(tell me a joke|tell a joke|got a joke|make me laugh|say something funny|something funny|be funny|lighten(?:\s+it)?(?:\s+up)?)\b/i.test(
+    String(message || "")
+  );
+}
 
 const KB_GROUNDING_RULES = `KNOWLEDGE BASE GROUNDING RULES
 For official CMU-Q facts, use ONLY the official knowledge base excerpts and authoritative key facts provided below.
@@ -286,7 +294,7 @@ function isCanvasRelatedQuery(query) {
 const SYSTEM_PROMPTS = {
   qa: `${KB_GROUNDING_RULES} Be accurate and casual about academics, registration, student life, policies, and CMU-Q resources.`,
   campus: `${KB_GROUNDING_RULES} Help students navigate CMU-Q campus life, resources, and student services — like a classmate, not a kiosk.`,
-  chat: `Talk like a friend. Everyday chat, studying, stress, plans, jokes — just be good company. If they ask a CMU-Q fact (policies, offices, deadlines, money, visas), use any knowledge-base excerpts provided and do not invent those details. Stay casual either way.`,
+  chat: `Talk like a friend. Everyday chat, studying, stress, plans — just be good company. One dry campus beat only if they asked for a joke or a tiny lift. Never a standup set. If they ask a CMU-Q fact (policies, offices, deadlines, money, visas), use any knowledge-base excerpts provided and do not invent those details. Stay casual either way.`,
 };
 
 const KB_MODES = new Set(["qa", "campus", "chat"]);
@@ -1552,7 +1560,7 @@ async function handleChatRequest(req, res, { stream = false } = {}) {
         );
       }
       if (!campusFactQuery) {
-        return sendChatReply(res, CASUAL_NO_AI_REPLY, {
+        return sendChatReply(res, isJokeRequest(userQuery) ? HUMOR_NO_AI_REPLY : CASUAL_NO_AI_REPLY, {
           stream,
           replyMeta: buildReplyMeta({
             mode,
@@ -1903,5 +1911,7 @@ module.exports.isStudyActionRequest = isStudyActionRequest;
 module.exports.getSmallTalkReply = getSmallTalkReply;
 module.exports.isCampusFactQuery = isCampusFactQuery;
 module.exports.CASUAL_NO_AI_REPLY = CASUAL_NO_AI_REPLY;
+module.exports.HUMOR_NO_AI_REPLY = HUMOR_NO_AI_REPLY;
+module.exports.isJokeRequest = isJokeRequest;
 module.exports.isCanvasConnectionStatusQuery = isCanvasConnectionStatusQuery;
 module.exports.isCanvasRelatedQuery = isCanvasRelatedQuery;

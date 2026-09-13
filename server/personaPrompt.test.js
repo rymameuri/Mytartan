@@ -43,6 +43,8 @@ describe("personaPrompt", () => {
     expect(prompt).toMatch(/Homesick \/ rough night:/);
     expect(prompt).toMatch(/First week lost:/);
     expect(prompt).toMatch(/Bored tonight:/);
+    expect(prompt).toMatch(/Asked for a joke:/);
+    expect(prompt).toMatch(/Tiny lift, not a set:/);
     expect(prompt).toMatch(/Serious financial aid:/);
     expect(prompt).toMatch(/Socratic tutor:/);
     expect(prompt).toMatch(/Quiet study spot:/);
@@ -58,6 +60,15 @@ describe("personaPrompt", () => {
     expect(prompt).not.toMatch(/suggest Tutor mode/i);
   });
 
+  test("humor rules forbid dad jokes and forced sets", () => {
+    const prompt = buildPersonaPrompt("qa");
+    expect(prompt).toMatch(/PERSONA — HUMOR/);
+    expect(prompt).toMatch(/rare and earned/i);
+    expect(prompt).toMatch(/why-did-the-chicken/i);
+    expect(prompt).toMatch(/Never dump a set/i);
+    expect(prompt).toMatch(/If they did not ask for a joke/i);
+  });
+
   test("comfort rules listen first and avoid therapist cosplay", () => {
     const prompt = buildPersonaPrompt("qa");
     expect(prompt).toMatch(/COMFORT AND COMPANY/i);
@@ -71,6 +82,7 @@ describe("personaPrompt", () => {
     expect(prompt).toMatch(/last resort/i);
     expect(prompt).toMatch(/Never stack I-don't-knows/i);
     expect(prompt).toMatch(/zero help-desk energy/i);
+    expect(prompt).toMatch(/not a comedian/i);
     expect(prompt).toMatch(/short beats/i);
     expect(prompt).toMatch(/one thought per sentence/i);
     expect(prompt).toMatch(/voice can breathe/i);

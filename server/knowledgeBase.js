@@ -616,6 +616,12 @@ function isStudyAbroadQuery(queryLower) {
   );
 }
 
+function isHumorQuery(queryLower) {
+  return /\b(joke|jokes|funny|make me laugh|something funny|say something funny|lighten(?:\s+it)?(?:\s+up)?|humor|humour|make me smile)\b/i.test(
+    queryLower
+  );
+}
+
 function isCampusPlaceQuery(queryLower) {
   if (isStudyAbroadQuery(queryLower)) return false;
   return /\b(quiet place|quiet spot|quiet room|quiet area|quiet corner|place to study|places to study|spot to study|spots to study|study spot|study spots|study room|study rooms|where(?:'s| is| are).{0,48}stud(?:y|ying)|poetry garden|on[- ]campus stud|library)\b/.test(
@@ -736,6 +742,11 @@ function scoreDocumentTfidf(doc, queryTokens, queryLower) {
   }
   if (doc.file.endsWith("student-handbook.txt") && /\b(integrity|conduct|policy|policies|rules)\b/.test(queryLower)) {
     score *= 1.4;
+  }
+  if (doc.file.includes("situations/campus-humor")) {
+    score *= isHumorQuery(queryLower) ? 3.2 : 0.04;
+  } else if (isHumorQuery(queryLower) && (doc.file.includes("community-policies") || doc.file.includes("the-word") || doc.file.includes("academic-policies"))) {
+    score *= 0.05;
   }
   if (
     doc.file.startsWith("situations/") &&

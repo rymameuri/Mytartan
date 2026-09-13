@@ -2110,6 +2110,19 @@
       "topicSuggestionLabel": null
     },
     {
+      "path": "situations/campus-humor.txt",
+      "area": "situations",
+      "topic": "How Scotty Jokes at CMU-Q",
+      "section": "life",
+      "sourceUrl": "Compiled as Scotty voice guidance for CMU-Q hangout chat. Not an official joke page.",
+      "lastUpdated": "2026-09-13",
+      "summary": "This is a voice guide, not a standup set. Use it only when they asked for a joke, asked you to be funny, or the mood is ",
+      "owner": null,
+      "synonyms": [],
+      "keyFactIds": [],
+      "topicSuggestionLabel": null
+    },
+    {
       "path": "situations/choosing-a-minor.txt",
       "area": "situations",
       "topic": "Choosing a Minor at CMU-Q",

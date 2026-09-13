@@ -423,6 +423,18 @@ describe("isSmallTalk", () => {
     expect(isCampusFactQuery("tell me a joke")).toBe(false);
   });
 
+  test("joke request without AI uses one dry campus beat, not a dad joke", async () => {
+    const res = await request(app)
+      .post("/api/chat")
+      .send({
+        messages: [{ role: "user", content: "tell me a joke" }],
+        mode: "qa",
+      });
+    expect(res.status).toBe(200);
+    expect(res.body.reply).toMatch(/Stellic has more pages/i);
+    expect(res.body.reply).not.toMatch(/chicken|knock.?knock|pawsitive|ruff|camel/i);
+  });
+
   test("classifies greetings and pleasantries as small talk", () => {
     expect(isSmallTalk("how are you")).toBe(true);
     expect(isSmallTalk("hello how are you")).toBe(true);
