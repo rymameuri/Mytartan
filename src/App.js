@@ -122,7 +122,7 @@ function AppShell() {
   const abortControllerRef = useRef(null);
   const documentSourceRef = useRef(null);
   const isDesktop = useIsDesktop();
-  const { isSpeaking, isPreparingSpeech, speak, stop, caption } = usePersonaSpeech(avatarRef);
+  const { isSpeaking, isPreparingSpeech, speak, stop, caption } = usePersonaSpeech(avatarRef, userId);
   const { isMuted, toggleMute } = useMutedPreference(stop, userId);
   const canvasConnection = useCanvasConnection(userId, token);
 
@@ -763,7 +763,6 @@ function AppShell() {
         if (
           activeMode === "qa" &&
           spokenReply.trim() &&
-          !readMutedPreference(userId) &&
           !isStructuredStudioContent(spokenReply)
         ) {
           speakFormatted(spokenReply);

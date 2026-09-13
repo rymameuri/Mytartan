@@ -36,7 +36,7 @@ export function armSpeechSynthesis() {
   window.speechSynthesis.speak(utterance);
 }
 
-export function usePersonaSpeech(avatarRef) {
+export function usePersonaSpeech(avatarRef, userId) {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isPreparingSpeech, setIsPreparingSpeech] = useState(false);
   const [caption, setCaption] = useState("");
@@ -45,6 +45,8 @@ export function usePersonaSpeech(avatarRef) {
   const fallbackTimerRef = useRef(null);
   const boundarySeenRef = useRef(false);
   const fullTextRef = useRef("");
+  const userIdRef = useRef(userId);
+  userIdRef.current = userId;
 
   const clearRevealTimers = useCallback(() => {
     if (revealTimerRef.current) {
@@ -123,6 +125,7 @@ export function usePersonaSpeech(avatarRef) {
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.rate = BROWSER_TTS_RATE;
       utterance.pitch = 1;
+      utterance.volume = readMutedPreference(userIdRef.current) ? 0 : 1;
 
       utterance.onboundary = (event) => {
         boundarySeenRef.current = true;
@@ -225,7 +228,7 @@ export function useAutoSpeakReply({
       if (!wasLoading) return;
     }
 
-    if (!toSpeak || readMutedPreference(userId)) return;
+    if (!toSpeak) return;
     if (!wasLoading && lastSpokenRef.current === toSpeak) return;
 
     lastSpokenRef.current = toSpeak;
