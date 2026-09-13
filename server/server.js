@@ -55,7 +55,11 @@ const {
   getUserById,
   createUser,
   updateUserProfile,
+  patchUser,
+  findUserByHashedToken,
 } = require("./userStore");
+const { isMailConfigured, mailStatus, publicAppUrl, sendMail } = require("./mailer");
+const { hashToken, createToken, VERIFY_TTL_MS, RESET_TTL_MS } = require("./authTokens");
 const {
   appendFeedback,
   validateFeedbackPayload,
@@ -180,6 +184,7 @@ function toPublicUser(user) {
   return {
     id: user.id,
     email: user.email,
+    emailVerified: user.emailVerified !== false,
     profile: user.profile,
   };
 }
@@ -477,10 +482,10 @@ function assembleSystemPrompt(
   appMode,
   studentContext,
   body,
-  { smallTalk = false, role = null, referrals = "" } = {}
+  { smallTalk = false, role = null, referrals = "", profile = null } = {}
 ) {
   const parts = [
-    buildPersonaPrompt(resolvePersonaMode(appMode), { smallTalk, role, referrals }),
+    buildPersonaPrompt(resolvePersonaMode(appMode), { smallTalk, role, referrals, profile }),
   ];
   if (studentContext?.trim()) parts.push(studentContext.trim());
   if (body?.trim()) parts.push(body.trim());
@@ -513,9 +518,10 @@ function buildSystemPrompt(
     canvasContext = null,
     role = null,
     referrals = "",
+    profile = null,
   } = {}
 ) {
-  const promptOptions = { role, referrals };
+  const promptOptions = { role, referrals, profile };
   if (mode === "tutor") {
     return assembleSystemPrompt(
       mode,
@@ -749,6 +755,12 @@ app.get("/", (_req, res) => {
     routes: [
       "POST /api/auth/signup",
       "POST /api/auth/login",
+      "POST /api/auth/logout",
+      "POST /api/auth/forgot-password",
+      "POST /api/auth/reset-password",
+      "POST /api/auth/verify-email",
+      "POST /api/auth/resend-verification",
+      "GET /api/auth/mail-status",
       "GET /api/auth/me",
       "PATCH /api/auth/profile",
       "GET /api/kb/status",
@@ -780,11 +792,48 @@ function normalizeCanvasUrl(url) {
   return String(url || "").trim().replace(/\/$/, "");
 }
 
+async function sendVerificationEmail(user) {
+  const issued = createToken(VERIFY_TTL_MS);
+  patchUser(user.id, {
+    verifyTokenHash: issued.hash,
+    verifyTokenExpires: issued.expiresAt,
+  });
+  const link = `${publicAppUrl()}/?verify=${issued.token}`;
+  await sendMail({
+    to: user.email,
+    subject: "Verify your MyTartan email",
+    text: `Hi — Scotty here.\n\nConfirm this email so I know it's you:\n${link}\n\nThis link expires in 24 hours.`,
+  });
+  return issued.token;
+}
+
+async function sendResetEmail(user) {
+  const issued = createToken(RESET_TTL_MS);
+  patchUser(user.id, {
+    resetTokenHash: issued.hash,
+    resetTokenExpires: issued.expiresAt,
+  });
+  const link = `${publicAppUrl()}/?reset=${issued.token}`;
+  await sendMail({
+    to: user.email,
+    subject: "Reset your MyTartan password",
+    text: `Reset your MyTartan password with this link:\n${link}\n\nThis link expires in 1 hour. If you didn't ask for this, ignore the email.`,
+  });
+  return issued.token;
+}
+
+app.get("/api/auth/mail-status", (_req, res) => {
+  res.json(mailStatus());
+});
+
 app.post("/api/auth/signup", async (req, res) => {
   const { email, password } = req.body ?? {};
 
   if (!email || !password) {
     return res.status(400).json({ error: "email and password are required" });
+  }
+  if (String(password).length < 6) {
+    return res.status(400).json({ error: "Password must be at least 6 characters." });
   }
 
   if (getUserByEmail(email)) {
@@ -793,9 +842,30 @@ app.post("/api/auth/signup", async (req, res) => {
 
   try {
     const passwordHash = await hashPassword(password);
-    const user = createUser({ email, passwordHash });
+    const user = createUser({ email, passwordHash, emailVerified: false });
+    let emailStatus = { sent: false, reason: null };
+    if (isMailConfigured()) {
+      try {
+        await sendVerificationEmail(user);
+        emailStatus = { sent: true, reason: null };
+      } catch (err) {
+        emailStatus = {
+          sent: false,
+          reason: err.message || "Could not send the verification email.",
+        };
+      }
+    } else {
+      emailStatus = {
+        sent: false,
+        reason: mailStatus().hint,
+      };
+    }
     const token = signToken(user);
-    return res.status(201).json({ token, user: toPublicUser(user) });
+    return res.status(201).json({
+      token,
+      user: toPublicUser(user),
+      email: emailStatus,
+    });
   } catch (err) {
     return res.status(400).json({ error: err.message || "Failed to create account" });
   }
@@ -819,7 +889,108 @@ app.post("/api/auth/login", async (req, res) => {
   }
 
   const token = signToken(user);
-  return res.json({ token, user: toPublicUser(user) });
+  return res.json({ token, user: toPublicUser(user), mail: mailStatus() });
+});
+
+app.post("/api/auth/logout", requireAuth, (_req, res) => {
+  return res.json({ ok: true });
+});
+
+app.post("/api/auth/forgot-password", async (req, res) => {
+  const email = String(req.body?.email || "").trim().toLowerCase();
+  if (!email) {
+    return res.status(400).json({ error: "Enter your email." });
+  }
+  if (!isMailConfigured()) {
+    return res.status(503).json({
+      error: mailStatus().hint,
+      email: { sent: false, reason: mailStatus().hint },
+    });
+  }
+  const user = getUserByEmail(email);
+  if (user) {
+    try {
+      await sendResetEmail(user);
+    } catch (err) {
+      return res.status(503).json({
+        error: err.message || "Could not send the reset email.",
+        email: { sent: false, reason: err.message },
+      });
+    }
+  }
+  return res.json({
+    email: { sent: true },
+    message: "If that email is registered, we sent a reset link.",
+  });
+});
+
+app.post("/api/auth/reset-password", async (req, res) => {
+  const token = String(req.body?.token || "").trim();
+  const password = String(req.body?.password || "");
+  if (!token || !password) {
+    return res.status(400).json({ error: "Reset token and new password are required." });
+  }
+  if (password.length < 6) {
+    return res.status(400).json({ error: "Password must be at least 6 characters." });
+  }
+  const user = findUserByHashedToken("resetTokenHash", "resetTokenExpires", hashToken(token));
+  if (!user) {
+    return res.status(400).json({ error: "That reset link is invalid or expired." });
+  }
+  const passwordHash = await hashPassword(password);
+  patchUser(user.id, {
+    passwordHash,
+    resetTokenHash: null,
+    resetTokenExpires: 0,
+  });
+  return res.json({ ok: true, message: "Password updated. You can log in." });
+});
+
+app.post("/api/auth/verify-email", async (req, res) => {
+  const token = String(req.body?.token || "").trim();
+  if (!token) {
+    return res.status(400).json({ error: "Verification token is required." });
+  }
+  const user = findUserByHashedToken("verifyTokenHash", "verifyTokenExpires", hashToken(token));
+  if (!user) {
+    return res.status(400).json({ error: "That verification link is invalid or expired." });
+  }
+  const next = patchUser(user.id, {
+    emailVerified: true,
+    verifyTokenHash: null,
+    verifyTokenExpires: 0,
+  });
+  return res.json({
+    ok: true,
+    user: toPublicUser(next),
+    token: signToken(next),
+    message: "Email verified.",
+  });
+});
+
+app.post("/api/auth/resend-verification", requireAuth, async (req, res) => {
+  const user = getUserById(req.user.id);
+  if (!user) {
+    return res.status(404).json({ error: "User not found" });
+  }
+  if (user.emailVerified) {
+    return res.json({ email: { sent: false }, message: "This email is already verified." });
+  }
+  if (!isMailConfigured()) {
+    return res.status(503).json({
+      error: mailStatus().hint,
+      email: { sent: false, reason: mailStatus().hint },
+    });
+  }
+  try {
+    await sendVerificationEmail(user);
+    return res.json({ email: { sent: true }, message: "Verification email sent." });
+  } catch (err) {
+    return res.status(503).json({
+      error: err.message || "Could not send the verification email.",
+      email: { sent: false, reason: err.message },
+    });
+  }
 });
 
 app.get("/api/auth/me", requireAuth, (req, res) => {
@@ -831,7 +1002,7 @@ app.get("/api/auth/me", requireAuth, (req, res) => {
 });
 
 app.patch("/api/auth/profile", requireAuth, (req, res) => {
-  const allowedFields = ["learningStyle", "intendedUse", "major", "graduationDate"];
+  const allowedFields = ["preferredName", "learningStyle", "intendedUse", "major", "graduationDate"];
   const profileFields = {};
 
   for (const field of allowedFields) {
@@ -1305,6 +1476,7 @@ async function handleChatRequest(req, res, { stream = false } = {}) {
     canvasContext,
     role: intent.role,
     referrals: referralBlock,
+    profile: req.user?.profile || null,
   });
   const aiOptions = getAiGenerationOptions(mode);
   const courseContextBlock =

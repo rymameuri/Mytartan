@@ -1,4 +1,4 @@
-const { buildPersonaPrompt, resolvePersonaMode } = require("./personaPrompt");
+const { buildPersonaPrompt, buildPersonaStudentBlock, resolvePersonaMode } = require("./personaPrompt");
 
 describe("personaPrompt", () => {
   test("resolvePersonaMode maps app modes correctly", () => {
@@ -131,6 +131,48 @@ describe("personaPrompt", () => {
     const prompt = buildPersonaPrompt("qa", { role: "teacher" });
     expect(prompt).toMatch(/ROLE — TEACHER/);
     expect(prompt).toMatch(/Socratic/);
+  });
+
+  test("THIS STUDENT block uses preferred name, major, year, and onboarding cues", () => {
+    const block = buildPersonaStudentBlock({
+      onboardingComplete: true,
+      preferredName: "Rym",
+      major: "Computer Science",
+      graduationDate: "May 2028",
+      intendedUse: "Someone to talk to",
+      learningStyle: "Talking it through",
+    });
+    expect(block).toMatch(/THIS STUDENT/);
+    expect(block).toMatch(/Call them Rym/);
+    expect(block).toMatch(/Computer Science/);
+    expect(block).toMatch(/May 2028/);
+    expect(block).toMatch(/Someone to talk to/);
+    expect(block).toMatch(/Talking it through/);
+  });
+
+  test("buildPersonaPrompt injects the student block after onboarding", () => {
+    const prompt = buildPersonaPrompt("qa", {
+      profile: {
+        onboardingComplete: true,
+        preferredName: "Rym",
+        major: "Information Systems",
+      },
+    });
+    expect(prompt).toMatch(/Call them Rym/);
+    expect(prompt).toMatch(/Information Systems/);
+  });
+
+  test("small-talk prompt still includes the student name", () => {
+    const prompt = buildPersonaPrompt("qa", {
+      smallTalk: true,
+      profile: {
+        onboardingComplete: true,
+        preferredName: "Rym",
+        major: "Computer Science",
+      },
+    });
+    expect(prompt).toMatch(/Call them Rym/);
+    expect(prompt).toMatch(/SMALL TALK/);
   });
 
   test("first-place voice is a trusted classmate, not a brochure", () => {

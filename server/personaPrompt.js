@@ -155,10 +155,50 @@ function resolvePersonaMode(appMode) {
  * @param {"qa"|"tutor"|"general"} mode
  * @param {{ smallTalk?: boolean, role?: string, referrals?: string }} [options]
  */
-function buildPersonaPrompt(mode, { smallTalk = false, role = null, referrals = "" } = {}) {
+function learningStyleCue(style) {
+  const raw = String(style || "").toLowerCase();
+  if (raw.includes("visual")) return "Use concrete pictures, maps, and 'picture this' when you explain.";
+  if (raw.includes("reading") || raw.includes("writ")) return "Give short written steps they can scan.";
+  if (raw.includes("hands") || raw.includes("practice")) return "End with one thing they can do in the next ten minutes.";
+  if (raw.includes("talk")) return "Talk it through with them. Ask one Socratic beat instead of dumping a lecture.";
+  return "";
+}
+
+function intendedUseCue(intendedUse) {
+  const raw = String(intendedUse || "").toLowerCase();
+  if (raw.includes("talk") || raw.includes("someone")) return "They came for company first. Listen, then help.";
+  if (raw.includes("way around") || raw.includes("finding")) return "Lead with the place or map. Keep logistics short.";
+  if (raw.includes("campus question") || raw.includes("general")) return "Lead with the official campus fact, then one next step.";
+  return "Balance campus facts, company, and study help.";
+}
+
+/**
+ * Turn onboarding picks into instructions Scotty actually follows.
+ */
+function buildPersonaStudentBlock(profile = {}) {
+  if (!profile || !profile.onboardingComplete) return "";
+  const name = String(profile.preferredName || "").trim();
+  const major = String(profile.major || "").trim();
+  const grad = String(profile.graduationDate || "").trim();
+  const style = String(profile.learningStyle || "").trim();
+  const use = String(profile.intendedUse || "").trim();
+  if (!major && !name) return "";
+
+  const lines = ["PERSONA — THIS STUDENT"];
+  if (name) lines.push(`Call them ${name}. Greet them like you already know them. Do not ask their name again.`);
+  if (major) lines.push(`They are in ${major} at CMU-Q.`);
+  if (grad) lines.push(`They expect to graduate ${grad}. Match first-year vs senior energy.`);
+  if (use) lines.push(`They asked you to prioritize: ${use}. ${intendedUseCue(use)}`);
+  if (style) lines.push(`When you teach, match ${style}. ${learningStyleCue(style)}`);
+  lines.push("Use TAILORED REFERRALS for their major and year. Do not treat them like a generic student.");
+  return lines.filter(Boolean).join("\n");
+}
+
+function buildPersonaPrompt(mode, { smallTalk = false, role = null, referrals = "", profile = null } = {}) {
   const personaMode = VALID_PERSONA_MODES.has(mode) ? mode : "qa";
+  const studentBlock = buildPersonaStudentBlock(profile);
   if (smallTalk) {
-    return [CORE_IDENTITY, TONE_RULES, COMFORT_RULES, SMALL_TALK_RULES].join("\n\n");
+    return [CORE_IDENTITY, TONE_RULES, COMFORT_RULES, SMALL_TALK_RULES, studentBlock].filter(Boolean).join("\n\n");
   }
   const roleBlock = VALID_ROLES.has(role) ? ROLE_ADDITIONS[role] : "";
   return [
@@ -168,6 +208,7 @@ function buildPersonaPrompt(mode, { smallTalk = false, role = null, referrals = 
     FIRST_PLACE_RULES,
     VISUAL_AND_ANIMATION,
     GROUNDING_RULES,
+    studentBlock,
     roleBlock,
     MODE_ADDITIONS[personaMode],
     referrals,
@@ -177,5 +218,6 @@ function buildPersonaPrompt(mode, { smallTalk = false, role = null, referrals = 
 
 module.exports = {
   buildPersonaPrompt,
+  buildPersonaStudentBlock,
   resolvePersonaMode,
 };

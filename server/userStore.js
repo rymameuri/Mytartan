@@ -30,6 +30,7 @@ function writeUsers(users) {
 
 function defaultProfile() {
   return {
+    preferredName: null,
     learningStyle: null,
     intendedUse: null,
     major: null,
@@ -55,6 +56,7 @@ function createUser(userObject) {
     id: userObject.id || crypto.randomUUID(),
     email: String(userObject.email ?? "").trim().toLowerCase(),
     passwordHash: userObject.passwordHash,
+    emailVerified: userObject.emailVerified === true,
     createdAt: userObject.createdAt ?? Date.now(),
     profile: { ...defaultProfile(), ...(userObject.profile ?? {}) },
   };
@@ -90,6 +92,23 @@ function updateUserProfile(id, profileFields) {
   };
   writeUsers(users);
   return users[index];
+}
+
+function patchUser(id, fields) {
+  const users = readUsers();
+  const index = users.findIndex((user) => user.id === id);
+  if (index < 0) return null;
+  users[index] = { ...users[index], ...fields };
+  writeUsers(users);
+  return users[index];
+}
+
+function findUserByHashedToken(hashField, expiresField, hash) {
+  if (!hash) return null;
+  const now = Date.now();
+  return (
+    readUsers().find((user) => user[hashField] === hash && Number(user[expiresField] || 0) > now) ?? null
+  );
 }
 
 function getUserCanvasConnection(id) {
@@ -131,6 +150,8 @@ module.exports = {
   getUserById,
   createUser,
   updateUserProfile,
+  patchUser,
+  findUserByHashedToken,
   getUserCanvasConnection,
   setUserCanvasConnection,
   clearUserCanvasConnection,

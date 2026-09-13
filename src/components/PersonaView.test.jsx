@@ -51,6 +51,13 @@ describe("PersonaView empty state", () => {
     expect(screen.getByText(/what's going on\?/i)).toBeInTheDocument();
   });
 
+  test("greets the student by preferred name and major", () => {
+    renderPersona({
+      profile: { preferredName: "Rym", major: "Computer Science", onboardingComplete: true },
+    });
+    expect(screen.getByText(/hey rym — computer science, right\? what's going on\?/i)).toBeInTheDocument();
+  });
+
   test("has a Message Scotty composer with a mic", () => {
     renderPersona();
     expect(screen.getByPlaceholderText(/message scotty/i)).toBeInTheDocument();

@@ -346,6 +346,15 @@ describe("buildStudentContext", () => {
     expect(context).toMatch(/Do not mention Course Tutor/);
   });
 
+  test("names the student and tells Scotty to call them that", () => {
+    const context = buildStudentContext({
+      ...completeProfile,
+      preferredName: "Rym",
+    });
+    expect(context).toMatch(/speaking with Rym/);
+    expect(context).toMatch(/Call them Rym/);
+  });
+
   test("returns empty string when onboarding is incomplete", () => {
     expect(buildStudentContext({ ...completeProfile, onboardingComplete: false })).toBe("");
     expect(buildStudentContext(null)).toBe("");

@@ -960,12 +960,16 @@ function buildStudentContext(profile, { now } = {}) {
   const intendedUse = profile.intendedUse?.trim();
   const yearBand = yearBandFromGraduationDate(graduationDate, now);
 
-  let text = `You are speaking with a CMU-Q student majoring in ${major}`;
+  const preferredName = profile.preferredName?.trim();
+  let text = preferredName
+    ? `You are speaking with ${preferredName}, a CMU-Q student majoring in ${major}`
+    : `You are speaking with a CMU-Q student majoring in ${major}`;
   if (graduationDate) text += `, expected to graduate in ${graduationDate}`;
   if (yearBand !== "unknown") text += ` (${yearBand})`;
   text += ".";
-  if (learningStyle) text += ` Their preferred learning style is ${learningStyle}.`;
-  if (intendedUse) text += ` They primarily use this assistant for ${intendedUse}.`;
+  if (preferredName) text += ` Call them ${preferredName}.`;
+  if (learningStyle) text += ` Their preferred learning style is ${learningStyle}. Match that when you explain.`;
+  if (intendedUse) text += ` They primarily use this assistant for ${intendedUse}. Lead with that.`;
   text += " Tailor tone and referrals to this student. Do not mention Course Tutor.";
   if (intendedUse && /navigation|way around/i.test(intendedUse)) {
     text += " When location questions come up, offer the campus map.";

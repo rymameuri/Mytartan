@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import LoginSignup from "./components/Auth/LoginSignup";
+import VerifyPending from "./components/Auth/VerifyPending";
 import OnboardingFlow from "./components/Onboarding/OnboardingFlow";
 import PersonaView from "./components/PersonaView";
 import SideMenu from "./components/SideMenu";
@@ -69,10 +70,29 @@ function useIsDesktop() {
 }
 
 function AppRoutes() {
-  const { token, user } = useAuth();
+  const { token, user, fetchMailStatus } = useAuth();
+  const [mailConfigured, setMailConfigured] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchMailStatus()
+      .then((status) => {
+        if (!cancelled) setMailConfigured(Boolean(status.configured));
+      })
+      .catch(() => {
+        if (!cancelled) setMailConfigured(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchMailStatus]);
 
   if (!token) {
     return <LoginSignup />;
+  }
+
+  if (mailConfigured && user?.emailVerified === false) {
+    return <VerifyPending />;
   }
 
   if (!user?.profile?.onboardingComplete) {

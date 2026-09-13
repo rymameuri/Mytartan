@@ -23,11 +23,116 @@
   margin-bottom: 28px;
 }
 
-.auth-page__mascot {
+.auth-page__hero {
+  width: min(220px, 58vw);
+  margin: 0 auto 18px;
+}
+
+.auth-page__hero--large {
+  width: min(280px, 70vw);
+  margin-bottom: 22px;
+}
+
+.auth-page--landing .auth-page__content {
+  padding-top: 2.5rem;
+}
+
+.auth-page__overview {
+  width: 100%;
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.auth-page__points {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  color: var(--app-text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+.auth-page__points li {
+  padding-left: 1.1rem;
+  position: relative;
+}
+
+.auth-page__points li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--tartan-maroon);
+}
+
+.auth-page__cta-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.auth-page__ghost {
+  appearance: none;
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
+  padding: 12px 20px;
+  background: var(--app-surface);
+  color: var(--app-text);
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.auth-page__card-title {
+  margin: 0 0 12px;
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.auth-page__help {
+  margin: 0 0 16px;
+  color: var(--app-text-secondary);
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+.auth-page__notice {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(47, 107, 78, 0.08);
+  color: var(--app-text);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.auth-page__text-btn {
+  appearance: none;
+  border: none;
+  padding: 0;
+  background: none;
+  color: var(--tartan-maroon);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+}
+
+.auth-page__text-btn--center {
   display: block;
-  width: 56px;
-  height: auto;
-  margin: 0 auto 16px;
+  width: 100%;
+  margin-top: 14px;
+  text-align: center;
 }
 
 .auth-page__app-name {

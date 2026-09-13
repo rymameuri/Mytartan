@@ -7,6 +7,7 @@ import { useMicInput } from "../hooks/useMicInput";
 import { MenuIcon, ShareIcon, DownloadIcon, VolumeIcon, ChevronIcon } from "./Icons";
 import SettingsButton from "./SettingsButton";
 import { orderStarterChips } from "../data/starterChips";
+import { personaWelcomeCaption } from "../utils/personaWelcome";
 import TeachStudio from "./TeachStudio";
 import { armSpeechSynthesis } from "../hooks/usePersonaSpeech";
 import "./PersonaView.css";
@@ -278,7 +279,7 @@ function PersonaView({
       ? { text: speechCaption, typing: false }
       : lastAssistantReply
         ? { text: lastAssistantReply, typing: false }
-        : { text: "What's going on?", typing: false };
+        : { text: personaWelcomeCaption(profile), typing: false };
 
   const shellClass = [
     "pv",

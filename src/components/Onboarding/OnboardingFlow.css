@@ -23,11 +23,36 @@
   margin-bottom: clamp(2rem, 6vh, 3.5rem);
 }
 
+.onboarding__kicker {
+  margin: 0 0 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--tartan-maroon);
+}
+
 .onboarding__step {
   margin: 0 0 12px;
   font-size: 0.8125rem;
   font-weight: 500;
   letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--app-text-muted);
+}
+
+.onboarding__why {
+  margin: -12px 0 22px;
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  color: var(--app-text-secondary);
+}
+
+.onboarding__subhead {
+  margin: 22px 0 10px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--app-text-muted);
 }

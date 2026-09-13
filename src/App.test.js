@@ -7,11 +7,11 @@ jest.mock('./components/ScottyAvatar', () => {
   };
 });
 
-test('renders login form when not authenticated', () => {
+test('renders pre-login overview when not authenticated', () => {
   render(<App />);
   expect(screen.getByRole('heading', { name: /hey, i'm scotty/i })).toBeInTheDocument();
   expect(screen.getByText('MyTartan')).toBeInTheDocument();
-  expect(screen.getByRole('tab', { name: /log in/i })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /get started/i })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /^log in$/i })).toBeInTheDocument();
 });
 
