@@ -21,7 +21,9 @@
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.chat-input-wrap:focus-within {
+.chat-input-wrap:focus-within,
+.chat-input-wrap--listening,
+.chat-input-wrap--review {
   border-color: rgba(156, 39, 51, 0.35);
   box-shadow: 0 0 0 3px var(--app-accent-soft), 0 8px 24px rgba(28, 25, 23, 0.06);
 }
@@ -97,7 +99,8 @@
   cursor: not-allowed;
 }
 
-.chat-mic-btn--active {
+.chat-mic-btn--active,
+.chat-mic-btn--review {
   background: var(--app-accent-soft);
   color: var(--tartan-maroon);
 }

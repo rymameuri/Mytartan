@@ -347,18 +347,34 @@ function ClassWorkspace({
     [onSend, lectureTopic, scopedContext, tutorActivity, isDesktop, courseContext?.courseName]
   );
 
+  const [composerText, setComposerText] = useState("");
+
   const handleVoiceResult = useCallback(
-    (transcript) => {
+    (spoken) => {
       stopSpeech?.();
       voiceModeRef.current = true;
-      sendTutorMessage(transcript);
+      sendTutorMessage(spoken);
+      setComposerText("");
     },
     [stopSpeech, voiceModeRef, sendTutorMessage]
   );
 
-  const { listening, isFinalizing, toggle: toggleMic, stop: stopMic } = useMicInput({
+  const {
+    listening,
+    reviewing,
+    isFinalizing,
+    transcript,
+    setTranscript,
+    toggle: toggleMic,
+    stop: stopMic,
+    reset: resetMic,
+  } = useMicInput({
     onResult: handleVoiceResult,
   });
+
+  useEffect(() => {
+    if (listening || reviewing) setComposerText(transcript);
+  }, [listening, reviewing, transcript]);
 
   useEffect(() => {
     stopMic();
@@ -368,6 +384,21 @@ function ClassWorkspace({
   useEffect(() => {
     onListeningChange?.(listening);
   }, [listening, onListeningChange]);
+
+  const handleComposerChange = useCallback((next) => {
+    setComposerText(next);
+    if (listening || reviewing) setTranscript(next);
+  }, [listening, reviewing, setTranscript]);
+
+  const handleComposerSend = useCallback((text) => {
+    if (reviewing) {
+      stopSpeech?.();
+      voiceModeRef.current = true;
+    }
+    sendTutorMessage(text);
+    setComposerText("");
+    resetMic();
+  }, [resetMic, reviewing, sendTutorMessage, stopSpeech, voiceModeRef]);
 
   const handleMicClick = useCallback(() => {
     if (isLoading || isPreparingSpeech || isFinalizing) return;
@@ -421,7 +452,9 @@ function ClassWorkspace({
   const micLabel = isLoading || isPreparingSpeech || isFinalizing
     ? "Thinking…"
     : listening
-      ? "Tap when you're done"
+      ? "Listening… tap again when you're done"
+      : reviewing
+        ? "Edit if needed, then send — or tap the mic"
       : isSpeaking
         ? "Tap to stop"
         : "Tap the mic";
@@ -1161,13 +1194,16 @@ function ClassWorkspace({
           <p className="ws-chat__scope">{sourceCountLabel}</p>
           <PersonaMicControls
             listening={listening}
+            reviewing={reviewing}
             isLoading={isLoading || isPreparingSpeech || isFinalizing}
             isSpeaking={isSpeaking}
             micLabel={micLabel}
             onMicClick={handleMicClick}
-            onSend={sendTutorMessage}
+            onSend={handleComposerSend}
             voiceModeRef={voiceModeRef}
-            placeholder="or type here"
+            placeholder={listening ? "Listening…" : reviewing ? "Edit this, then send" : "or type here"}
+            value={composerText}
+            onChange={handleComposerChange}
           />
         </footer>
       </main>

@@ -78,4 +78,10 @@ describe("classifyIntent", () => {
     expect(intent.topic).toBe("academic_support");
     expect(intent.role).toBe("emotional_support");
   });
+
+  test("ugh midterms and I can't do this are generous support reads", () => {
+    expect(classifyIntent("ugh midterms").topic).toBe("academic_support");
+    expect(classifyIntent("I can't do this").role).toBe("emotional_support");
+    expect(classifyIntent("I can't do this").intent).not.toBe("academic_fact");
+  });
 });

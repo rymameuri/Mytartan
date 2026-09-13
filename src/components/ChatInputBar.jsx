@@ -10,17 +10,27 @@ function ChatInputBar({
   placeholder = "Message Scotty",
   onMicClick,
   micActive = false,
+  reviewing = false,
   showMic = false,
+  value,
+  onChange,
 }) {
   const [input, setInput] = useState("");
+  const isControlled = value !== undefined;
+  const textValue = isControlled ? value : input;
+
+  function setText(next) {
+    if (isControlled) onChange?.(next);
+    else setInput(next);
+  }
 
   function handleSubmit(event) {
     event.preventDefault();
-    const text = input.trim();
+    const text = String(textValue || "").trim();
     if (!text || isLoading) return;
-    if (voiceModeRef) voiceModeRef.current = false;
+    if (voiceModeRef && !reviewing) voiceModeRef.current = false;
     onSend(text);
-    setInput("");
+    setText("");
   }
 
   function handleKeyDown(event) {
@@ -35,24 +45,30 @@ function ChatInputBar({
       className={`chat-input-bar${compact ? " chat-input-bar--compact" : ""}`}
       onSubmit={handleSubmit}
     >
-      <div className="chat-input-wrap">
+      <div className={`chat-input-wrap${micActive ? " chat-input-wrap--listening" : ""}${reviewing ? " chat-input-wrap--review" : ""}`}>
         {showMic && (
           <button
             type="button"
-            className={`chat-mic-btn${micActive ? " chat-mic-btn--active" : ""}`}
+            className={`chat-mic-btn${micActive ? " chat-mic-btn--active" : ""}${reviewing ? " chat-mic-btn--review" : ""}`}
             onClick={onMicClick}
             disabled={isLoading}
-            aria-label={micActive ? "Stop listening" : "Speak to Scotty"}
+            aria-label={
+              micActive
+                ? "Stop listening"
+                : reviewing
+                  ? "Send voice note"
+                  : "Speak to Scotty"
+            }
           >
-            <MicIcon active={micActive} />
+            <MicIcon active={micActive || reviewing} />
           </button>
         )}
         <input
           type="text"
           className="chat-input"
           placeholder={placeholder}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
+          value={textValue}
+          onChange={(e) => setText(e.target.value)}
           onKeyDown={handleKeyDown}
           disabled={isLoading}
           aria-label="Message input"
@@ -60,7 +76,7 @@ function ChatInputBar({
         <button
           type="submit"
           className="chat-send"
-          disabled={isLoading || !input.trim()}
+          disabled={isLoading || !String(textValue || "").trim()}
           aria-label="Send message"
         >
           <SendIcon />

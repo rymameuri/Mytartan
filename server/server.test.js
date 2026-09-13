@@ -56,6 +56,16 @@ describe("GET /api/kb/status", () => {
     expect(res.body).toHaveProperty("lastQuery");
     expect(res.body.lastQuery).toHaveProperty("usedQueryRewriting");
     expect(res.body.lastQuery).toHaveProperty("usedReranking");
+    expect(res.body).toHaveProperty("transcribeAvailable");
+  });
+});
+
+describe("POST /api/transcribe", () => {
+  test("returns 501 when no gateway transcription is configured", async () => {
+    const res = await request(app)
+      .post("/api/transcribe")
+      .send({ audio: Buffer.from("not-real-audio-but-long-enough-pad").toString("base64") });
+    expect(res.status).toBe(501);
   });
 });
 
@@ -358,6 +368,19 @@ describe("POST /api/chat — input validation", () => {
     expect(res.body.reply).not.toMatch(/rdriley@/);
     expect(res.body.reply).not.toMatch(/hbouamor@/);
     expect((res.body.reply.match(/@[a-z0-9.-]+/gi) || []).length).toBeLessThanOrEqual(3);
+  });
+
+  test("ugh midterms is supportive, not a campus-fact miss", async () => {
+    const res = await request(app)
+      .post("/api/chat")
+      .send({
+        messages: [{ role: "user", content: "ugh midterms" }],
+        mode: "qa",
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.reply).toMatch(/that's a lot|i'm here/i);
+    expect(res.body.reply).not.toMatch(/don't have the official answer/i);
   });
 });
 

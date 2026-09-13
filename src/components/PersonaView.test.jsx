@@ -8,7 +8,15 @@ jest.mock("./ScottyAvatar", () => {
 });
 
 jest.mock("../hooks/useMicInput", () => ({
-  useMicInput: () => ({ listening: false, isFinalizing: false, toggle: jest.fn() }),
+  useMicInput: () => ({
+    listening: false,
+    reviewing: false,
+    isFinalizing: false,
+    transcript: "",
+    setTranscript: jest.fn(),
+    toggle: jest.fn(),
+    reset: jest.fn(),
+  }),
 }));
 
 jest.mock("./MessageFeedback", () => {

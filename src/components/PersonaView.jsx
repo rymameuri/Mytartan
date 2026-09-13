@@ -67,17 +67,49 @@ function PersonaView({
     setShowScrollDown(false);
   }, [chatSessionKey, stopSpeech, voiceModeRef]);
 
-  const handleVoiceResult = useCallback((transcript) => {
+  const [composerText, setComposerText] = useState("");
+
+  const handleVoiceResult = useCallback((spoken) => {
     stopSpeech?.();
     voiceModeRef.current = true;
-    onSend(transcript);
+    onSend(spoken);
+    setComposerText("");
   }, [onSend, voiceModeRef, stopSpeech]);
 
-  const { listening, isFinalizing, toggle: toggleMic } = useMicInput({
+  const {
+    listening,
+    reviewing,
+    isFinalizing,
+    transcript,
+    setTranscript,
+    toggle: toggleMic,
+    reset: resetMic,
+  } = useMicInput({
     onResult: handleVoiceResult,
   });
 
+  useEffect(() => {
+    if (listening || reviewing) setComposerText(transcript);
+  }, [listening, reviewing, transcript]);
+
   const isThinking = !isSpeaking && (isLoading || isPreparingSpeech || isFinalizing);
+
+  const handleComposerChange = useCallback((next) => {
+    setComposerText(next);
+    if (listening || reviewing) setTranscript(next);
+  }, [listening, reviewing, setTranscript]);
+
+  const handleComposerSend = useCallback((text) => {
+    if (reviewing) {
+      stopSpeech?.();
+      voiceModeRef.current = true;
+    } else if (voiceModeRef) {
+      voiceModeRef.current = false;
+    }
+    onSend(text);
+    setComposerText("");
+    resetMic();
+  }, [onSend, resetMic, reviewing, stopSpeech, voiceModeRef]);
 
   const handleMicClick = useCallback(() => {
     if (isLoading || isPreparingSpeech || isFinalizing) return;
@@ -113,7 +145,9 @@ function PersonaView({
   const micLabel = isLoading || isPreparingSpeech || isFinalizing
     ? "Thinking…"
     : listening
-      ? "Tap when you're done"
+      ? "Listening… tap again when you're done"
+      : reviewing
+        ? "Edit if needed, then send — or tap the mic"
       : isSpeaking
         ? "Tap to stop"
         : "Tap the mic";
@@ -311,17 +345,32 @@ function PersonaView({
       <footer className="pv-footer">
         <PersonaMicControls
           listening={listening}
+          reviewing={reviewing}
           isLoading={isLoading || isPreparingSpeech || isFinalizing}
           isSpeaking={isSpeaking}
           micLabel={micLabel}
           onMicClick={handleMicClick}
-          onSend={onSend}
+          onSend={handleComposerSend}
           voiceModeRef={voiceModeRef}
-          placeholder="Message Scotty"
+          placeholder={
+            listening
+              ? "Listening…"
+              : reviewing
+                ? "Edit this, then send"
+                : "Message Scotty"
+          }
           inputOnly
           showComposerMic
+          value={composerText}
+          onChange={handleComposerChange}
         />
-        <p className="pv-footer__hint">Scotty can get things wrong. Check campus sources.</p>
+        <p className="pv-footer__hint">
+          {listening
+            ? "Listening. Tap the mic when you're done, then edit or send."
+            : reviewing
+              ? "Edit if it looks messy, then send."
+              : "Scotty can get things wrong. Check campus sources."}
+        </p>
       </footer>
     </div>
   );

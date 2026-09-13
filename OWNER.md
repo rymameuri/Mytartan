@@ -8,6 +8,9 @@ When retrieval is weak on an official fact, Scotty says so once, then names **1�
 ## CMU-Q grounding
 Official answers come from the scraped myCMU-Q / Scotty KB plus key facts. The confidence gate still refuses invented policy, emails, phones, and hours. Situation guides only point at resources that already appear in those files.
 
+## Messy real speech
+Voice notes show a live transcript and wait for an edit/send confirm (no auto-fire). Browser STT prefers `en-QA` → `en-GB` → `en-US` and picks the best of several alternatives. If the CMU AI Gateway is configured, `/api/transcribe` can use a Whisper-class model. Typed or spoken filler (`ugh midterms`, `um yawn stew co`) is normalized before RAG/intent.
+
 ## Situation layer
 `knowledge-base/situations/` is student-life, not a policy dump: midterms week, homesick / rough night, first week, choosing a minor, quiet vs social study. Synonyms in `data/synonyms.json` map slang (`majlis`, `rough night`, `pick a minor`) onto those topics.
 

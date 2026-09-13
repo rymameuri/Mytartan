@@ -27,6 +27,7 @@ const {
 } = require("./tutorPrompt");
 const { buildPersonaPrompt, resolvePersonaMode } = require("./personaPrompt");
 const { classifyIntent, shouldSelectReferrals } = require("./intentRouter");
+const { normalizeUtterance, rewriteUtterance } = require("./utteranceNormalize");
 const {
   selectContacts,
   formatReferralBlock,
@@ -725,6 +726,10 @@ app.use(
 );
 app.use(express.json());
 
+function canTranscribe() {
+  return Boolean(getAiGatewayBaseUrl() && (hasAiKey() || isConfiguredKey(process.env.OPENAI_API_KEY)));
+}
+
 app.get("/", (_req, res) => {
   res.json({
     message: "Tartan Scotty API server",
@@ -747,6 +752,7 @@ app.get("/", (_req, res) => {
       "DELETE /api/courses/:id",
       "POST /api/chat",
       "POST /api/chat/stream",
+      "POST /api/transcribe",
       "POST /api/feedback",
       "POST /api/liveavatar-token",
       "POST /api/tts",
@@ -902,7 +908,51 @@ app.post("/api/courses/import/canvas", requireAuth, async (req, res) => {
 });
 
 app.get("/api/kb/status", (_req, res) => {
-  res.json(getRetrievalStatus());
+  res.json({
+    ...getRetrievalStatus(),
+    transcribeAvailable: canTranscribe(),
+  });
+});
+
+app.post("/api/transcribe", optionalAuth, express.json({ limit: "6mb" }), async (req, res) => {
+  if (!canTranscribe()) {
+    return res.status(501).json({ error: "Transcription is not configured" });
+  }
+
+  const audio = req.body?.audio;
+  if (!audio || typeof audio !== "string") {
+    return res.status(400).json({ error: "audio is required" });
+  }
+
+  try {
+    const buffer = Buffer.from(audio, "base64");
+    if (buffer.length < 40 || buffer.length > 5 * 1024 * 1024) {
+      return res.status(400).json({ error: "audio is empty or too large" });
+    }
+
+    const mimeType = req.body.mimeType || "audio/webm";
+    const form = new FormData();
+    form.append("file", new Blob([buffer], { type: mimeType }), "speech.webm");
+    form.append("model", process.env.TRANSCRIBE_MODEL || "whisper-1");
+    form.append("language", "en");
+
+    const response = await axios.post(
+      `${getAiGatewayBaseUrl()}/v1/audio/transcriptions`,
+      form,
+      {
+        headers: {
+          Authorization: `Bearer ${getClaudeApiKey() || process.env.OPENAI_API_KEY}`,
+        },
+        maxBodyLength: 6 * 1024 * 1024,
+        proxy: false,
+      }
+    );
+
+    const text = String(response.data?.text || "").trim();
+    return res.json({ text, source: "gateway" });
+  } catch {
+    return res.status(502).json({ error: "Could not transcribe audio" });
+  }
 });
 
 /** Dev helper: inspect which KB chunks match a question (no LLM call). */
@@ -1159,7 +1209,14 @@ async function handleChatRequest(req, res, { stream = false } = {}) {
   }
 
   const latestUserMessage = [...messages].reverse().find((m) => m.role === "user");
-  const userQuery = latestUserMessage?.content || "";
+  const rawQuery = latestUserMessage?.content || "";
+  let understood = normalizeUtterance(rawQuery);
+  if (understood.messy && hasAiKey()) {
+    understood = await rewriteUtterance(rawQuery, async (prompt, rewriteMessages) =>
+      getChatReply(prompt, rewriteMessages, { maxTokens: 80, temperature: 0.1 })
+    );
+  }
+  const userQuery = understood.normalized || rawQuery;
   const smallTalk = KB_MODES.has(mode) && isSmallTalk(userQuery);
   const intent = classifyIntent(userQuery, mode);
   const referralTopic = intent.topic === "general" ? "academics" : intent.topic;
@@ -1211,7 +1268,15 @@ async function handleChatRequest(req, res, { stream = false } = {}) {
   const recentMessages = messages.slice(-5);
   const { docs, confidence } = await retrieveForQuery(mode, userQuery, recentMessages);
   const keyFacts = KB_MODES.has(mode) ? checkKeyFacts(userQuery) : [];
-  const studentContext = buildStudentContext(req.user?.profile);
+  const studentContext = [
+    buildStudentContext(req.user?.profile),
+    understood.original &&
+    understood.original !== userQuery
+      ? `The student said this messily: "${understood.original}". Treat this cleaned meaning as the request: "${userQuery}". Do not invent campus facts from the cleanup.`
+      : "",
+  ]
+    .filter(Boolean)
+    .join("\n\n");
   const canvasContext = req.user?.id ? await getCanvasContext(req.user.id) : null;
   const systemPrompt = buildSystemPrompt(mode, docs, {
     smallTalk: false,
