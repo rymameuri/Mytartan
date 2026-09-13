@@ -140,8 +140,21 @@ function headingLines(text) {
 /**
  * Short concept labels from paper body — not citation lines or sentence dumps.
  */
+function citationLeadNames(text) {
+  const names = new Set();
+  String(text || "")
+    .split(/\n+/)
+    .forEach((line) => {
+      if (!isBibliographicJunk(line)) return;
+      const first = line.replace(/\s+/g, " ").trim().split(/[,\s]/)[0];
+      if (first && /^[A-Z][a-z]{3,}$/.test(first)) names.add(first.toLowerCase());
+    });
+  return names;
+}
+
 export function extractConceptLabels(text, { exclude = [], limit = 6 } = {}) {
   const blocked = new Set(exclude.map((item) => String(item || "").toLowerCase().trim()).filter(Boolean));
+  citationLeadNames(text).forEach((name) => blocked.add(name));
   const labels = [];
   const seen = new Set(blocked);
 

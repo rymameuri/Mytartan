@@ -104,6 +104,7 @@ Meaning grows from everyday encounters, not from a publisher address.
     expect(labels.map((item) => item.label.toLowerCase())).toEqual(
       expect.arrayContaining(["location", "locale", "sense of place", "meaning"])
     );
+    expect(labels.map((item) => item.label.toLowerCase())).not.toContain("cresswell");
 
     const map = buildMindMapFromConcept("this", {
       sourceText: paper,
