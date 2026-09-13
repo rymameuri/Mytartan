@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import ScottyPersonaStage from "./ScottyPersonaStage";
+import ScottyAvatar from "./ScottyAvatar";
 import PersonaCaption from "./PersonaCaption";
 import QuizPlayer from "./QuizPlayer";
 import MindMapBoard from "./MindMapBoard";
@@ -77,20 +77,15 @@ function TeachStudio({
     >
       <aside className="teach-studio__rail">
         <div className="teach-studio__spot" aria-hidden="true" />
-        <ScottyPersonaStage
-          compact
-          tone="cream"
-          avatarRef={avatarRef}
-          avatarState={avatarState}
-          title="Scotty"
-          subtitle="Your CMU-Q classmate"
-        >
-          {isSpeaking && speechCaption ? (
-            <PersonaCaption text={speechCaption} />
-          ) : isLoading ? (
-            <PersonaCaption text="thinking" typing />
-          ) : null}
-        </ScottyPersonaStage>
+        <div className={`teach-studio__scotty pv-avatar-frame pv-avatar-frame--${avatarState}`}>
+          <ScottyAvatar ref={avatarRef} persona avatarState={avatarState} />
+        </div>
+        <p className="teach-studio__name">Scotty</p>
+        {isSpeaking && speechCaption ? (
+          <PersonaCaption text={speechCaption} />
+        ) : isLoading ? (
+          <PersonaCaption text="thinking" typing />
+        ) : null}
         {studio.reaction?.text && (
           <p
             key={studio.reaction.text}

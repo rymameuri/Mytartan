@@ -1,4 +1,4 @@
-/* PersonaView — live Scotty first; transcript is optional */
+/* PersonaView — cream product shell + live Scotty mark */
 
 .pv {
   position: relative;
@@ -64,6 +64,33 @@
   margin-left: auto;
 }
 
+.pv-mode-toggle {
+  appearance: none;
+  border: 1px solid var(--app-border);
+  border-radius: 999px;
+  padding: 6px 12px;
+  margin-right: 4px;
+  background: var(--app-surface);
+  color: var(--app-text-secondary);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.pv-mode-toggle:hover {
+  background: var(--app-hover);
+  color: var(--app-text);
+}
+
+.pv-mode-toggle--active {
+  background: var(--app-accent-soft);
+  border-color: rgba(156, 39, 51, 0.22);
+  color: var(--tartan-maroon);
+}
+
 .pv-icon-btn {
   display: inline-flex;
   align-items: center;
@@ -93,33 +120,6 @@
   color: var(--tartan-maroon);
 }
 
-.pv-mode-toggle {
-  appearance: none;
-  border: 1px solid var(--app-border);
-  border-radius: 999px;
-  padding: 6px 12px;
-  margin-right: 4px;
-  background: var(--app-surface);
-  color: var(--app-text-secondary);
-  font: inherit;
-  font-size: 0.75rem;
-  font-weight: 600;
-  line-height: 1.2;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.pv-mode-toggle:hover {
-  background: var(--app-hover);
-  color: var(--app-text);
-}
-
-.pv-mode-toggle--active {
-  background: var(--app-accent-soft);
-  border-color: rgba(156, 39, 51, 0.22);
-  color: var(--tartan-maroon);
-}
-
 .pv-body {
   position: relative;
   z-index: 5;
@@ -136,20 +136,89 @@
   overflow-y: auto;
 }
 
-.pv-companion {
+.pv-stage {
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
   gap: 10px;
-  padding: 12px 24px 4px;
+  padding: 16px 24px 8px;
   width: 100%;
-  max-width: 680px;
+  max-width: 640px;
 }
 
-.pv-companion--hero {
+.pv-stage--persona-main {
   flex: 1;
   justify-content: center;
+}
+
+.pv-avatar-frame {
+  position: relative;
+  width: min(240px, 58vw);
+  height: min(272px, 66vw);
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 28px;
+  background: transparent;
+}
+
+.pv-avatar-frame--speaking {
+  filter: drop-shadow(0 0 18px rgba(156, 39, 51, 0.18));
+}
+
+.pv-avatar-frame--listening {
+  box-shadow: 0 0 0 3px rgba(156, 39, 51, 0.2);
+}
+
+.pv-avatar-frame--thinking {
+  filter: drop-shadow(0 0 12px rgba(28, 25, 23, 0.08));
+}
+
+.pv-identity {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.pv-identity__name {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: var(--app-text);
+}
+
+.pv-identity__role {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8125rem;
+  color: var(--app-text-muted);
+}
+
+.pv-identity__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #6ee7a0;
+  box-shadow: 0 0 8px rgba(110, 231, 160, 0.55);
+}
+
+.pv-identity__dot--speaking {
+  background: var(--tartan-maroon);
+  box-shadow: 0 0 8px rgba(156, 39, 51, 0.4);
+  animation: pv-dot-pulse 1s ease-in-out infinite;
+}
+
+.pv-identity__dot--listening {
+  background: #3b82f6;
+}
+
+.pv-identity__dot--thinking {
+  background: #c4b5a5;
+  box-shadow: none;
 }
 
 .pv-last-ask {
@@ -182,7 +251,7 @@
   flex-wrap: wrap;
   justify-content: center;
   gap: 8px;
-  margin: 14px 0 0;
+  margin: 10px 0 0;
   padding: 0;
   list-style: none;
   max-width: 560px;
@@ -200,17 +269,11 @@
   font-weight: 500;
   line-height: 1.35;
   cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
 .pv-empty__chip:hover:not(:disabled) {
   background: var(--ws-surface-hover);
   border-color: var(--ws-border-strong);
-}
-
-.pv-empty__chip:focus-visible {
-  outline: 2px solid var(--tartan-maroon);
-  outline-offset: 2px;
 }
 
 .pv-empty__chip:disabled {
@@ -272,11 +335,6 @@
   box-shadow: 0 4px 16px rgba(28, 25, 23, 0.08);
 }
 
-.pv-scroll-down:hover {
-  background: var(--ws-surface-hover);
-  color: var(--app-text);
-}
-
 .pv--studio .pv-footer {
   width: 100%;
   max-width: none;
@@ -296,18 +354,6 @@
   margin: 0 auto;
 }
 
-.pv .pmc-label {
-  color: var(--app-text-secondary);
-}
-
-.pv .pmc-label--live {
-  color: var(--tartan-maroon);
-}
-
-.pv .pmc-sonar {
-  border-color: rgba(156, 39, 51, 0.35);
-}
-
 .pv-footer__hint {
   margin: 10px 0 0;
   font-size: 0.75rem;
@@ -316,60 +362,38 @@
   text-align: center;
 }
 
+@keyframes pv-dot-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.25);
+  }
+}
+
 @media (max-width: 480px) {
   .pv-header {
     padding: 10px 12px;
     gap: 8px;
   }
 
-  .pv-header__role {
-    max-width: none;
-  }
-
   .pv-header__app {
     display: none;
   }
 
-  .pv-header__actions {
-    gap: 2px;
+  .pv-avatar-frame {
+    width: min(188px, 58vw);
+    height: min(214px, 66vw);
   }
 
-  .pv-icon-btn {
-    width: 34px;
-    height: 34px;
-  }
-
-  .pv-messages,
-  .pv-body--chat .pv-messages {
-    padding: 16px 14px 12px;
+  .pv-identity__name {
+    font-size: 1.5rem;
   }
 
   .pv-footer {
     padding: 6px 12px max(12px, env(safe-area-inset-bottom));
     width: 100%;
-  }
-
-  .pv-companion {
-    padding: 8px 16px 4px;
-  }
-
-  .pv-companion--hero .sp-avatar-frame {
-    width: min(210px, 58vw);
-    height: min(210px, 58vw);
-  }
-
-  .pv-mode-toggle {
-    padding: 5px 10px;
-    font-size: 0.6875rem;
-  }
-
-  .pv-last-ask {
-    max-width: calc(100vw - 32px);
-  }
-
-  .pv-empty__chips {
-    gap: 7px;
-    margin-top: 12px;
   }
 
   .pv-empty__chip {

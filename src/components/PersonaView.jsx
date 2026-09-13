@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import MessageContent from "./MessageContent";
 import PersonaMicControls from "./PersonaMicControls";
 import PersonaCaption from "./PersonaCaption";
-import ScottyPersonaStage from "./ScottyPersonaStage";
+import ScottyAvatar from "./ScottyAvatar";
 import { useMicInput } from "../hooks/useMicInput";
 import { MenuIcon, ShareIcon, DownloadIcon, VolumeIcon, ChevronIcon } from "./Icons";
 import SettingsButton from "./SettingsButton";
@@ -190,6 +190,7 @@ function PersonaView({
   }, [listening, reviewing, setTranscript]);
 
   const handleComposerSend = useCallback((text, extra) => {
+    armSpeechSynthesis();
     if (reviewing) {
       stopSpeech?.();
       voiceModeRef.current = true;
@@ -384,17 +385,26 @@ function PersonaView({
         </main>
       ) : (
         <main className="pv-body pv-body--idle">
-          <div className="pv-companion pv-companion--hero">
-            <ScottyPersonaStage
-              hero
-              tone="cream"
-              avatarRef={avatarRef}
-              avatarState={avatarState}
-              title="Hey, I'm Scotty"
-              subtitle="Your CMU-Q classmate"
-            >
-              <PersonaCaption text={stageCaption.text} typing={stageCaption.typing} />
-            </ScottyPersonaStage>
+          <div className="pv-stage pv-stage--persona-main">
+            <div className={`pv-avatar-frame pv-avatar-frame--${avatarState}`}>
+              <ScottyAvatar ref={avatarRef} persona avatarState={avatarState} />
+            </div>
+
+            <div className="pv-identity">
+              <p className="pv-identity__name brand-display">Hey, I&apos;m Scotty</p>
+              <p className="pv-identity__role">
+                <span className={`pv-identity__dot pv-identity__dot--${avatarState}`} />
+                {avatarState === "speaking"
+                  ? "Talking with you"
+                  : avatarState === "listening"
+                    ? "Listening…"
+                    : avatarState === "thinking"
+                      ? "Thinking…"
+                      : "Your CMU-Q classmate"}
+              </p>
+            </div>
+
+            <PersonaCaption text={stageCaption.text} typing={stageCaption.typing} />
 
             {lastUserAsk && (
               <p className="pv-last-ask" title={lastUserAsk}>
@@ -436,8 +446,10 @@ function PersonaView({
               ? "Listening…"
               : reviewing
                 ? "Edit this, then send"
-                : "or type here"
+                : "Message Scotty"
           }
+          inputOnly
+          showComposerMic
           allowAttach
           value={composerText}
           onChange={handleComposerChange}

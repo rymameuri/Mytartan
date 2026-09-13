@@ -51,11 +51,10 @@ describe("PersonaView empty state", () => {
     expect(screen.getByText(/what's going on\?/i)).toBeInTheDocument();
   });
 
-  test("has a talk-to-Scotty mic and a type fallback", () => {
+  test("has a Message Scotty composer with a mic", () => {
     renderPersona();
+    expect(screen.getByPlaceholderText(/message scotty/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/speak to scotty/i)).toBeInTheDocument();
-    expect(screen.getByText(/tap the mic/i)).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/or type here/i)).toBeInTheDocument();
   });
 
   test("hides course tutor, tartan wallpaper, and scale chrome", () => {
@@ -71,7 +70,7 @@ describe("PersonaView empty state", () => {
   test("shows a hero Scotty and starter chips that send", () => {
     const onSend = jest.fn();
     renderPersona({ onSend });
-    expect(document.querySelector(".scotty-persona--hero")).toBeInTheDocument();
+    expect(document.querySelector(".pv-avatar-frame")).toBeInTheDocument();
     expect(document.querySelector("[data-testid=\"scotty-avatar\"]")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /stressed about midterms/i })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /stressed about midterms/i }));
@@ -106,7 +105,7 @@ describe("PersonaView empty state", () => {
       },
     });
     expect(document.querySelector(".pv--studio")).toBeInTheDocument();
-    expect(document.querySelector(".teach-studio .scotty-persona")).toBeInTheDocument();
+    expect(document.querySelector(".teach-studio .pv-avatar-frame")).toBeInTheDocument();
     expect(screen.getByText(/quiz studio/i)).toBeInTheDocument();
     expect(screen.getByText(/What is a base case/i)).toBeInTheDocument();
     expect(screen.getByText(/Whenever you're ready/i)).toBeInTheDocument();
@@ -189,7 +188,7 @@ describe("PersonaView empty state", () => {
         { role: "assistant", content: "Yeah — let's get you through this week." },
       ],
     });
-    expect(document.querySelector(".scotty-persona--hero")).toBeInTheDocument();
+    expect(document.querySelector(".pv-avatar-frame")).toBeInTheDocument();
     expect(document.querySelector(".pv--persona-mode")).toBeInTheDocument();
     expect(document.querySelector(".pv--chat-only")).not.toBeInTheDocument();
     expect(document.querySelector(".message-history")).not.toBeInTheDocument();
@@ -210,9 +209,9 @@ describe("PersonaView empty state", () => {
     fireEvent.click(screen.getByRole("button", { name: /chat only/i }));
     expect(document.querySelector(".pv--chat-only")).toBeInTheDocument();
     expect(document.querySelector(".message-history")).toBeInTheDocument();
-    expect(document.querySelector(".scotty-persona--hero")).not.toBeInTheDocument();
+    expect(document.querySelector(".pv-avatar-frame")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /back to persona/i }));
-    expect(document.querySelector(".scotty-persona--hero")).toBeInTheDocument();
+    expect(document.querySelector(".pv-avatar-frame")).toBeInTheDocument();
     expect(document.querySelector(".pv--chat-only")).not.toBeInTheDocument();
   });
 
@@ -222,8 +221,8 @@ describe("PersonaView empty state", () => {
       speechCaption: "Library's in the Academic Building — I can walk you.",
     });
     expect(screen.getByText(/Library's in the Academic Building/i)).toBeInTheDocument();
-    expect(document.querySelector(".sp-avatar-frame--speaking")).toBeInTheDocument();
-    expect(document.querySelector(".scotty-persona--hero")).toBeInTheDocument();
+    expect(document.querySelector(".pv-avatar-frame--speaking")).toBeInTheDocument();
+    expect(document.querySelector(".pv-avatar-frame")).toBeInTheDocument();
   });
 
   test("keeps talking Scotty docked beside a studio", () => {
@@ -253,8 +252,8 @@ describe("PersonaView empty state", () => {
         reaction: { type: "celebrate", text: "Yes — recursion has to stop somewhere." },
       },
     });
-    expect(document.querySelector(".teach-studio .scotty-persona")).toBeInTheDocument();
-    expect(document.querySelector(".teach-studio .sp-avatar-frame--speaking")).toBeInTheDocument();
+    expect(document.querySelector(".teach-studio .pv-avatar-frame")).toBeInTheDocument();
+    expect(document.querySelector(".teach-studio .pv-avatar-frame--speaking")).toBeInTheDocument();
     expect(screen.getByText(/Nice — that's the base case/i)).toBeInTheDocument();
     expect(screen.getByText(/Yes — recursion has to stop somewhere/i)).toBeInTheDocument();
     expect(screen.getByText(/What is a base case/i)).toBeInTheDocument();

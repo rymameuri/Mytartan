@@ -7,6 +7,7 @@ import {
   msPerSpeechWord,
   captionForCharIndex,
   captionForWordIndex,
+  captionForPlaybackProgress,
 } from "../utils/speechCaption";
 import { toSpokenText } from "../utils/spokenText";
 
@@ -159,9 +160,56 @@ export function usePersonaSpeech(avatarRef, userId) {
       if (!normalized) return;
 
       fullTextRef.current = normalized;
+      setIsPreparingSpeech(true);
+      setIsSpeaking(true);
+      updateCaptionForWord(normalized, 0);
+
+      if (avatarRef?.current?.speak) {
+        try {
+          await avatarRef.current.speak(normalized, {
+            muted: readMutedPreference(userIdRef.current),
+            onStart: () => {
+              setIsPreparingSpeech(false);
+              setIsSpeaking(true);
+              updateCaptionForWord(normalized, 0);
+              fallbackTimerRef.current = setTimeout(() => {
+                if (!revealTimerRef.current) {
+                  startTimedReveal(normalized, 580);
+                }
+              }, 800);
+            },
+            onTimeUpdate: (currentTime, duration) => {
+              if (fallbackTimerRef.current) {
+                clearTimeout(fallbackTimerRef.current);
+                fallbackTimerRef.current = null;
+              }
+              if (revealTimerRef.current) {
+                clearInterval(revealTimerRef.current);
+                revealTimerRef.current = null;
+              }
+              if (!Number.isFinite(duration) || duration <= 0) return;
+              setCaption(captionForPlaybackProgress(normalized, currentTime, duration));
+            },
+          });
+          finishSpeaking();
+          return;
+        } catch (err) {
+          avatarRef.current?.stop?.();
+          console.warn("[usePersonaSpeech] ElevenLabs unavailable, using browser TTS:", err.message);
+        }
+      }
+
       speakBrowser(normalized);
     },
-    [speakBrowser, clearRevealTimers, clearCaption]
+    [
+      avatarRef,
+      speakBrowser,
+      clearRevealTimers,
+      clearCaption,
+      startTimedReveal,
+      finishSpeaking,
+      updateCaptionForWord,
+    ]
   );
 
   const stop = useCallback(() => {

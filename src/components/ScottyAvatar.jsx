@@ -161,7 +161,7 @@ const ScottyAvatar = forwardRef(function ScottyAvatar(
   );
 
   useImperativeHandle(ref, () => ({
-    async speak(text, { onStart, onTimeUpdate } = {}) {
+    async speak(text, { onStart, onTimeUpdate, muted = false } = {}) {
       if (!text?.trim()) {
         throw new Error("speak() requires non-empty text");
       }
@@ -185,6 +185,8 @@ const ScottyAvatar = forwardRef(function ScottyAvatar(
       objectUrlRef.current = url;
 
       const audio = new Audio(url);
+      audio.muted = Boolean(muted);
+      audio.volume = muted ? 0 : 1;
       audioRef.current = audio;
 
       if (!audioCtxRef.current) {
