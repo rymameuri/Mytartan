@@ -2,7 +2,19 @@ const DEFAULT_WORDS_PER_LINE = 7;
 
 export function normalizeSpeechCaption(text) {
   if (!text || typeof text !== "string") return "";
-  return text.replace(/\s+/g, " ").trim();
+  return text
+    .replace(/<break\s+time="[^"]*"\s*\/>/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** Sentence-ending words hold longer so captions breathe with the voice. */
+export function speechWordWeight(word) {
+  return /[.!?]"?$/.test(String(word || "").trim()) ? 1.85 : 1;
+}
+
+export function msForCaptionStep(word, baseMs) {
+  return Math.round(Number(baseMs) * speechWordWeight(word));
 }
 
 export function splitSpeechWords(text) {
@@ -87,13 +99,23 @@ export function wordIndexForPlaybackProgress(
   wordCount,
   currentTime,
   duration,
-  lagSec = CAPTION_LAG_SEC
+  lagSec = CAPTION_LAG_SEC,
+  weights
 ) {
   if (!wordCount) return 0;
   if (!Number.isFinite(duration) || duration <= 0) return 0;
   const lagged = Math.max(0, currentTime - Math.max(0, lagSec));
   const progress = Math.min(1, lagged / duration);
-  return Math.min(wordCount - 1, Math.floor(progress * wordCount));
+  if (!Array.isArray(weights) || weights.length !== wordCount) {
+    return Math.min(wordCount - 1, Math.floor(progress * wordCount));
+  }
+  const total = weights.reduce((sum, weight) => sum + Number(weight || 1), 0);
+  let consumed = progress * total;
+  for (let i = 0; i < wordCount; i += 1) {
+    consumed -= Number(weights[i] || 1);
+    if (consumed <= 0) return i;
+  }
+  return wordCount - 1;
 }
 
 export function captionForPlaybackProgress(
@@ -106,7 +128,13 @@ export function captionForPlaybackProgress(
   if (!words.length) return "";
   return captionForWordIndex(
     text,
-    wordIndexForPlaybackProgress(words.length, currentTime, duration),
+    wordIndexForPlaybackProgress(
+      words.length,
+      currentTime,
+      duration,
+      CAPTION_LAG_SEC,
+      words.map(speechWordWeight)
+    ),
     maxWords
   );
 }

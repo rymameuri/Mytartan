@@ -37,6 +37,7 @@ const {
 } = require("./contactMap");
 const { generateTutorSpeechScript } = require("./tutorSpeech");
 const { generateQuizRecap } = require("./tutorQuizRecap");
+const { paceTtsText } = require("./ttsPace");
 const {
   listCourses,
   getCourseForUser,
@@ -1632,22 +1633,6 @@ async function createLiveAvatarToken(_req, res) {
 app.post("/api/liveavatar-token", createLiveAvatarToken);
 app.post("/api/heygen-token", createLiveAvatarToken);
 
-function flattenTtsPauses(text) {
-  if (!text) return "";
-  return text
-    .replace(/(\d+)\s*[–—]\s*(\d+)/g, "$1 to $2")
-    .replace(/\u2026/g, ".")
-    .replace(/\.{3,}/g, ".")
-    .replace(/\s*[—–]\s*/g, ", ")
-    .replace(/\s+--\s+/g, ", ")
-    .replace(/[ \t]*;[ \t]*/g, ", ")
-    .replace(/([A-Za-z])\s*:\s+([A-Za-z])/g, "$1, $2")
-    .replace(/(,\s*){2,}/g, ", ")
-    .replace(/\s+([,.!?])/g, "$1")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
 function elevenLabsConfigured() {
   const apiKey = process.env.ELEVENLABS_API_KEY?.trim();
   const voiceId = process.env.ELEVENLABS_VOICE_ID?.trim();
@@ -1672,7 +1657,7 @@ app.post("/api/tts", async (req, res) => {
     });
   }
 
-  const text = flattenTtsPauses(String(req.body?.text || "").trim());
+  const text = paceTtsText(String(req.body?.text || "").trim());
   if (!text) {
     return res.status(400).json({ error: "text is required" });
   }
@@ -1686,9 +1671,9 @@ app.post("/api/tts", async (req, res) => {
         text,
         model_id: modelId,
         voice_settings: {
-          stability: 0.72,
+          stability: 0.55,
           similarity_boost: 0.75,
-          style: 0,
+          style: 0.3,
           use_speaker_boost: true,
         },
       },

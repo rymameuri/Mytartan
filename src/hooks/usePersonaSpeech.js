@@ -5,6 +5,7 @@ import {
   normalizeSpeechCaption,
   splitSpeechWords,
   msPerSpeechWord,
+  msForCaptionStep,
   captionForCharIndex,
   captionForWordIndex,
   captionForPlaybackProgress,
@@ -75,6 +76,7 @@ export function usePersonaSpeech(avatarRef, userId) {
 
   const clearRevealTimers = useCallback(() => {
     if (revealTimerRef.current) {
+      clearTimeout(revealTimerRef.current);
       clearInterval(revealTimerRef.current);
       revealTimerRef.current = null;
     }
@@ -102,14 +104,16 @@ export function usePersonaSpeech(avatarRef, userId) {
       let wordIndex = 0;
       updateCaptionForWord(text, 0);
 
-      revealTimerRef.current = setInterval(() => {
+      const tick = () => {
         wordIndex += 1;
         if (wordIndex >= words.length) {
           clearRevealTimers();
           return;
         }
         updateCaptionForWord(text, wordIndex);
-      }, msPerWord);
+        revealTimerRef.current = setTimeout(tick, msForCaptionStep(words[wordIndex - 1], msPerWord));
+      };
+      revealTimerRef.current = setTimeout(tick, msForCaptionStep(words[0], msPerWord));
     },
     [clearRevealTimers, updateCaptionForWord]
   );

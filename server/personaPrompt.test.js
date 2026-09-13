@@ -71,7 +71,9 @@ describe("personaPrompt", () => {
     expect(prompt).toMatch(/last resort/i);
     expect(prompt).toMatch(/Never stack I-don't-knows/i);
     expect(prompt).toMatch(/zero help-desk energy/i);
-    expect(prompt).toMatch(/Never use em dashes/i);
+    expect(prompt).toMatch(/short beats/i);
+    expect(prompt).toMatch(/one thought per sentence/i);
+    expect(prompt).toMatch(/voice can breathe/i);
   });
 
   test("small-talk persona prompt skips knowledge-base grounding", () => {
