@@ -122,7 +122,7 @@ function AppShell() {
   const abortControllerRef = useRef(null);
   const documentSourceRef = useRef(null);
   const isDesktop = useIsDesktop();
-  const { isSpeaking, isPreparingSpeech, speak, stop, caption } = usePersonaSpeech(avatarRef, userId);
+  const { isSpeaking, isPreparingSpeech, speak, stop, caption, voiceStatus, retryVoice } = usePersonaSpeech(avatarRef, userId);
   const { isMuted, toggleMute } = useMutedPreference(stop, userId);
   const canvasConnection = useCanvasConnection(userId, token);
 
@@ -1004,6 +1004,8 @@ function AppShell() {
               voiceModeRef={voiceModeRef}
               avatarRef={avatarRef}
               speechCaption={caption}
+              voiceStatus={voiceStatus}
+              onRetryVoice={retryVoice}
               profile={user?.profile}
               teachStudio={teachStudio}
               documentSource={documentSource}

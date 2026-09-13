@@ -10,6 +10,11 @@ import {
   captionForPlaybackProgress,
 } from "../utils/speechCaption";
 import { toSpokenText } from "../utils/spokenText";
+import {
+  fetchTtsStatus,
+  shouldFallBackToBrowserTts,
+  unlockHtmlAudio,
+} from "../utils/elevenLabsVoice";
 
 export const MUTE_STORAGE_KEY = "mytartan-persona-muted";
 
@@ -23,8 +28,9 @@ export function readMutedPreference(userId) {
   }
 }
 
-/** Call synchronously from a click handler so browser TTS works after async replies. */
+/** Call synchronously from a click handler so ElevenLabs MPEG and browser TTS can play after async replies. */
 export function armSpeechSynthesis() {
+  unlockHtmlAudio();
   if (!window.speechSynthesis) return;
   window.speechSynthesis.getVoices();
   if (window.speechSynthesis.paused) {
@@ -41,13 +47,31 @@ export function usePersonaSpeech(avatarRef, userId) {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isPreparingSpeech, setIsPreparingSpeech] = useState(false);
   const [caption, setCaption] = useState("");
+  const [voiceStatus, setVoiceStatus] = useState("idle");
   const speakTimerRef = useRef(null);
   const revealTimerRef = useRef(null);
   const fallbackTimerRef = useRef(null);
   const boundarySeenRef = useRef(false);
   const fullTextRef = useRef("");
   const userIdRef = useRef(userId);
+  const ttsConfiguredRef = useRef(false);
+  const inFlightTextRef = useRef("");
+  const speakGenRef = useRef(0);
   userIdRef.current = userId;
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchTtsStatus()
+      .then((status) => {
+        if (!cancelled) ttsConfiguredRef.current = Boolean(status.configured);
+      })
+      .catch(() => {
+        if (!cancelled) ttsConfiguredRef.current = false;
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const clearRevealTimers = useCallback(() => {
     if (revealTimerRef.current) {
@@ -152,25 +176,39 @@ export function usePersonaSpeech(avatarRef, userId) {
 
   const speak = useCallback(
     async (text) => {
+      const normalized = normalizeSpeechCaption(toSpokenText(text));
+      if (!normalized) return;
+      if (inFlightTextRef.current === normalized) return;
+
       clearTimeout(speakTimerRef.current);
       clearRevealTimers();
       clearCaption();
 
-      const normalized = normalizeSpeechCaption(toSpokenText(text));
-      if (!normalized) return;
-
+      const gen = ++speakGenRef.current;
+      inFlightTextRef.current = normalized;
       fullTextRef.current = normalized;
       setIsPreparingSpeech(true);
       setIsSpeaking(true);
+      setVoiceStatus("idle");
       updateCaptionForWord(normalized, 0);
+      unlockHtmlAudio();
+
+      const finishIfCurrent = () => {
+        if (speakGenRef.current === gen) {
+          inFlightTextRef.current = "";
+          finishSpeaking();
+        }
+      };
 
       if (avatarRef?.current?.speak) {
         try {
           await avatarRef.current.speak(normalized, {
             muted: readMutedPreference(userIdRef.current),
             onStart: () => {
+              if (speakGenRef.current !== gen) return;
               setIsPreparingSpeech(false);
               setIsSpeaking(true);
+              setVoiceStatus("elevenlabs");
               updateCaptionForWord(normalized, 0);
               fallbackTimerRef.current = setTimeout(() => {
                 if (!revealTimerRef.current) {
@@ -179,6 +217,7 @@ export function usePersonaSpeech(avatarRef, userId) {
               }, 800);
             },
             onTimeUpdate: (currentTime, duration) => {
+              if (speakGenRef.current !== gen) return;
               if (fallbackTimerRef.current) {
                 clearTimeout(fallbackTimerRef.current);
                 fallbackTimerRef.current = null;
@@ -191,15 +230,42 @@ export function usePersonaSpeech(avatarRef, userId) {
               setCaption(captionForPlaybackProgress(normalized, currentTime, duration));
             },
           });
-          finishSpeaking();
+          finishIfCurrent();
           return;
         } catch (err) {
           avatarRef.current?.stop?.();
-          console.warn("[usePersonaSpeech] ElevenLabs unavailable, using browser TTS:", err.message);
+          if (speakGenRef.current !== gen) return;
+          const configured = ttsConfiguredRef.current;
+          if (!shouldFallBackToBrowserTts(err, { configured })) {
+            const blocked = Boolean(err?.ttsSucceeded);
+            setVoiceStatus(blocked ? "blocked" : "error");
+            setIsPreparingSpeech(false);
+            setIsSpeaking(true);
+            startTimedReveal(normalized, 580);
+            console.error(
+              blocked
+                ? "[Scotty voice] ElevenLabs /api/tts succeeded but playback was blocked. Tap “Tap to play Scotty”. Not using browser TTS."
+                : `[Scotty voice] ElevenLabs failed; not falling back to browser TTS: ${err.message}`
+            );
+            inFlightTextRef.current = "";
+            return;
+          }
+          console.warn("[Scotty voice] ElevenLabs not configured, using browser TTS:", err.message);
         }
+      } else if (ttsConfiguredRef.current) {
+        setVoiceStatus("error");
+        setIsPreparingSpeech(false);
+        setIsSpeaking(true);
+        startTimedReveal(normalized, 580);
+        console.error("[Scotty voice] ElevenLabs is configured but ScottyAvatar.speak is missing. Not using browser TTS.");
+        inFlightTextRef.current = "";
+        return;
       }
 
+      if (speakGenRef.current !== gen) return;
+      setVoiceStatus("browser");
       speakBrowser(normalized);
+      inFlightTextRef.current = "";
     },
     [
       avatarRef,
@@ -213,6 +279,8 @@ export function usePersonaSpeech(avatarRef, userId) {
   );
 
   const stop = useCallback(() => {
+    speakGenRef.current += 1;
+    inFlightTextRef.current = "";
     clearTimeout(speakTimerRef.current);
     speakTimerRef.current = null;
     clearRevealTimers();
@@ -220,6 +288,7 @@ export function usePersonaSpeech(avatarRef, userId) {
     avatarRef?.current?.stop?.();
     setIsPreparingSpeech(false);
     setIsSpeaking(false);
+    setVoiceStatus("idle");
     clearCaption();
   }, [avatarRef, clearRevealTimers, clearCaption]);
 
@@ -232,7 +301,15 @@ export function usePersonaSpeech(avatarRef, userId) {
     [clearRevealTimers]
   );
 
-  return { isSpeaking, isPreparingSpeech, speak, stop, caption };
+  const retryVoice = useCallback(() => {
+    const text = fullTextRef.current;
+    if (!text) return;
+    unlockHtmlAudio();
+    inFlightTextRef.current = "";
+    speak(text);
+  }, [speak]);
+
+  return { isSpeaking, isPreparingSpeech, speak, stop, caption, voiceStatus, retryVoice };
 }
 
 /**

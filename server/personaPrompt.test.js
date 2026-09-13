@@ -13,6 +13,8 @@ describe("personaPrompt", () => {
     expect(prompt).toMatch(/You are Scotty/i);
     expect(prompt).toMatch(/cartoon dog mascot/i);
     expect(prompt).toMatch(/Avoid sarcasm/i);
+    expect(prompt).toMatch(/2 to 5 sentences/i);
+    expect(prompt).toMatch(/Never paste knowledge-base excerpts/i);
     expect(prompt).toMatch(/financial aid/i);
     expect(prompt).toMatch(/VISUAL IDENTITY AND ANIMATION/i);
   });

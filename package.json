@@ -40,6 +40,7 @@
     "kb:validate": "node scripts/kb-validate.js",
     "test:retrieval": "node scripts/test-retrieval.js",
     "test:tone": "node scripts/test-tone.js",
+    "tts:smoke": "node scripts/tts-smoke.js",
     "generate:sample-pdf": "node scripts/generate_sample_syllabus_pdf.js",
     "eject": "react-scripts eject"
   },

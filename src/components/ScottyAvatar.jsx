@@ -10,9 +10,14 @@ import tartanScottyFacialBase from "../assets/tartan-scotty-facial-base.png";
 import { useFacialCoords } from "../hooks/useFacialCoords";
 import { facialCoordsToStyle } from "../utils/facialCoords";
 import { computeRms, mouthFromAmplitude, smoothAmplitude } from "../utils/mouthSync";
+import {
+  createTtsError,
+  fetchTtsAudio,
+  getUnlockedAudioContext,
+  unlockHtmlAudio,
+} from "../utils/elevenLabsVoice";
 import "./ScottyAvatar.css";
 
-const API_BASE = process.env.REACT_APP_API_URL || "";
 const VALID_AVATAR_STATES = new Set(["idle", "listening", "thinking", "speaking"]);
 
 function cleanupPlayback({ audioRef, objectUrlRef, sourceRef, progressRafRef }) {
@@ -168,31 +173,26 @@ const ScottyAvatar = forwardRef(function ScottyAvatar(
 
       cleanupPlayback({ audioRef, objectUrlRef, sourceRef, progressRafRef });
       resetMouth();
+      unlockHtmlAudio();
 
-      const response = await fetch(`${API_BASE}/api/tts`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
-      });
-
-      if (!response.ok) {
-        const body = await response.json().catch(() => ({}));
-        throw new Error(body.error || "Failed to generate speech");
-      }
-
-      const blob = await response.blob();
+      const blob = await fetchTtsAudio(text);
       const url = URL.createObjectURL(blob);
       objectUrlRef.current = url;
 
       const audio = new Audio(url);
+      audio.setAttribute("playsinline", "true");
+      audio.preload = "auto";
       audio.muted = Boolean(muted);
       audio.volume = muted ? 0 : 1;
       audioRef.current = audio;
 
       if (!audioCtxRef.current) {
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        if (AudioContext) {
-          audioCtxRef.current = new AudioContext();
+        audioCtxRef.current = getUnlockedAudioContext() || null;
+        if (!audioCtxRef.current) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) {
+            audioCtxRef.current = new AudioContext();
+          }
         }
       }
 
@@ -266,9 +266,29 @@ const ScottyAvatar = forwardRef(function ScottyAvatar(
           endPlayback(new Error("Audio playback failed"));
         };
 
-        audio.play().catch((playErr) => {
-          endPlayback(playErr);
-        });
+        const startPlayback = async () => {
+          try {
+            if (ctx?.state === "suspended") {
+              await ctx.resume();
+            }
+            await audio.play();
+          } catch (firstErr) {
+            try {
+              unlockHtmlAudio();
+              if (ctx?.state === "suspended") {
+                await ctx.resume();
+              }
+              await audio.play();
+            } catch {
+              endPlayback(
+                createTtsError(firstErr.message || "Audio playback was blocked", {
+                  ttsSucceeded: true,
+                })
+              );
+            }
+          }
+        };
+        startPlayback();
       });
     },
 

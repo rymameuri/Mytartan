@@ -57,6 +57,26 @@
   text-overflow: ellipsis;
 }
 
+.pv-voice-status {
+  appearance: none;
+  display: inline-block;
+  margin: 4px 0 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--tartan-maroon);
+  font: inherit;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+}
+
+.pv-voice-status--error {
+  cursor: default;
+  color: var(--app-text-muted);
+}
+
 .pv-header__actions {
   display: flex;
   align-items: center;

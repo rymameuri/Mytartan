@@ -233,6 +233,13 @@ describe("PersonaView empty state", () => {
     expect(onSend).toHaveBeenCalledWith("Cheat sheet from this");
   });
 
+  test("shows a tap-to-play control when ElevenLabs audio is blocked", () => {
+    const onRetryVoice = jest.fn();
+    renderPersona({ voiceStatus: "blocked", onRetryVoice });
+    fireEvent.click(screen.getByRole("button", { name: /tap to play scotty/i }));
+    expect(onRetryVoice).toHaveBeenCalled();
+  });
+
   test("shows live captions while Scotty is talking", () => {
     renderPersona({
       isSpeaking: true,

@@ -83,9 +83,9 @@ const {
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-const AI_MAX_TOKENS = 350;
+const AI_MAX_TOKENS = 240;
 const AI_MAX_TOKENS_TUTOR = 512;
-const AI_TEMPERATURE = 0.55;
+const AI_TEMPERATURE = 0.72;
 
 // Tune after eval: scores below this skip full LLM generation (weak retrieval / hallucination risk).
 const LOW_CONFIDENCE_THRESHOLD = 40;
@@ -100,6 +100,7 @@ const PLACEHOLDER_KEYS = new Set([
   "your_key",
   "your-key",
   "your_api_key",
+  "your_elevenlabs_api_key",
   "changeme",
   "placeholder",
 ]);
@@ -241,7 +242,9 @@ CRITICAL RULES:
 
 RESPONSE STYLE:
 - Keep it very casual — contractions, short sentences, like a classmate, not an official notice.
-- Lead with the direct answer in the first sentence.
+- 2 to 5 sentences. Lead with the useful answer in the first sentence. Ask at most one follow-up.
+- Never paste or concatenate knowledge-base sections, headings, or office dumps. Rewrite the facts in your own voice.
+- Do not mention study abroad, exchange, Pittsburgh semester, or Student Affairs programs unless they asked.
 - Never open with stiff phrases like "According to the official knowledge base" or "Here's how it works:"
 - Do not number every step unless the user is explicitly asking for a process in order.
 - Avoid bullet points for simple answers — weave the info into natural sentences.
@@ -763,6 +766,7 @@ app.get("/", (_req, res) => {
       "POST /api/transcribe",
       "POST /api/feedback",
       "POST /api/liveavatar-token",
+      "GET /api/tts/status",
       "POST /api/tts",
       "POST /api/canvas/connect",
       "POST /api/canvas/disconnect",
@@ -1643,6 +1647,19 @@ function flattenTtsPauses(text) {
     .replace(/\s+/g, " ")
     .trim();
 }
+
+function elevenLabsConfigured() {
+  const apiKey = process.env.ELEVENLABS_API_KEY?.trim();
+  const voiceId = process.env.ELEVENLABS_VOICE_ID?.trim();
+  return Boolean(isConfiguredKey(apiKey) && voiceId);
+}
+
+app.get("/api/tts/status", (_req, res) => {
+  res.json({
+    configured: elevenLabsConfigured(),
+    provider: elevenLabsConfigured() ? "elevenlabs" : "none",
+  });
+});
 
 app.post("/api/tts", async (req, res) => {
   const apiKey = process.env.ELEVENLABS_API_KEY?.trim();

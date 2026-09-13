@@ -60,6 +60,19 @@ describe("GET /api/kb/status", () => {
   });
 });
 
+describe("GET /api/tts/status", () => {
+  test("reports whether ElevenLabs keys are configured", async () => {
+    const res = await request(app).get("/api/tts/status");
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(
+      expect.objectContaining({
+        configured: expect.any(Boolean),
+        provider: expect.stringMatching(/^(elevenlabs|none)$/),
+      })
+    );
+  });
+});
+
 describe("POST /api/transcribe", () => {
   test("returns 501 when no gateway transcription is configured", async () => {
     const res = await request(app)

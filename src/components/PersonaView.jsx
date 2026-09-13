@@ -106,6 +106,8 @@ function PersonaView({
   voiceModeRef,
   avatarRef,
   speechCaption = "",
+  voiceStatus = "idle",
+  onRetryVoice,
   profile = null,
   teachStudio = null,
   documentSource = null,
@@ -313,6 +315,14 @@ function PersonaView({
                     : "Live companion"}
               <span className="pv-header__app"> · MyTartan</span>
             </p>
+            {voiceStatus === "blocked" && (
+              <button type="button" className="pv-voice-status" onClick={onRetryVoice}>
+                Tap to play Scotty
+              </button>
+            )}
+            {voiceStatus === "error" && (
+              <p className="pv-voice-status pv-voice-status--error">ElevenLabs voice failed</p>
+            )}
           </div>
         </div>
         <div className="pv-header__actions">
