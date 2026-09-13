@@ -81,6 +81,17 @@ describe("ChatInputBar", () => {
     expect(onChange).toHaveBeenCalledWith("What is StuCo?");
   });
 
+  test("lets the student attach a file and send without typing", () => {
+    const mockSend = jest.fn();
+    render(<ChatInputBar onSend={mockSend} isLoading={false} allowAttach />);
+
+    const file = new File(["Recursion needs a base case."], "notes.txt", { type: "text/plain" });
+    fireEvent.change(screen.getByLabelText(/attach notes/i), { target: { files: [file] } });
+    expect(screen.getByLabelText(/send message/i)).toBeEnabled();
+    fireEvent.click(screen.getByLabelText(/send message/i));
+    expect(mockSend).toHaveBeenCalledWith("", { files: [file] });
+  });
+
   test("does not call onSend for whitespace-only input", () => {
     const mockSend = jest.fn();
     render(<ChatInputBar onSend={mockSend} isLoading={false} />);

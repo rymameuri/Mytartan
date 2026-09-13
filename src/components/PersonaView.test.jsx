@@ -80,6 +80,67 @@ describe("PersonaView empty state", () => {
     );
   });
 
+  test("opens a quiz studio with Scotty docked and one question", () => {
+    renderPersona({
+      messages: [
+        { role: "user", content: "quiz me on notes.txt" },
+        { role: "assistant", content: "Quiz from your notes.", studio: true },
+      ],
+      teachStudio: {
+        kind: "quiz",
+        title: "Quiz · notes.txt",
+        sourceName: "notes.txt",
+        questions: [
+          {
+            number: "1",
+            text: "What is a base case?",
+            options: [
+              { id: "A", text: "Stopping condition" },
+              { id: "B", text: "First line" },
+            ],
+            correct: "A",
+            explanation: "Recursion must stop.",
+          },
+        ],
+        reaction: { type: "teach", text: "Whenever you're ready — pick an answer." },
+      },
+    });
+    expect(document.querySelector(".pv--studio")).toBeInTheDocument();
+    expect(screen.getByText(/quiz studio/i)).toBeInTheDocument();
+    expect(screen.getByText(/What is a base case/i)).toBeInTheDocument();
+    expect(screen.getByText(/Whenever you're ready/i)).toBeInTheDocument();
+    expect(screen.queryByText(/What is the call stack/i)).not.toBeInTheDocument();
+  });
+
+  test("opens a whiteboard studio for an animated mind-map", () => {
+    renderPersona({
+      messages: [{ role: "user", content: "whiteboard recursion" }],
+      teachStudio: {
+        kind: "mindmap",
+        title: "Recursion",
+        step: 0,
+        map: {
+          title: "Recursion",
+          width: 800,
+          height: 520,
+          nodes: [
+            { id: "n0", label: "Recursion", x: 400, y: 250 },
+            { id: "n1", label: "Base case", x: 600, y: 250 },
+          ],
+          links: [{ id: "e1", from: "n0", to: "n1" }],
+          steps: [
+            { revealNodeIds: ["n0"], revealLinkIds: [], narration: "Start at the center." },
+            { revealNodeIds: ["n1"], revealLinkIds: ["e1"], narration: "Add the base case." },
+          ],
+        },
+        reaction: { type: "teach", text: "Start at the center." },
+      },
+    });
+    expect(screen.getByText(/whiteboard studio/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/mind map of recursion/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Start at the center/i).length).toBeGreaterThan(0);
+  });
+
   test("hides chips and the hero once a conversation has started", () => {
     renderPersona({
       messages: [

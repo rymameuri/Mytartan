@@ -1,0 +1,140 @@
+.mind-map-board {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  background: var(--app-surface);
+}
+
+.mind-map-board__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 16px 10px;
+  border-bottom: 1px solid var(--app-border);
+}
+
+.mind-map-board__title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 650;
+  color: var(--app-text);
+}
+
+.mind-map-board__counter {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--app-text-muted);
+}
+
+.mind-map-board__canvas {
+  flex: 1;
+  min-height: 220px;
+  padding: 8px;
+}
+
+.mind-map-board__canvas svg {
+  width: 100%;
+  height: 100%;
+  min-height: 220px;
+  display: block;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(156, 39, 51, 0.04), transparent 40%),
+    linear-gradient(#faf7f2, #f6f3ee);
+  border-radius: 12px;
+}
+
+.mind-map-board__edge {
+  stroke: rgba(156, 39, 51, 0.35);
+  stroke-width: 2.25;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  opacity: 0;
+}
+
+.mind-map-board__edge--in {
+  opacity: 1;
+  animation: mm-draw 0.7s ease forwards;
+}
+
+.mind-map-board__node {
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  transform: scale(0.82);
+}
+
+.mind-map-board__node--in {
+  opacity: 1;
+  animation: mm-pop 0.45s ease forwards;
+}
+
+.mind-map-board__node rect {
+  fill: #fff;
+  stroke: var(--app-border);
+  stroke-width: 1.5;
+  filter: drop-shadow(0 6px 14px rgba(28, 25, 23, 0.06));
+}
+
+.mind-map-board__node--root rect {
+  fill: var(--tartan-maroon);
+  stroke: var(--tartan-maroon-dark);
+}
+
+.mind-map-board__node text {
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  fill: var(--app-text);
+}
+
+.mind-map-board__node--root text {
+  fill: #fff;
+}
+
+.mind-map-board__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px 16px;
+  border-top: 1px solid var(--app-border);
+}
+
+.mind-map-board__narration {
+  margin: 0;
+  flex: 1;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--app-text-secondary);
+}
+
+@keyframes mm-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes mm-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.82);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (max-width: 899px) {
+  .mind-map-board__canvas {
+    min-height: 200px;
+  }
+
+  .mind-map-board__footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

@@ -273,6 +273,12 @@
   color: var(--app-text);
 }
 
+.pv--studio .pv-footer {
+  width: 100%;
+  max-width: none;
+  padding-inline: 16px;
+}
+
 .pv-footer {
   position: relative;
   z-index: 10;

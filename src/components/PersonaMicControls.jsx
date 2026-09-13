@@ -15,6 +15,7 @@ function PersonaMicControls({
   inputOnly = false,
   micOnly = false,
   showComposerMic = false,
+  allowAttach = false,
   value,
   onChange,
 }) {
@@ -78,6 +79,7 @@ function PersonaMicControls({
             compact
             placeholder={placeholder}
             showMic={showComposerMic}
+            allowAttach={allowAttach}
             onMicClick={onMicClick}
             micActive={listening}
             reviewing={reviewing}

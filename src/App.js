@@ -28,6 +28,15 @@ import { stripMarkdownFormatting } from "./utils/stripMarkdown";
 import { toSpokenText } from "./utils/spokenText";
 import { readSidebarCollapsed, writeSidebarCollapsed } from "./utils/sidebarPreference";
 import { COURSE_TUTOR_ENABLED } from "./config/features";
+import { extractStudyDocuments } from "./utils/extractSyllabusText";
+import { generateQuizFromSource } from "./utils/documentQuiz";
+import { buildMindMapFromConcept, guessTitle } from "./utils/mindMap";
+import {
+  ATTACH_HINT,
+  celebrateReaction,
+  detectTeachIntent,
+  teachReaction,
+} from "./utils/teachStudio";
 import "./App.css";
 
 const API_BASE = process.env.REACT_APP_API_URL || "";
@@ -104,9 +113,12 @@ function AppShell() {
   const [chatSessionKey, setChatSessionKey] = useState(0);
   const [tutorSpeechText, setTutorSpeechText] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [teachStudio, setTeachStudio] = useState(null);
+  const [documentSource, setDocumentSource] = useState(null);
   const voiceModeRef = useRef(false);
   const avatarRef = useRef(null);
   const abortControllerRef = useRef(null);
+  const documentSourceRef = useRef(null);
   const isDesktop = useIsDesktop();
   const { isSpeaking, isPreparingSpeech, speak, stop, caption } = usePersonaSpeech(avatarRef);
   const { isMuted, toggleMute } = useMutedPreference(stop, userId);
@@ -155,6 +167,19 @@ function AppShell() {
     userId,
   });
 
+  const prevMindStepRef = useRef(0);
+  useEffect(() => {
+    if (teachStudio?.kind !== "mindmap") {
+      prevMindStepRef.current = 0;
+      return;
+    }
+    if (teachStudio.step === prevMindStepRef.current) return;
+    prevMindStepRef.current = teachStudio.step;
+    if (teachStudio.step > 0 && teachStudio.reaction?.text && !readMutedPreference(userId)) {
+      speakFormatted(teachStudio.reaction.text);
+    }
+  }, [teachStudio, speakFormatted, userId]);
+
   function closeMenu() {
     setMenuOpen(false);
   }
@@ -167,6 +192,12 @@ function AppShell() {
     });
   }
 
+  function resetTeachSession() {
+    setTeachStudio(null);
+    setDocumentSource(null);
+    documentSourceRef.current = null;
+  }
+
   function resetChatSession() {
     abortControllerRef.current?.abort();
     abortControllerRef.current = null;
@@ -174,6 +205,16 @@ function AppShell() {
     setTutorListening(false);
     setIsLoading(false);
     setChatSessionKey((key) => key + 1);
+    resetTeachSession();
+  }
+
+  function appendStudioMessages(userText, assistantText) {
+    setMessages((prev) => [
+      ...prev,
+      { role: "user", content: userText },
+      { role: "assistant", content: assistantText, studio: true },
+    ]);
+    setIsLoading(false);
   }
 
   function enterTutorDashboard() {
@@ -324,9 +365,145 @@ function AppShell() {
     URL.revokeObjectURL(url);
   }
 
+  const handleMindMapStep = useCallback((next) => {
+    setTeachStudio((current) => {
+      if (!current || current.kind !== "mindmap") return current;
+      const last = Math.max((current.map?.steps?.length ?? 1) - 1, 0);
+      const step = Math.min(Math.max(next, 0), last);
+      if (step === current.step) return current;
+      return {
+        ...current,
+        step,
+        reaction: { type: "teach", text: current.map.steps[step]?.narration || "" },
+      };
+    });
+  }, []);
+
+  function handleQuizAnswer({ correct, question, index }) {
+    const text = correct ? celebrateReaction(index) : teachReaction(question);
+    setTeachStudio((current) =>
+      current ? { ...current, reaction: { type: correct ? "celebrate" : "teach", text } } : current
+    );
+    if (!readMutedPreference(userId)) {
+      speakFormatted(text);
+    }
+  }
+
+  function handleDocumentQuizComplete(results) {
+    const recap = `Finished the quiz from your notes: ${results.score}/${results.total}. Ask to retry or whiteboard something you missed.`;
+    setTeachStudio((current) =>
+      current
+        ? { ...current, reaction: { type: "celebrate", text: `${results.score} out of ${results.total}. Solid work.` } }
+        : current
+    );
+    setMessages((prev) => [...prev, { role: "assistant", content: recap, studio: true }]);
+    if (!readMutedPreference(userId)) {
+      speakFormatted(`That's ${results.score} out of ${results.total} from your notes.`);
+    }
+  }
+
+  async function tryOpenTeachStudio(text, files = []) {
+    const intent = detectTeachIntent(text, { hasSource: Boolean(documentSourceRef.current || files.length) });
+    const emptyAsk = !String(text || "").trim();
+    if (!intent && !(emptyAsk && files.length) && !files.length) {
+      return false;
+    }
+
+    let source = documentSourceRef.current;
+    let warnings = [];
+
+    if (files.length) {
+      setIsLoading(true);
+      try {
+        const extracted = await extractStudyDocuments(files);
+        warnings = extracted.warnings;
+        if (extracted.text) {
+          source = { name: extracted.names.join(", "), text: extracted.text };
+          documentSourceRef.current = source;
+          setDocumentSource(source);
+        }
+      } catch (err) {
+        warnings.push(err.message || "Could not read that file.");
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    const wantQuiz = intent?.kind === "quiz" || (emptyAsk && files.length > 0);
+    const wantMap = intent?.kind === "mindmap";
+
+    if (!wantQuiz && !wantMap) {
+      if (warnings.length && emptyAsk) {
+        appendStudioMessages(
+          files.map((file) => file.name).join(", ") || "Uploaded a file",
+          warnings.join(" ")
+        );
+        return true;
+      }
+      return false;
+    }
+
+    const userContent =
+      String(text || "").trim() ||
+      (wantQuiz
+        ? `Quiz me on ${files.map((file) => file.name).join(", ") || source?.name || "this"}`
+        : `Whiteboard ${intent?.concept || source?.name || "this"}`);
+
+    if (wantQuiz) {
+      if (!source?.text) {
+        appendStudioMessages(userContent, warnings[0] || ATTACH_HINT);
+        return true;
+      }
+      const quiz = generateQuizFromSource(source.text, { sourceName: source.name, count: 5 });
+      if (!quiz.questions.length) {
+        appendStudioMessages(
+          userContent,
+          "I couldn't pull enough statements from that file to quiz you. Try a notes PDF or paste a few paragraphs."
+        );
+        return true;
+      }
+      appendStudioMessages(
+        userContent,
+        `Quiz from your notes (${source.name}) — one question at a time. This is your material, not campus policy.`
+      );
+      setTeachStudio({
+        kind: "quiz",
+        title: quiz.title,
+        sourceName: source.name,
+        questions: quiz.questions,
+        reaction: { type: "teach", text: "Whenever you're ready — pick an answer." },
+      });
+      return true;
+    }
+
+    const concept = intent?.concept || guessTitle(source?.text) || "this idea";
+    const map = buildMindMapFromConcept(concept, {
+      sourceText: source?.text || "",
+      struggle: Boolean(intent?.struggle),
+    });
+    appendStudioMessages(
+      userContent,
+      intent?.struggle
+        ? "This one's sticky — I'll walk it on the board, one piece at a time."
+        : `I'll map ${concept} beside us. Watch the board as we go.`
+    );
+    setTeachStudio({
+      kind: "mindmap",
+      title: map.title,
+      map,
+      step: 0,
+      reaction: { type: "teach", text: map.steps[0]?.narration || "" },
+    });
+    return true;
+  }
+
   async function handleSend(text, overrideMode, options = {}) {
     armSpeechSynthesis();
     const activeMode = overrideMode ?? mode;
+    if (activeMode !== "tutor") {
+      const handled = await tryOpenTeachStudio(text, options.files || []);
+      if (handled) return;
+    }
     const isStudioGeneration = Boolean(options.studioGeneration);
     const speechMode = options.speechMode ?? (isStudioGeneration ? "introduction" : null);
     const userMessage = {
@@ -708,6 +885,12 @@ function AppShell() {
               avatarRef={avatarRef}
               speechCaption={caption}
               profile={user?.profile}
+              teachStudio={teachStudio}
+              documentSource={documentSource}
+              onCloseStudio={() => setTeachStudio(null)}
+              onQuizAnswer={handleQuizAnswer}
+              onDocumentQuizComplete={handleDocumentQuizComplete}
+              onMindMapStep={handleMindMapStep}
             />
           )}
         </div>

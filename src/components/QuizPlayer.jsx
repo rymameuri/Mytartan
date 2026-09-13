@@ -1,7 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import "./QuizPlayer.css";
 
-function QuizPlayer({ questions, title = "Quiz", onComplete, onHelp, onQuestionChange, helpDisabled = false }) {
+function QuizPlayer({
+  questions,
+  title = "Quiz",
+  onComplete,
+  onHelp,
+  onQuestionChange,
+  onAnswer,
+  helpDisabled = false,
+  revealMode = "end",
+}) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState({});
   const [phase, setPhase] = useState("taking");
@@ -39,7 +48,16 @@ function QuizPlayer({ questions, title = "Quiz", onComplete, onHelp, onQuestionC
 
   function selectOption(optionId) {
     if (phase === "submitted") return;
+    if (revealMode === "immediate" && answers[currentIndex]) return;
     setAnswers((prev) => ({ ...prev, [currentIndex]: optionId }));
+    if (revealMode === "immediate") {
+      onAnswer?.({
+        index: currentIndex,
+        question: current,
+        selected: optionId,
+        correct: optionId === current.correct,
+      });
+    }
   }
 
   function handleNext() {
@@ -157,8 +175,10 @@ function QuizPlayer({ questions, title = "Quiz", onComplete, onHelp, onQuestionC
   const isLast = currentIndex === total - 1;
   const allAnswered = answeredCount === total;
 
+  const revealed = revealMode === "immediate" && Boolean(selected);
+
   return (
-    <div className="quiz-player">
+    <div className={`quiz-player${revealMode === "immediate" ? " quiz-player--immediate" : ""}`}>
       <header className="quiz-player__header">
         <div className="quiz-player__header-top">
           <h2 className="quiz-player__title">{title}</h2>
@@ -184,10 +204,14 @@ function QuizPlayer({ questions, title = "Quiz", onComplete, onHelp, onQuestionC
           <legend className="quiz-player__sr-only">Select an answer</legend>
           {current.options.map((opt) => {
             const checked = selected === opt.id;
+            const showCorrect = revealed && opt.id === current.correct;
+            const showWrong = revealed && checked && opt.id !== current.correct;
             return (
               <label
                 key={opt.id}
-                className={`quiz-player__option${checked ? " quiz-player__option--selected" : ""}`}
+                className={`quiz-player__option${checked ? " quiz-player__option--selected" : ""}${
+                  showCorrect ? " quiz-player__option--correct" : ""
+                }${showWrong ? " quiz-player__option--wrong" : ""}`}
               >
                 <input
                   type="radio"
@@ -205,14 +229,16 @@ function QuizPlayer({ questions, title = "Quiz", onComplete, onHelp, onQuestionC
       </div>
 
       <footer className="quiz-player__footer">
-        <button
-          type="button"
-          className="class-workspace__ghost-btn"
-          disabled={currentIndex === 0}
-          onClick={handlePrev}
-        >
-          Previous
-        </button>
+        {revealMode !== "immediate" && (
+          <button
+            type="button"
+            className="class-workspace__ghost-btn"
+            disabled={currentIndex === 0}
+            onClick={handlePrev}
+          >
+            Previous
+          </button>
+        )}
 
         {onHelp && (
           <button
@@ -232,7 +258,7 @@ function QuizPlayer({ questions, title = "Quiz", onComplete, onHelp, onQuestionC
             disabled={!allAnswered}
             onClick={handleSubmit}
           >
-            Submit quiz
+            {revealMode === "immediate" ? "See results" : "Submit quiz"}
           </button>
         ) : (
           <button
@@ -241,7 +267,7 @@ function QuizPlayer({ questions, title = "Quiz", onComplete, onHelp, onQuestionC
             disabled={!selected}
             onClick={handleNext}
           >
-            Next
+            {revealMode === "immediate" ? "Continue" : "Next"}
           </button>
         )}
       </footer>

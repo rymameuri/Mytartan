@@ -6,6 +6,7 @@ import { useMicInput } from "../hooks/useMicInput";
 import { MenuIcon, ShareIcon, DownloadIcon, VolumeIcon, ChevronIcon } from "./Icons";
 import SettingsButton from "./SettingsButton";
 import { orderStarterChips } from "../data/starterChips";
+import TeachStudio from "./TeachStudio";
 import "./PersonaView.css";
 import MessageFeedback from "./MessageFeedback";
 import "./ChatInterface.css";
@@ -30,6 +31,12 @@ function PersonaView({
   avatarRef,
   speechCaption = "",
   profile = null,
+  teachStudio = null,
+  documentSource = null,
+  onCloseStudio,
+  onQuizAnswer,
+  onDocumentQuizComplete,
+  onMindMapStep,
 }) {
   const messagesContainerRef = useRef(null);
   const isNearBottomRef = useRef(true);
@@ -99,14 +106,14 @@ function PersonaView({
     if (listening || reviewing) setTranscript(next);
   }, [listening, reviewing, setTranscript]);
 
-  const handleComposerSend = useCallback((text) => {
+  const handleComposerSend = useCallback((text, extra) => {
     if (reviewing) {
       stopSpeech?.();
       voiceModeRef.current = true;
     } else if (voiceModeRef) {
       voiceModeRef.current = false;
     }
-    onSend(text);
+    onSend(text, undefined, extra || {});
     setComposerText("");
     resetMic();
   }, [onSend, resetMic, reviewing, stopSpeech, voiceModeRef]);
@@ -168,6 +175,7 @@ function PersonaView({
     !hasUserMessages;
   const starterChips = useMemo(() => orderStarterChips(profile ?? {}), [profile]);
   const composerBusy = isLoading || isPreparingSpeech || isFinalizing;
+  const studioOpen = Boolean(teachStudio);
 
   const handleChipClick = useCallback((prompt) => {
     if (composerBusy) return;
@@ -176,7 +184,7 @@ function PersonaView({
   }, [composerBusy, onSend, voiceModeRef]);
 
   return (
-    <div className={`pv${!showChatHistory ? " pv--persona-mode" : ""}`}>
+    <div className={`pv${!showChatHistory && !studioOpen ? " pv--persona-mode" : ""}${studioOpen ? " pv--studio" : ""}`}>
       <div className="pv__overlay" aria-hidden="true" />
 
       <header className="pv-header">
@@ -239,6 +247,20 @@ function PersonaView({
         </div>
       </header>
 
+      {studioOpen ? (
+        <TeachStudio
+          studio={teachStudio}
+          messages={messages}
+          isLoading={isLoading}
+          avatarState={avatarState}
+          avatarRef={avatarRef}
+          onClose={onCloseStudio}
+          onAnswer={onQuizAnswer}
+          onQuizComplete={onDocumentQuizComplete}
+          onMindMapStep={onMindMapStep}
+          isDesktop={isDesktop}
+        />
+      ) : (
       <main
         className={`pv-body${showChatHistory ? " pv-body--chat" : " pv-body--idle"}`}
       >
@@ -341,6 +363,7 @@ function PersonaView({
           </div>
         )}
       </main>
+      )}
 
       <footer className="pv-footer">
         <PersonaMicControls
@@ -361,6 +384,7 @@ function PersonaView({
           }
           inputOnly
           showComposerMic
+          allowAttach
           value={composerText}
           onChange={handleComposerChange}
         />
@@ -369,7 +393,13 @@ function PersonaView({
             ? "Listening. Tap the mic when you're done, then edit or send."
             : reviewing
               ? "Edit if it looks messy, then send."
-              : "Scotty can get things wrong. Check campus sources."}
+              : studioOpen && teachStudio?.kind === "quiz"
+                ? "One question at a time, from your notes — not campus policy."
+                : studioOpen && teachStudio?.kind === "mindmap"
+                  ? "The map grows as Scotty explains."
+                : documentSource
+                  ? `Notes ready: ${documentSource.name}. Say “quiz me on this” or “whiteboard this”.`
+                : "Scotty can get things wrong. Check campus sources."}
         </p>
       </footer>
     </div>
