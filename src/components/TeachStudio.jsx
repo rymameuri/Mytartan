@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import ScottyAvatar from "./ScottyAvatar";
+import ScottyPersonaStage from "./ScottyPersonaStage";
+import PersonaCaption from "./PersonaCaption";
 import QuizPlayer from "./QuizPlayer";
 import MindMapBoard from "./MindMapBoard";
 import StudySheetBoard from "./StudySheetBoard";
@@ -14,6 +15,8 @@ const SCENE_LABEL = {
 function TeachStudio({
   studio,
   isLoading = false,
+  isSpeaking = false,
+  speechCaption = "",
   avatarState = "idle",
   avatarRef,
   onClose,
@@ -74,9 +77,20 @@ function TeachStudio({
     >
       <aside className="teach-studio__rail">
         <div className="teach-studio__spot" aria-hidden="true" />
-        <div className={`teach-studio__scotty teach-studio__scotty--${avatarState}`}>
-          <ScottyAvatar ref={avatarRef} persona avatarState={avatarState} />
-        </div>
+        <ScottyPersonaStage
+          compact
+          tone="cream"
+          avatarRef={avatarRef}
+          avatarState={avatarState}
+          title="Scotty"
+          subtitle="Your CMU-Q classmate"
+        >
+          {isSpeaking && speechCaption ? (
+            <PersonaCaption text={speechCaption} />
+          ) : isLoading ? (
+            <PersonaCaption text="thinking" typing />
+          ) : null}
+        </ScottyPersonaStage>
         {studio.reaction?.text && (
           <p
             key={studio.reaction.text}
@@ -85,7 +99,6 @@ function TeachStudio({
             {studio.reaction.text}
           </p>
         )}
-        {isLoading && <p className="teach-studio__thinking">holding…</p>}
       </aside>
 
       <section className="teach-studio__pane">

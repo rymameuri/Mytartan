@@ -37,29 +37,19 @@
   pointer-events: none;
 }
 
-.teach-studio__scotty {
-  position: relative;
-  width: 168px;
-  height: 188px;
-  margin: 0 auto;
-  overflow: hidden;
-  border-radius: 28px;
-  flex-shrink: 0;
+.teach-studio__rail .scotty-persona {
+  width: 100%;
   animation: scotty-dock 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
-.teach-studio__scotty--speaking,
-.teach-studio__scotty--thinking {
-  animation: scotty-dock 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both, scotty-breathe 2.4s ease-in-out infinite;
+.teach-studio__rail .scotty-persona .sp-avatar-frame {
+  width: min(200px, 42vw);
+  height: min(200px, 42vw);
 }
 
-.teach-studio__scotty canvas,
-.teach-studio__scotty img,
-.teach-studio__scotty video,
-.teach-studio__scotty > * {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.teach-studio__rail .scotty-persona[data-avatar-state="speaking"] .sp-avatar-frame,
+.teach-studio__rail .scotty-persona[data-avatar-state="thinking"] .sp-avatar-frame {
+  animation: scotty-breathe 2.4s ease-in-out infinite;
 }
 
 .teach-studio__reaction {
@@ -219,11 +209,23 @@
     height: 90px;
   }
 
-  .teach-studio__scotty {
-    width: 72px;
-    height: 80px;
-    border-radius: 16px;
-    margin: 0;
+  .teach-studio__rail .scotty-persona {
+    width: auto;
+    flex-shrink: 0;
+  }
+
+  .teach-studio__rail .scotty-persona .sp-avatar-frame {
+    width: 112px;
+    height: 112px;
+  }
+
+  .teach-studio__rail .sp-identity__name {
+    font-size: 0.9375rem;
+  }
+
+  .teach-studio__rail .persona-caption {
+    width: min(220px, 52vw);
+    font-size: 0.8125rem;
   }
 
   .teach-studio__reaction {

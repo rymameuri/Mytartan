@@ -35,24 +35,6 @@
   min-width: 0;
 }
 
-.pv-header__avatar {
-  width: 32px;
-  height: 32px;
-  flex-shrink: 0;
-  overflow: hidden;
-  border-radius: 50%;
-  background: var(--app-accent-soft);
-}
-
-.pv-header__avatar canvas,
-.pv-header__avatar img,
-.pv-header__avatar video,
-.pv-header__avatar > * {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
 .pv-header__copy {
   min-width: 0;
 }
@@ -127,50 +109,30 @@
   overflow-y: auto;
 }
 
-.pv-empty {
+.pv-companion {
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
   gap: 10px;
-  padding: 16px 24px 8px;
-  max-width: 640px;
+  padding: 12px 24px 4px;
   width: 100%;
+  max-width: 680px;
 }
 
-.pv-empty__mark {
-  width: min(220px, 56vw);
-  height: min(248px, 62vw);
-  margin-bottom: 4px;
-  overflow: hidden;
-  border-radius: 28px;
-  background: transparent;
+.pv-companion--hero {
+  flex: 1;
+  justify-content: center;
 }
 
-.pv-empty__mark canvas,
-.pv-empty__mark img,
-.pv-empty__mark video,
-.pv-empty__mark > * {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.pv-companion--docked {
+  flex-shrink: 0;
+  padding: 4px 16px 8px;
 }
 
-.pv-empty__title {
-  margin: 0;
-  font-size: 1.75rem;
-  font-weight: 600;
-  letter-spacing: -0.03em;
-  line-height: 1.2;
-  color: var(--app-text);
-}
-
-.pv-empty__lede {
-  margin: 0;
-  font-size: 1rem;
-  font-weight: 400;
-  line-height: 1.5;
-  color: var(--app-text-secondary);
+.pv-body--chat .pv-companion--docked .sp-avatar-frame {
+  width: min(200px, 38vw);
+  height: min(200px, 38vw);
 }
 
 .pv-empty__chips {
@@ -220,7 +182,7 @@
 }
 
 .pv-body--chat .pv-messages {
-  padding: 28px 24px 16px;
+  padding: 16px 24px 8px;
   width: min(100%, 768px);
   align-self: center;
 }
@@ -292,6 +254,18 @@
   margin: 0 auto;
 }
 
+.pv .pmc-label {
+  color: var(--app-text-secondary);
+}
+
+.pv .pmc-label--live {
+  color: var(--tartan-maroon);
+}
+
+.pv .pmc-sonar {
+  border-color: rgba(156, 39, 51, 0.35);
+}
+
 .pv-footer__hint {
   margin: 10px 0 0;
   font-size: 0.75rem;
@@ -333,17 +307,18 @@
     width: 100%;
   }
 
-  .pv-empty {
-    padding: 12px 16px 4px;
+  .pv-companion {
+    padding: 8px 16px 4px;
   }
 
-  .pv-empty__mark {
-    width: min(168px, 58vw);
-    height: min(190px, 64vw);
+  .pv-companion--hero .sp-avatar-frame {
+    width: min(210px, 58vw);
+    height: min(210px, 58vw);
   }
 
-  .pv-empty__title {
-    font-size: 1.5rem;
+  .pv-body--chat .pv-companion--docked .sp-avatar-frame {
+    width: min(148px, 42vw);
+    height: min(148px, 42vw);
   }
 
   .pv-empty__chips {

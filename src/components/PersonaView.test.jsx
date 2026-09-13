@@ -51,12 +51,11 @@ describe("PersonaView empty state", () => {
     expect(screen.getByText(/what's going on\?/i)).toBeInTheDocument();
   });
 
-  test("has a type-first composer with a secondary mic", () => {
+  test("has a talk-to-Scotty mic and a type fallback", () => {
     renderPersona();
-    expect(screen.getByPlaceholderText(/message scotty/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/speak to scotty/i)).toBeInTheDocument();
-    expect(screen.queryByText(/tap the mic/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/tap to speak/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/tap the mic/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/or type here/i)).toBeInTheDocument();
   });
 
   test("hides course tutor, tartan wallpaper, and scale chrome", () => {
@@ -72,7 +71,8 @@ describe("PersonaView empty state", () => {
   test("shows a hero Scotty and starter chips that send", () => {
     const onSend = jest.fn();
     renderPersona({ onSend });
-    expect(document.querySelector(".pv-empty__mark")).toBeInTheDocument();
+    expect(document.querySelector(".scotty-persona--hero")).toBeInTheDocument();
+    expect(document.querySelector("[data-testid=\"scotty-avatar\"]")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /stressed about midterms/i })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /stressed about midterms/i }));
     expect(onSend).toHaveBeenCalledWith(
@@ -106,6 +106,7 @@ describe("PersonaView empty state", () => {
       },
     });
     expect(document.querySelector(".pv--studio")).toBeInTheDocument();
+    expect(document.querySelector(".teach-studio .scotty-persona")).toBeInTheDocument();
     expect(screen.getByText(/quiz studio/i)).toBeInTheDocument();
     expect(screen.getByText(/What is a base case/i)).toBeInTheDocument();
     expect(screen.getByText(/Whenever you're ready/i)).toBeInTheDocument();
@@ -181,7 +182,7 @@ describe("PersonaView empty state", () => {
     expect(document.querySelector(".teach-studio--scene")).toBeInTheDocument();
   });
 
-  test("hides chips and the hero once a conversation has started", () => {
+  test("keeps live Scotty on stage after a conversation starts", () => {
     renderPersona({
       messages: [
         { role: "user", content: "Where is the library?" },
@@ -189,7 +190,53 @@ describe("PersonaView empty state", () => {
       ],
     });
     expect(screen.queryByRole("button", { name: /stressed about midterms/i })).not.toBeInTheDocument();
-    expect(document.querySelector(".pv-empty__mark")).not.toBeInTheDocument();
-    expect(document.querySelector(".pv-header__avatar")).toBeInTheDocument();
+    expect(document.querySelector(".scotty-persona")).toBeInTheDocument();
+    expect(document.querySelector(".pv-companion--docked")).toBeInTheDocument();
+    expect(document.querySelector(".pv-header__avatar")).not.toBeInTheDocument();
+    expect(screen.getByText(/The library is in the Academic Building/i)).toBeInTheDocument();
+  });
+
+  test("shows live captions while Scotty is talking", () => {
+    renderPersona({
+      isSpeaking: true,
+      speechCaption: "Library's in the Academic Building — I can walk you.",
+    });
+    expect(screen.getByText(/Library's in the Academic Building/i)).toBeInTheDocument();
+    expect(document.querySelector(".sp-avatar-frame--speaking")).toBeInTheDocument();
+    expect(document.querySelector(".scotty-persona--hero")).toBeInTheDocument();
+  });
+
+  test("keeps talking Scotty docked beside a studio", () => {
+    renderPersona({
+      isSpeaking: true,
+      speechCaption: "Nice — that's the base case.",
+      messages: [
+        { role: "user", content: "quiz me on notes.txt" },
+        { role: "assistant", content: "Quiz from your notes.", studio: true },
+      ],
+      teachStudio: {
+        kind: "quiz",
+        title: "Quiz · notes.txt",
+        sourceName: "notes.txt",
+        questions: [
+          {
+            number: "1",
+            text: "What is a base case?",
+            options: [
+              { id: "A", text: "Stopping condition" },
+              { id: "B", text: "First line" },
+            ],
+            correct: "A",
+            explanation: "Recursion must stop.",
+          },
+        ],
+        reaction: { type: "celebrate", text: "Yes — recursion has to stop somewhere." },
+      },
+    });
+    expect(document.querySelector(".teach-studio .scotty-persona")).toBeInTheDocument();
+    expect(document.querySelector(".teach-studio .sp-avatar-frame--speaking")).toBeInTheDocument();
+    expect(screen.getByText(/Nice — that's the base case/i)).toBeInTheDocument();
+    expect(screen.getByText(/Yes — recursion has to stop somewhere/i)).toBeInTheDocument();
+    expect(screen.getByText(/What is a base case/i)).toBeInTheDocument();
   });
 });

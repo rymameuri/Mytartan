@@ -1,7 +1,8 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
-import ScottyAvatar from "./ScottyAvatar";
 import MessageContent from "./MessageContent";
 import PersonaMicControls from "./PersonaMicControls";
+import PersonaCaption from "./PersonaCaption";
+import ScottyPersonaStage from "./ScottyPersonaStage";
 import { useMicInput } from "../hooks/useMicInput";
 import { MenuIcon, ShareIcon, DownloadIcon, VolumeIcon, ChevronIcon } from "./Icons";
 import SettingsButton from "./SettingsButton";
@@ -202,15 +203,16 @@ function PersonaView({
           </button>
         )}
         <div className="pv-header__identity">
-          {showChatHistory && (
-            <div className="pv-header__avatar" aria-hidden="true">
-              <ScottyAvatar persona avatarState={avatarState} />
-            </div>
-          )}
           <div className="pv-header__copy">
             <p className="pv-header__name">Scotty</p>
             <p className="pv-header__role">
-              Your CMU-Q classmate
+              {avatarState === "speaking"
+                ? "Talking with you"
+                : avatarState === "listening"
+                  ? "Listening…"
+                  : avatarState === "thinking"
+                    ? "Thinking…"
+                    : "Live companion"}
               <span className="pv-header__app"> · MyTartan</span>
             </p>
           </div>
@@ -255,6 +257,8 @@ function PersonaView({
           studio={teachStudio}
           messages={messages}
           isLoading={isLoading}
+          isSpeaking={isSpeaking}
+          speechCaption={speechCaption}
           avatarState={avatarState}
           avatarRef={avatarRef}
           onClose={onCloseStudio}
@@ -335,39 +339,44 @@ function PersonaView({
           </div>
         )}
 
-        {!showChatHistory && (
-          <div className="pv-empty">
-            <div className={`pv-empty__mark pv-empty__mark--${avatarState}`}>
-              <ScottyAvatar ref={avatarRef} persona avatarState={avatarState} />
-            </div>
-            <h1 className="pv-empty__title">Hey, I&apos;m Scotty</h1>
-            <p className="pv-empty__lede">
-              {isThinking
-                ? "Thinking…"
-                : isSpeaking && speechCaption
-                  ? speechCaption
-                  : showIdleHint
-                    ? "What's going on?"
-                    : lastAssistantReply || "What's going on?"}
-            </p>
-            {showIdleHint && (
-              <ul className="pv-empty__chips" aria-label="Suggested questions">
-                {starterChips.map((chip) => (
-                  <li key={chip.id}>
-                    <button
-                      type="button"
-                      className="pv-empty__chip"
-                      disabled={composerBusy}
-                      onClick={() => handleChipClick(chip.prompt)}
-                    >
-                      {chip.label}
-                    </button>
-                  </li>
-                ))}
-              </ul>
+        <div className={`pv-companion${showChatHistory ? " pv-companion--docked" : " pv-companion--hero"}`}>
+          <ScottyPersonaStage
+            hero={!showChatHistory}
+            compact={showChatHistory}
+            tone="cream"
+            avatarRef={avatarRef}
+            avatarState={avatarState}
+            title={showChatHistory ? "Scotty" : "Hey, I'm Scotty"}
+            subtitle="Your CMU-Q classmate"
+          >
+            {isThinking ? (
+              <PersonaCaption text="thinking" typing />
+            ) : isSpeaking && speechCaption ? (
+              <PersonaCaption text={speechCaption} />
+            ) : showIdleHint ? (
+              <PersonaCaption text="What's going on?" />
+            ) : (
+              !showChatHistory && lastAssistantReply && <PersonaCaption text={lastAssistantReply} />
             )}
-          </div>
-        )}
+          </ScottyPersonaStage>
+
+          {showIdleHint && (
+            <ul className="pv-empty__chips" aria-label="Suggested questions">
+              {starterChips.map((chip) => (
+                <li key={chip.id}>
+                  <button
+                    type="button"
+                    className="pv-empty__chip"
+                    disabled={composerBusy}
+                    onClick={() => handleChipClick(chip.prompt)}
+                  >
+                    {chip.label}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </main>
       )}
 
@@ -386,10 +395,8 @@ function PersonaView({
               ? "Listening…"
               : reviewing
                 ? "Edit this, then send"
-                : "Message Scotty"
+                : "or type here"
           }
-          inputOnly
-          showComposerMic
           allowAttach
           value={composerText}
           onChange={handleComposerChange}
