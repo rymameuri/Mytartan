@@ -30,38 +30,38 @@ function StudySheetBoard({
   return (
     <div className={`study-sheet study-sheet--${view.density}`}>
       <header className="study-sheet__toolbar">
-        <div className="study-sheet__toolbar-copy">
-          <p className="study-sheet__counter">
-            Scene {Math.min(step + 1, view.sections.length)} of {Math.max(view.sections.length, 1)}
-          </p>
-          <div className="study-sheet__toggles">
-            <button
-              type="button"
-              className={`study-sheet__chip${density === "dense" ? " study-sheet__chip--on" : ""}`}
-              onClick={() => onToggleDensity?.("dense")}
-            >
-              Denser
+        <p className="study-sheet__counter">
+          Beat {Math.min(step + 1, view.sections.length)} of {Math.max(view.sections.length, 1)}
+        </p>
+        <div className="study-sheet__toggles">
+          <button
+            type="button"
+            className={`study-sheet__chip${density === "dense" ? " study-sheet__chip--on" : ""}`}
+            onClick={() => onToggleDensity?.("dense")}
+          >
+            Denser
+          </button>
+          <button
+            type="button"
+            className={`study-sheet__chip${density === "gentle" ? " study-sheet__chip--on" : ""}`}
+            onClick={() => onToggleDensity?.("gentle")}
+          >
+            Gentler
+          </button>
+        </div>
+        {isLast && (
+          <div className="study-sheet__actions">
+            <button type="button" className="study-sheet__ghost" onClick={() => onRegenerate?.()}>
+              Replay
             </button>
-            <button
-              type="button"
-              className={`study-sheet__chip${density === "gentle" ? " study-sheet__chip--on" : ""}`}
-              onClick={() => onToggleDensity?.("gentle")}
-            >
-              Gentler
+            <button type="button" className="study-sheet__ghost" onClick={handleExport}>
+              Export
+            </button>
+            <button type="button" className="tartan-btn" onClick={handlePrint}>
+              Print
             </button>
           </div>
-        </div>
-        <div className="study-sheet__actions">
-          <button type="button" className="study-sheet__ghost" onClick={() => onRegenerate?.()}>
-            Regenerate
-          </button>
-          <button type="button" className="study-sheet__ghost" onClick={handleExport}>
-            Export
-          </button>
-          <button type="button" className="tartan-btn" onClick={handlePrint}>
-            Print
-          </button>
-        </div>
+        )}
       </header>
 
       <article className="study-sheet__page" aria-label={view.title}>
@@ -108,7 +108,7 @@ function StudySheetBoard({
           disabled={isLast || !view.sections.length}
           onClick={() => onContinue?.(step + 1)}
         >
-          {isLast ? "Full sheet" : "Continue"}
+          {isLast ? "Hold on this" : "Next beat"}
         </button>
       </footer>
     </div>

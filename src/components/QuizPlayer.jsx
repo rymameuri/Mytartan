@@ -194,7 +194,7 @@ function QuizPlayer({
         </p>
       </header>
 
-      <div className="quiz-player__body">
+      <div className="quiz-player__body" key={currentIndex}>
         <p className="quiz-player__question">
           <span className="quiz-player__q-num">{currentIndex + 1}.</span>
           {current.text}
@@ -267,7 +267,7 @@ function QuizPlayer({
             disabled={!selected}
             onClick={handleNext}
           >
-            {revealMode === "immediate" ? "Continue" : "Next"}
+            {revealMode === "immediate" ? "Next beat" : "Next"}
           </button>
         )}
       </footer>

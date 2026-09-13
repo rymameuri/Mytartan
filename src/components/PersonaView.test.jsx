@@ -177,6 +177,8 @@ describe("PersonaView empty state", () => {
     expect(screen.getByText(/not an official past paper/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /denser/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /print/i })).toBeInTheDocument();
+    expect(document.querySelector(".teach-studio__log")).not.toBeInTheDocument();
+    expect(document.querySelector(".teach-studio--scene")).toBeInTheDocument();
   });
 
   test("hides chips and the hero once a conversation has started", () => {

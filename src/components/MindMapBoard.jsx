@@ -7,13 +7,14 @@ function MindMapBoard({ map, step = 0, onContinue }) {
   const visibleLinks = new Set(view.visibleLinkIds);
   const isLast = step >= view.steps.length - 1;
   const nodeById = new Map(view.nodes.map((node) => [node.id, node]));
+  const nowIds = new Set(view.steps[view.currentStep]?.revealNodeIds || []);
 
   return (
     <div className="mind-map-board">
       <header className="mind-map-board__header">
         <h2 className="mind-map-board__title">{view.title}</h2>
         <p className="mind-map-board__counter">
-          Step {Math.min(step + 1, view.steps.length)} of {view.steps.length}
+          Beat {Math.min(step + 1, view.steps.length)} of {view.steps.length}
         </p>
       </header>
 
@@ -43,6 +44,7 @@ function MindMapBoard({ map, step = 0, onContinue }) {
           {view.nodes.map((node, index) => {
             const shown = visibleNodes.has(node.id);
             const isRoot = index === 0;
+            const isNow = nowIds.has(node.id);
             const width = isRoot ? 168 : 150;
             const height = isRoot ? 56 : 50;
             return (
@@ -50,7 +52,7 @@ function MindMapBoard({ map, step = 0, onContinue }) {
                 <g
                   className={`mind-map-board__node${shown ? " mind-map-board__node--in" : ""}${
                     isRoot ? " mind-map-board__node--root" : ""
-                  }`}
+                  }${isNow ? " mind-map-board__node--now" : ""}`}
                 >
                   <rect
                     x={-width / 2}
@@ -77,7 +79,7 @@ function MindMapBoard({ map, step = 0, onContinue }) {
           disabled={isLast}
           onClick={() => onContinue?.(step + 1)}
         >
-          {isLast ? "Full map" : "Continue"}
+          {isLast ? "Hold on this" : "Next beat"}
         </button>
       </footer>
     </div>

@@ -83,7 +83,7 @@ test("immediate reveal teaches one question at a time", () => {
   expect(screen.getByLabelText(/Stopping condition/i).closest("label").className).toMatch(/correct/);
   expect(screen.queryByRole("button", { name: /Previous/i })).not.toBeInTheDocument();
 
-  fireEvent.click(screen.getByRole("button", { name: /Continue/i }));
+  fireEvent.click(screen.getByRole("button", { name: /Next beat/i }));
   expect(screen.getByText(/Question 2 of 2/i)).toBeInTheDocument();
   fireEvent.click(screen.getByLabelText(/Active calls/i));
   expect(onAnswer).toHaveBeenCalledWith(expect.objectContaining({ correct: true, index: 1 }));

@@ -400,11 +400,11 @@ function PersonaView({
             : reviewing
               ? "Edit if it looks messy, then send."
               : studioOpen && teachStudio?.kind === "quiz"
-                ? "One question at a time, from your notes — not campus policy."
+                ? "One beat, one question. Scotty stays with you."
                 : studioOpen && teachStudio?.kind === "mindmap"
-                  ? "The map grows as Scotty explains."
+                  ? "The board grows as Scotty talks. Pause anytime."
                 : studioOpen && teachStudio?.kind === "sheet"
-                  ? "The sheet reveals section by section — print when it's all on the page."
+                  ? "The sheet writes itself in beats. Save it when the scene ends."
                 : documentSource
                   ? `Notes ready: ${documentSource.name}. Quiz me, whiteboard this, or ask for a cheat sheet.`
                 : "Scotty can get things wrong. Check campus sources."}

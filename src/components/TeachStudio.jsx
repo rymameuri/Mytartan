@@ -1,14 +1,18 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import ScottyAvatar from "./ScottyAvatar";
-import MessageContent from "./MessageContent";
 import QuizPlayer from "./QuizPlayer";
 import MindMapBoard from "./MindMapBoard";
 import StudySheetBoard from "./StudySheetBoard";
 import "./TeachStudio.css";
 
+const SCENE_LABEL = {
+  quiz: "Quiz studio",
+  mindmap: "Whiteboard studio",
+  sheet: "Study studio",
+};
+
 function TeachStudio({
   studio,
-  messages = [],
   isLoading = false,
   avatarState = "idle",
   avatarRef,
@@ -21,21 +25,31 @@ function TeachStudio({
   onSheetRegenerate,
   isDesktop = true,
 }) {
+  const [playing, setPlaying] = useState(true);
+  const canAutoplay = studio?.kind === "mindmap" || studio?.kind === "sheet";
+
   useEffect(() => {
+    setPlaying(true);
+  }, [studio?.kind, studio?.title]);
+
+  useEffect(() => {
+    if (!playing || !canAutoplay) return undefined;
     if (studio?.kind === "mindmap") {
       const last = (studio.map?.steps?.length ?? 1) - 1;
       if (studio.step >= last) return undefined;
-      const timer = window.setTimeout(() => onMindMapStep?.(studio.step + 1), 3800);
+      const timer = window.setTimeout(() => onMindMapStep?.(studio.step + 1), 3600);
       return () => window.clearTimeout(timer);
     }
     if (studio?.kind === "sheet") {
       const last = (studio.sheet?.sections?.length ?? 1) - 1;
       if (studio.step >= last) return undefined;
-      const timer = window.setTimeout(() => onSheetStep?.(studio.step + 1), 2800);
+      const timer = window.setTimeout(() => onSheetStep?.(studio.step + 1), 2600);
       return () => window.clearTimeout(timer);
     }
     return undefined;
   }, [
+    playing,
+    canAutoplay,
     studio?.kind,
     studio?.step,
     studio?.map?.steps?.length,
@@ -46,47 +60,56 @@ function TeachStudio({
 
   if (!studio) return null;
 
-  const recent = messages.slice(-4);
+  const scene = SCENE_LABEL[studio.kind] || "Studio";
+  const beat =
+    studio.kind === "mindmap"
+      ? `${(studio.step ?? 0) + 1}/${studio.map?.steps?.length || 1}`
+      : studio.kind === "sheet"
+        ? `${(studio.step ?? 0) + 1}/${studio.sheet?.sections?.length || 1}`
+        : null;
 
   return (
-    <main className={`teach-studio${isDesktop ? "" : " teach-studio--stack"}`}>
+    <main
+      className={`teach-studio teach-studio--scene${isDesktop ? "" : " teach-studio--stack"}`}
+    >
       <aside className="teach-studio__rail">
-        <div className="teach-studio__scotty">
+        <div className="teach-studio__spot" aria-hidden="true" />
+        <div className={`teach-studio__scotty teach-studio__scotty--${avatarState}`}>
           <ScottyAvatar ref={avatarRef} persona avatarState={avatarState} />
         </div>
         {studio.reaction?.text && (
-          <p className={`teach-studio__reaction teach-studio__reaction--${studio.reaction.type || "teach"}`}>
+          <p
+            key={studio.reaction.text}
+            className={`teach-studio__reaction teach-studio__reaction--${studio.reaction.type || "teach"}`}
+          >
             {studio.reaction.text}
           </p>
         )}
-        <div className="teach-studio__log" aria-label="Recent chat">
-          {recent.map((message, index) => (
-            <div
-              key={message.id ?? `studio-msg-${index}`}
-              className={`teach-studio__msg teach-studio__msg--${message.role}`}
-            >
-              <MessageContent content={message.content} />
-            </div>
-          ))}
-          {isLoading && <p className="teach-studio__thinking">thinking…</p>}
-        </div>
+        {isLoading && <p className="teach-studio__thinking">holding…</p>}
       </aside>
 
       <section className="teach-studio__pane">
         <header className="teach-studio__pane-bar">
           <p className="teach-studio__kicker">
-            {studio.kind === "quiz"
-              ? "Quiz studio"
-              : studio.kind === "sheet"
-                ? "Study studio"
-                : "Whiteboard studio"}
-            {studio.sourceName ? ` · ${studio.sourceName}` : ""}
+            {scene}
+            {beat ? ` · beat ${beat}` : ""}
           </p>
-          <button type="button" className="teach-studio__close" onClick={onClose}>
-            Back to chat
-          </button>
+          <div className="teach-studio__bar-actions">
+            {canAutoplay && (
+              <button
+                type="button"
+                className="teach-studio__ghost"
+                onClick={() => setPlaying((prev) => !prev)}
+              >
+                {playing ? "Pause" : "Play"}
+              </button>
+            )}
+            <button type="button" className="teach-studio__close" onClick={onClose}>
+              End scene
+            </button>
+          </div>
         </header>
-        <div className="teach-studio__surface">
+        <div className="teach-studio__surface" key={`${studio.kind}-${studio.title}`}>
           {studio.kind === "quiz" && (
             <QuizPlayer
               questions={studio.questions}

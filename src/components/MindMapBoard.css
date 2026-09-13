@@ -94,6 +94,12 @@
   fill: #fff;
 }
 
+.mind-map-board__node--now rect {
+  stroke: var(--tartan-maroon);
+  stroke-width: 2.25;
+  filter: drop-shadow(0 0 16px rgba(156, 39, 51, 0.22));
+}
+
 .mind-map-board__footer {
   display: flex;
   align-items: center;
