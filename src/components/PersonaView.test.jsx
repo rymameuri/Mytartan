@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import PersonaView from "./PersonaView";
 
 jest.mock("./ScottyAvatar", () => {
@@ -10,6 +10,12 @@ jest.mock("./ScottyAvatar", () => {
 jest.mock("../hooks/useMicInput", () => ({
   useMicInput: () => ({ listening: false, isFinalizing: false, toggle: jest.fn() }),
 }));
+
+jest.mock("./MessageFeedback", () => {
+  return function MockMessageFeedback() {
+    return null;
+  };
+});
 
 const voiceModeRef = { current: false };
 const noOp = () => {};
@@ -53,5 +59,28 @@ describe("PersonaView empty state", () => {
     expect(document.querySelector(".scotty-pattern")).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/share chat/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/download chat/i)).not.toBeInTheDocument();
+  });
+
+  test("shows a hero Scotty and starter chips that send", () => {
+    const onSend = jest.fn();
+    renderPersona({ onSend });
+    expect(document.querySelector(".pv-empty__mark")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /stressed about midterms/i })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /stressed about midterms/i }));
+    expect(onSend).toHaveBeenCalledWith(
+      "I'm stressed about midterms. Can you help me get through this week?"
+    );
+  });
+
+  test("hides chips and the hero once a conversation has started", () => {
+    renderPersona({
+      messages: [
+        { role: "user", content: "Where is the library?" },
+        { role: "assistant", content: "The library is in the Academic Building." },
+      ],
+    });
+    expect(screen.queryByRole("button", { name: /stressed about midterms/i })).not.toBeInTheDocument();
+    expect(document.querySelector(".pv-empty__mark")).not.toBeInTheDocument();
+    expect(document.querySelector(".pv-header__avatar")).toBeInTheDocument();
   });
 });

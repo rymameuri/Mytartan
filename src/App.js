@@ -707,6 +707,7 @@ function AppShell() {
               voiceModeRef={voiceModeRef}
               avatarRef={avatarRef}
               speechCaption={caption}
+              profile={user?.profile}
             />
           )}
         </div>

@@ -124,6 +124,7 @@
 .pv-body--idle {
   justify-content: center;
   align-items: center;
+  overflow-y: auto;
 }
 
 .pv-empty {
@@ -132,18 +133,18 @@
   align-items: center;
   text-align: center;
   gap: 10px;
-  padding: 24px 24px 8px;
-  max-width: 480px;
+  padding: 16px 24px 8px;
+  max-width: 640px;
+  width: 100%;
 }
 
 .pv-empty__mark {
-  width: 72px;
-  height: 72px;
-  margin-bottom: 8px;
+  width: min(220px, 56vw);
+  height: min(248px, 62vw);
+  margin-bottom: 4px;
   overflow: hidden;
-  border-radius: 50%;
-  background: var(--app-surface);
-  border: 1px solid var(--app-border);
+  border-radius: 28px;
+  background: transparent;
 }
 
 .pv-empty__mark canvas,
@@ -170,6 +171,47 @@
   font-weight: 400;
   line-height: 1.5;
   color: var(--app-text-secondary);
+}
+
+.pv-empty__chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+  max-width: 560px;
+}
+
+.pv-empty__chip {
+  appearance: none;
+  border: 1px solid var(--app-border);
+  border-radius: 999px;
+  padding: 8px 14px;
+  background: var(--app-surface);
+  color: var(--app-text);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.35;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.pv-empty__chip:hover:not(:disabled) {
+  background: var(--ws-surface-hover);
+  border-color: var(--ws-border-strong);
+}
+
+.pv-empty__chip:focus-visible {
+  outline: 2px solid var(--tartan-maroon);
+  outline-offset: 2px;
+}
+
+.pv-empty__chip:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .pv-body--chat .pv-messages-wrap {
@@ -285,7 +327,26 @@
     width: 100%;
   }
 
+  .pv-empty {
+    padding: 12px 16px 4px;
+  }
+
+  .pv-empty__mark {
+    width: min(168px, 58vw);
+    height: min(190px, 64vw);
+  }
+
   .pv-empty__title {
     font-size: 1.5rem;
+  }
+
+  .pv-empty__chips {
+    gap: 7px;
+    margin-top: 12px;
+  }
+
+  .pv-empty__chip {
+    padding: 8px 12px;
+    font-size: 0.8125rem;
   }
 }

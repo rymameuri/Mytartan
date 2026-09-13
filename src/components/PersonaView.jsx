@@ -1,10 +1,11 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import ScottyAvatar from "./ScottyAvatar";
 import MessageContent from "./MessageContent";
 import PersonaMicControls from "./PersonaMicControls";
 import { useMicInput } from "../hooks/useMicInput";
 import { MenuIcon, ShareIcon, DownloadIcon, VolumeIcon, ChevronIcon } from "./Icons";
 import SettingsButton from "./SettingsButton";
+import { orderStarterChips } from "../data/starterChips";
 import "./PersonaView.css";
 import MessageFeedback from "./MessageFeedback";
 import "./ChatInterface.css";
@@ -28,6 +29,7 @@ function PersonaView({
   voiceModeRef,
   avatarRef,
   speechCaption = "",
+  profile = null,
 }) {
   const messagesContainerRef = useRef(null);
   const isNearBottomRef = useRef(true);
@@ -130,6 +132,14 @@ function PersonaView({
     !isPreparingSpeech &&
     !isFinalizing &&
     !hasUserMessages;
+  const starterChips = useMemo(() => orderStarterChips(profile ?? {}), [profile]);
+  const composerBusy = isLoading || isPreparingSpeech || isFinalizing;
+
+  const handleChipClick = useCallback((prompt) => {
+    if (composerBusy) return;
+    if (voiceModeRef) voiceModeRef.current = false;
+    onSend(prompt);
+  }, [composerBusy, onSend, voiceModeRef]);
 
   return (
     <div className={`pv${!showChatHistory ? " pv--persona-mode" : ""}`}>
@@ -147,9 +157,11 @@ function PersonaView({
           </button>
         )}
         <div className="pv-header__identity">
-          <div className="pv-header__avatar" aria-hidden="true">
-            <ScottyAvatar persona avatarState={avatarState} />
-          </div>
+          {showChatHistory && (
+            <div className="pv-header__avatar" aria-hidden="true">
+              <ScottyAvatar persona avatarState={avatarState} />
+            </div>
+          )}
           <div className="pv-header__copy">
             <p className="pv-header__name">Scotty</p>
             <p className="pv-header__role">
@@ -276,6 +288,22 @@ function PersonaView({
                     ? "What's going on?"
                     : lastAssistantReply || "What's going on?"}
             </p>
+            {showIdleHint && (
+              <ul className="pv-empty__chips" aria-label="Suggested questions">
+                {starterChips.map((chip) => (
+                  <li key={chip.id}>
+                    <button
+                      type="button"
+                      className="pv-empty__chip"
+                      disabled={composerBusy}
+                      onClick={() => handleChipClick(chip.prompt)}
+                    >
+                      {chip.label}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         )}
       </main>
