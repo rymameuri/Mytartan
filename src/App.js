@@ -195,18 +195,6 @@ function AppShell() {
     }
   }, [teachStudio, speakFormatted, userId]);
 
-  const prevSheetStepRef = useRef(0);
-  useEffect(() => {
-    if (teachStudio?.kind !== "sheet") {
-      prevSheetStepRef.current = 0;
-      return;
-    }
-    if (teachStudio.step === prevSheetStepRef.current) return;
-    prevSheetStepRef.current = teachStudio.step;
-    if (teachStudio.step > 0 && teachStudio.reaction?.text && !readMutedPreference(userId)) {
-      speakFormatted(teachStudio.reaction.text);
-    }
-  }, [teachStudio, speakFormatted, userId]);
 
   function closeMenu() {
     setMenuOpen(false);
