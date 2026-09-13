@@ -182,18 +182,38 @@ describe("PersonaView empty state", () => {
     expect(document.querySelector(".teach-studio--scene")).toBeInTheDocument();
   });
 
-  test("keeps live Scotty on stage after a conversation starts", () => {
+  test("keeps the hero persona after a chip or message — no bubble takeover", () => {
+    renderPersona({
+      messages: [
+        { role: "user", content: "I'm stressed about midterms. Can you help me get through this week?" },
+        { role: "assistant", content: "Yeah — let's get you through this week." },
+      ],
+    });
+    expect(document.querySelector(".scotty-persona--hero")).toBeInTheDocument();
+    expect(document.querySelector(".pv--persona-mode")).toBeInTheDocument();
+    expect(document.querySelector(".pv--chat-only")).not.toBeInTheDocument();
+    expect(document.querySelector(".message-history")).not.toBeInTheDocument();
+    expect(document.querySelector(".pv-header__avatar")).not.toBeInTheDocument();
+    expect(screen.getByText(/Yeah — let's get you through this week/i)).toBeInTheDocument();
+    expect(document.querySelector(".pv-last-ask")).toHaveTextContent(/stressed about midterms/i);
+    expect(screen.getByRole("button", { name: /stressed about midterms/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /chat only/i })).toBeInTheDocument();
+  });
+
+  test("Chat only is an optional transcript; Persona switches back", () => {
     renderPersona({
       messages: [
         { role: "user", content: "Where is the library?" },
         { role: "assistant", content: "The library is in the Academic Building." },
       ],
     });
-    expect(screen.queryByRole("button", { name: /stressed about midterms/i })).not.toBeInTheDocument();
-    expect(document.querySelector(".scotty-persona")).toBeInTheDocument();
-    expect(document.querySelector(".pv-companion--docked")).toBeInTheDocument();
-    expect(document.querySelector(".pv-header__avatar")).not.toBeInTheDocument();
-    expect(screen.getByText(/The library is in the Academic Building/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /chat only/i }));
+    expect(document.querySelector(".pv--chat-only")).toBeInTheDocument();
+    expect(document.querySelector(".message-history")).toBeInTheDocument();
+    expect(document.querySelector(".scotty-persona--hero")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /back to persona/i }));
+    expect(document.querySelector(".scotty-persona--hero")).toBeInTheDocument();
+    expect(document.querySelector(".pv--chat-only")).not.toBeInTheDocument();
   });
 
   test("shows live captions while Scotty is talking", () => {

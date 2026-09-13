@@ -12,6 +12,80 @@ import "./PersonaView.css";
 import MessageFeedback from "./MessageFeedback";
 import "./ChatInterface.css";
 
+function TranscriptLog({
+  messages,
+  isLoading,
+  mode,
+  messagesContainerRef,
+  showScrollDown,
+  onScrollToBottom,
+}) {
+  return (
+    <div className="pv-messages-wrap">
+      <div
+        className="pv-messages message-history"
+        ref={messagesContainerRef}
+        role="log"
+        aria-live="polite"
+        aria-relevant="additions"
+      >
+        {messages.map((message, index) => {
+          const isUser = message.role === "user";
+          const msgId = message.id ?? index;
+          return (
+            <div
+              key={msgId}
+              className={`msg-row${isUser ? " msg-row--user" : " msg-row--assistant"}`}
+            >
+              <div className={`msg-bubble${isUser ? " msg-bubble--user" : " msg-bubble--assistant"}`}>
+                <MessageContent content={message.content} />
+                {!isUser && message.confidence?.message && (
+                  <p className="msg-confidence" title={message.confidence.message}>
+                    {message.confidence.message}
+                  </p>
+                )}
+                {!isUser && !message.streaming && !message.studio && (
+                  <MessageFeedback
+                    messageId={message.id ?? `pv-${msgId}`}
+                    reply={message.content}
+                    feedbackContext={message.feedbackContext ?? { mode }}
+                    disabled={isLoading}
+                  />
+                )}
+              </div>
+            </div>
+          );
+        })}
+
+        {isLoading && (
+          <div className="msg-row msg-row--assistant">
+            <div
+              className="msg-bubble msg-bubble--assistant typing-indicator"
+              aria-label="thinking"
+            >
+              <span className="typing-label">thinking</span>
+              <span className="typing-dot" />
+              <span className="typing-dot" />
+              <span className="typing-dot" />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {showScrollDown && (
+        <button
+          type="button"
+          className="pv-scroll-down"
+          aria-label="Scroll to latest message"
+          onClick={onScrollToBottom}
+        >
+          <ChevronIcon />
+        </button>
+      )}
+    </div>
+  );
+}
+
 function PersonaView({
   chatSessionKey = 0,
   messages = [],
@@ -45,12 +119,15 @@ function PersonaView({
   const messagesContainerRef = useRef(null);
   const isNearBottomRef = useRef(true);
   const [showScrollDown, setShowScrollDown] = useState(false);
+  const [chatOnly, setChatOnly] = useState(false);
   const hasMessages = messages.length > 0;
   const hasUserMessages = messages.some((message) => message.role === "user");
-  const showChatHistory = hasUserMessages;
   const lastAssistantReply = [...messages]
     .reverse()
     .find((message) => message.role === "assistant" && message.content?.trim())?.content;
+  const lastUserAsk = [...messages]
+    .reverse()
+    .find((message) => message.role === "user" && message.content?.trim())?.content;
 
   const SCROLL_THRESHOLD = 72;
 
@@ -76,6 +153,7 @@ function PersonaView({
     voiceModeRef.current = false;
     isNearBottomRef.current = true;
     setShowScrollDown(false);
+    setChatOnly(false);
   }, [chatSessionKey, stopSpeech, voiceModeRef]);
 
   const [composerText, setComposerText] = useState("");
@@ -131,8 +209,11 @@ function PersonaView({
     toggleMic();
   }, [isLoading, isPreparingSpeech, isFinalizing, isSpeaking, stopSpeech, toggleMic]);
 
+  const studioOpen = Boolean(teachStudio);
+  const showTranscript = chatOnly && hasUserMessages && !studioOpen;
+
   useEffect(() => {
-    if (!showChatHistory) return undefined;
+    if (!showTranscript) return undefined;
 
     const el = messagesContainerRef.current;
     if (!el) return undefined;
@@ -141,17 +222,17 @@ function PersonaView({
     checkScrollPosition();
 
     return () => el.removeEventListener("scroll", checkScrollPosition);
-  }, [showChatHistory, checkScrollPosition]);
+  }, [showTranscript, checkScrollPosition]);
 
   useEffect(() => {
-    if (!showChatHistory) return;
+    if (!showTranscript) return;
     if (isNearBottomRef.current) {
       const isStreaming = messages.some((message) => message.streaming);
       requestAnimationFrame(() => scrollToBottom(isStreaming ? "auto" : "smooth"));
     } else {
       checkScrollPosition();
     }
-  }, [messages, isLoading, showChatHistory, scrollToBottom, checkScrollPosition]);
+  }, [messages, isLoading, showTranscript, scrollToBottom, checkScrollPosition]);
 
   const micLabel = isLoading || isPreparingSpeech || isFinalizing
     ? "Thinking…"
@@ -170,16 +251,8 @@ function PersonaView({
       : isLoading || isPreparingSpeech || isFinalizing
         ? "thinking"
         : "idle";
-  const showIdleHint =
-    !showChatHistory &&
-    !isSpeaking &&
-    !isLoading &&
-    !isPreparingSpeech &&
-    !isFinalizing &&
-    !hasUserMessages;
   const starterChips = useMemo(() => orderStarterChips(profile ?? {}), [profile]);
   const composerBusy = isLoading || isPreparingSpeech || isFinalizing;
-  const studioOpen = Boolean(teachStudio);
 
   const handleChipClick = useCallback((prompt) => {
     if (composerBusy) return;
@@ -187,8 +260,23 @@ function PersonaView({
     onSend(prompt);
   }, [composerBusy, onSend, voiceModeRef]);
 
+  const stageCaption = isThinking
+    ? { text: "thinking", typing: true }
+    : isSpeaking && speechCaption
+      ? { text: speechCaption, typing: false }
+      : lastAssistantReply
+        ? { text: lastAssistantReply, typing: false }
+        : { text: "What's going on?", typing: false };
+
+  const shellClass = [
+    "pv",
+    !showTranscript && !studioOpen ? "pv--persona-mode" : "",
+    studioOpen ? "pv--studio" : "",
+    showTranscript ? "pv--chat-only" : "",
+  ].filter(Boolean).join(" ");
+
   return (
-    <div className={`pv${!showChatHistory && !studioOpen ? " pv--persona-mode" : ""}${studioOpen ? " pv--studio" : ""}`}>
+    <div className={shellClass}>
       <div className="pv__overlay" aria-hidden="true" />
 
       <header className="pv-header">
@@ -218,6 +306,17 @@ function PersonaView({
           </div>
         </div>
         <div className="pv-header__actions">
+          {hasUserMessages && !studioOpen && (
+            <button
+              type="button"
+              className={`pv-mode-toggle${chatOnly ? " pv-mode-toggle--active" : ""}`}
+              aria-pressed={chatOnly}
+              aria-label={chatOnly ? "Back to persona" : "Chat only"}
+              onClick={() => setChatOnly((current) => !current)}
+            >
+              {chatOnly ? "Persona" : "Chat only"}
+            </button>
+          )}
           <button
             type="button"
             className={`pv-icon-btn${isMuted ? " pv-icon-btn--active" : ""}`}
@@ -270,97 +369,38 @@ function PersonaView({
           onSheetRegenerate={onSheetRegenerate}
           isDesktop={isDesktop}
         />
+      ) : showTranscript ? (
+        <main className="pv-body pv-body--chat">
+          <TranscriptLog
+            messages={messages}
+            isLoading={isLoading}
+            mode={mode}
+            messagesContainerRef={messagesContainerRef}
+            showScrollDown={showScrollDown}
+            onScrollToBottom={() => scrollToBottom()}
+          />
+        </main>
       ) : (
-      <main
-        className={`pv-body${showChatHistory ? " pv-body--chat" : " pv-body--idle"}`}
-      >
-        {showChatHistory && (
-          <div className="pv-messages-wrap">
-            <div
-              className="pv-messages message-history"
-              ref={messagesContainerRef}
-              role="log"
-              aria-live="polite"
-              aria-relevant="additions"
+        <main className="pv-body pv-body--idle">
+          <div className="pv-companion pv-companion--hero">
+            <ScottyPersonaStage
+              hero
+              tone="cream"
+              avatarRef={avatarRef}
+              avatarState={avatarState}
+              title="Hey, I'm Scotty"
+              subtitle="Your CMU-Q classmate"
             >
-              {messages.map((message, index) => {
-                const isUser = message.role === "user";
-                const msgId = message.id ?? index;
-                return (
-                  <div
-                    key={msgId}
-                    className={`msg-row${isUser ? " msg-row--user" : " msg-row--assistant"}`}
-                  >
-                    <div className={`msg-bubble${isUser ? " msg-bubble--user" : " msg-bubble--assistant"}`}>
-                      <MessageContent content={message.content} />
-                      {!isUser && message.confidence?.message && (
-                        <p className="msg-confidence" title={message.confidence.message}>
-                          {message.confidence.message}
-                        </p>
-                      )}
-                      {!isUser && !message.streaming && !message.studio && (
-                        <MessageFeedback
-                          messageId={message.id ?? `pv-${msgId}`}
-                          reply={message.content}
-                          feedbackContext={message.feedbackContext ?? { mode }}
-                          disabled={isLoading}
-                        />
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+              <PersonaCaption text={stageCaption.text} typing={stageCaption.typing} />
+            </ScottyPersonaStage>
 
-              {isLoading && (
-                <div className="msg-row msg-row--assistant">
-                  <div
-                    className="msg-bubble msg-bubble--assistant typing-indicator"
-                    aria-label="thinking"
-                  >
-                    <span className="typing-label">thinking</span>
-                    <span className="typing-dot" />
-                    <span className="typing-dot" />
-                    <span className="typing-dot" />
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {showScrollDown && (
-              <button
-                type="button"
-                className="pv-scroll-down"
-                aria-label="Scroll to latest message"
-                onClick={() => scrollToBottom()}
-              >
-                <ChevronIcon />
-              </button>
+            {lastUserAsk && (
+              <p className="pv-last-ask" title={lastUserAsk}>
+                <span className="pv-last-ask__label">You</span>
+                {lastUserAsk}
+              </p>
             )}
-          </div>
-        )}
 
-        <div className={`pv-companion${showChatHistory ? " pv-companion--docked" : " pv-companion--hero"}`}>
-          <ScottyPersonaStage
-            hero={!showChatHistory}
-            compact={showChatHistory}
-            tone="cream"
-            avatarRef={avatarRef}
-            avatarState={avatarState}
-            title={showChatHistory ? "Scotty" : "Hey, I'm Scotty"}
-            subtitle="Your CMU-Q classmate"
-          >
-            {isThinking ? (
-              <PersonaCaption text="thinking" typing />
-            ) : isSpeaking && speechCaption ? (
-              <PersonaCaption text={speechCaption} />
-            ) : showIdleHint ? (
-              <PersonaCaption text="What's going on?" />
-            ) : (
-              !showChatHistory && lastAssistantReply && <PersonaCaption text={lastAssistantReply} />
-            )}
-          </ScottyPersonaStage>
-
-          {showIdleHint && (
             <ul className="pv-empty__chips" aria-label="Suggested questions">
               {starterChips.map((chip) => (
                 <li key={chip.id}>
@@ -375,9 +415,8 @@ function PersonaView({
                 </li>
               ))}
             </ul>
-          )}
-        </div>
-      </main>
+          </div>
+        </main>
       )}
 
       <footer className="pv-footer">
@@ -414,7 +453,7 @@ function PersonaView({
                   ? "The sheet writes itself in beats. Save it when the scene ends."
                 : documentSource
                   ? `Notes ready: ${documentSource.name}. Quiz me, whiteboard this, or ask for a cheat sheet.`
-                : "Scotty can get things wrong. Check campus sources."}
+                  : "Scotty can get things wrong. Check campus sources."}
         </p>
       </footer>
     </div>

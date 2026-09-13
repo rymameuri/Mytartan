@@ -1,4 +1,4 @@
-/* PersonaView — chat-first, Claude/ChatGPT calm */
+/* PersonaView — live Scotty first; transcript is optional */
 
 .pv {
   position: relative;
@@ -93,6 +93,33 @@
   color: var(--tartan-maroon);
 }
 
+.pv-mode-toggle {
+  appearance: none;
+  border: 1px solid var(--app-border);
+  border-radius: 999px;
+  padding: 6px 12px;
+  margin-right: 4px;
+  background: var(--app-surface);
+  color: var(--app-text-secondary);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.pv-mode-toggle:hover {
+  background: var(--app-hover);
+  color: var(--app-text);
+}
+
+.pv-mode-toggle--active {
+  background: var(--app-accent-soft);
+  border-color: rgba(156, 39, 51, 0.22);
+  color: var(--tartan-maroon);
+}
+
 .pv-body {
   position: relative;
   z-index: 5;
@@ -125,14 +152,29 @@
   justify-content: center;
 }
 
-.pv-companion--docked {
-  flex-shrink: 0;
-  padding: 4px 16px 8px;
+.pv-last-ask {
+  margin: 2px 0 0;
+  max-width: 36rem;
+  padding: 8px 14px;
+  border: 1px solid var(--app-border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--app-text-secondary);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.pv-body--chat .pv-companion--docked .sp-avatar-frame {
-  width: min(200px, 38vw);
-  height: min(200px, 38vw);
+.pv-last-ask__label {
+  display: inline-block;
+  margin-right: 8px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tartan-maroon);
 }
 
 .pv-empty__chips {
@@ -316,9 +358,13 @@
     height: min(210px, 58vw);
   }
 
-  .pv-body--chat .pv-companion--docked .sp-avatar-frame {
-    width: min(148px, 42vw);
-    height: min(148px, 42vw);
+  .pv-mode-toggle {
+    padding: 5px 10px;
+    font-size: 0.6875rem;
+  }
+
+  .pv-last-ask {
+    max-width: calc(100vw - 32px);
   }
 
   .pv-empty__chips {
