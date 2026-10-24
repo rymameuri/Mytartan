@@ -105,7 +105,7 @@ The app opens at `http://localhost:3000`.
 | `LIVEAVATAR_API_KEY` | No | Optional — legacy LiveAvatar video avatar |
 | `ELEVENLABS_API_KEY` | No | ElevenLabs API key for talking mascot voice |
 | `ELEVENLABS_VOICE_ID` | No | ElevenLabs voice ID (required with `ELEVENLABS_API_KEY`) |
-| `ELEVENLABS_MODEL_ID` | No | TTS model (default: `eleven_multilingual_v2`) |
+| `ELEVENLABS_MODEL_ID` | No | TTS model (default: `eleven_flash_v2_5`, the low-latency model). Set `eleven_multilingual_v2` if a cloned voice rejects flash. |
 | `PORT` | No | Backend port (default: `3001`) |
 
 \* Use either the CMU AI Gateway vars **or** `ANTHROPIC_API_KEY`, or set `AI_PROVIDER=huggingface` with `HUGGINGFACE_API_KEY` — not multiple providers at once.

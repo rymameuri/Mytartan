@@ -44,9 +44,10 @@ function PersonaView({
   const showChatHistory = interactionMode === "chat" && hasUserMessages;
   const showPersonaStage = interactionMode === "persona" || !hasUserMessages;
   const showAvatarStage = interactionMode === "persona" || !hasUserMessages;
-  const lastAssistantReply = [...messages]
+  const lastAssistantMessage = [...messages]
     .reverse()
-    .find((message) => message.role === "assistant" && message.content?.trim())?.content;
+    .find((message) => message.role === "assistant" && message.content?.trim());
+  const lastAssistantReply = lastAssistantMessage?.content;
 
   const SCROLL_THRESHOLD = 72;
 
@@ -178,11 +179,29 @@ function PersonaView({
           <button
             type="button"
             role="tab"
+            aria-selected={mode === "chat"}
+            className={`pv-mode-tab${mode === "chat" ? " pv-mode-tab--active" : ""}`}
+            onClick={() => onSwitchMode?.("chat")}
+          >
+            Chat
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mode === "campus"}
+            className={`pv-mode-tab${mode === "campus" ? " pv-mode-tab--active" : ""}`}
+            onClick={() => onSwitchMode?.("campus")}
+          >
+            Campus
+          </button>
+          <button
+            type="button"
+            role="tab"
             aria-selected={mode === "tutor"}
             className={`pv-mode-tab${mode === "tutor" ? " pv-mode-tab--active" : ""}`}
             onClick={() => onSwitchMode?.("tutor")}
           >
-            Course Tutor
+            Tutor
           </button>
         </div>
         <div className="pv-header__actions">
@@ -336,7 +355,11 @@ function PersonaView({
               <p className="pv-identity__name brand-display">My Tartan</p>
               <p className="pv-identity__role">
                 <span className="pv-identity__dot" />
-                {isTutor ? "Course Tutor" : "CMU-Q Student Assistant"}
+                {isTutor
+                  ? "Course Tutor"
+                  : mode === "chat"
+                    ? "Chat companion"
+                    : "CMU-Q Student Assistant"}
               </p>
             </div>
           )}
@@ -346,6 +369,12 @@ function PersonaView({
           ) : (
             personaCaptionText && <PersonaCaption text={personaCaptionText} />
           )}
+
+          {interactionMode === "persona" &&
+            !isThinking &&
+            lastAssistantMessage?.confidence?.message && (
+              <p className="pv-grounding">{lastAssistantMessage.confidence.message}</p>
+            )}
 
           {showIdleHint && (
             <p className="pv-idle-hint">

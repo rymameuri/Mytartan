@@ -225,6 +225,8 @@ function SideMenu({
   onToggleCollapsed,
   onClose,
   onNewChat,
+  onStartChat,
+  onStartCampus,
   onStartTutor,
   onSelectPrompt,
   onSelectConversation,
@@ -319,6 +321,20 @@ function SideMenu({
         <PlusIcon />
         <span className="side-menu__btn-label">New chat</span>
       </button>
+
+      {onStartChat && (
+        <button type="button" className="side-menu__tutor-btn" onClick={onStartChat} title="Chat companion">
+          <span className="side-menu__tutor-icon" aria-hidden="true">💬</span>
+          <span className="side-menu__btn-label">Chat</span>
+        </button>
+      )}
+
+      {onStartCampus && (
+        <button type="button" className="side-menu__tutor-btn" onClick={onStartCampus} title="Campus guide">
+          <span className="side-menu__tutor-icon" aria-hidden="true">🗺️</span>
+          <span className="side-menu__btn-label">Campus guide</span>
+        </button>
+      )}
 
       <button
         type="button"

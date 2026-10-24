@@ -4,7 +4,7 @@ import { useAuth } from "../../context/AuthContext";
 import "./LoginSignup.css";
 
 function LoginSignup() {
-  const { login, signup } = useAuth();
+  const { login, signup, continueAsGuest } = useAuth();
   const [mode, setMode] = useState("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -103,6 +103,9 @@ function LoginSignup() {
 
             <button type="submit" className="auth-page__submit" disabled={submitting}>
               {submitting ? "Please wait…" : isLogin ? "Log in" : "Create account"}
+            </button>
+            <button type="button" className="auth-page__guest" onClick={continueAsGuest}>
+              Continue to the demo
             </button>
           </form>
         </main>

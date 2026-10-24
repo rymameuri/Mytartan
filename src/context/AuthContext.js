@@ -41,8 +41,8 @@ async function authRequest(path, { method = "GET", body, token } = {}) {
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
     const fallback =
-      response.status === 404
-        ? "Auth API not found — restart the server (npm run dev) so /api/auth routes load."
+      response.status === 404 || response.status === 405
+        ? "The account service isn't available from this page. Use Continue to the demo to look around without signing in."
         : `Request failed (${response.status})`;
     throw new Error(data.error || data.message || fallback);
   }
@@ -90,6 +90,24 @@ export function AuthProvider({ children }) {
     persistAuth(null, null);
   }, [auth.token, persistAuth]);
 
+  const continueAsGuest = useCallback(() => {
+    persistAuth(
+      {
+        id: "guest",
+        guest: true,
+        email: null,
+        profile: {
+          onboardingComplete: true,
+          major: "Information Systems",
+          graduationDate: "Spring 2027",
+          learningStyle: "mixed",
+          intendedUse: "a live campus demo",
+        },
+      },
+      "guest-local"
+    );
+  }, [persistAuth]);
+
   const updateProfile = useCallback(async (profileFields) => {
     if (!auth.token) throw new Error("Not authenticated");
     const data = await authRequest("/api/auth/profile", {
@@ -114,8 +132,9 @@ export function AuthProvider({ children }) {
       signup,
       logout,
       updateProfile,
+      continueAsGuest,
     }),
-    [auth, login, signup, logout, updateProfile]
+    [auth, login, signup, logout, updateProfile, continueAsGuest]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

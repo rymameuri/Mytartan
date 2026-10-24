@@ -7,6 +7,7 @@ import SideMenu from "./components/SideMenu";
 import ScottyPattern from "./components/ScottyPattern";
 import ScottyPersonaStage from "./components/ScottyPersonaStage";
 import CourseTutorDashboard from "./components/CourseTutorDashboard";
+import MapNavigator from "./components/MapNavigator";
 import ClassWorkspace from "./components/ClassWorkspace";
 import { useConversations } from "./hooks/useConversations";
 import {
@@ -27,6 +28,8 @@ import { buildTutorWelcomeMessage } from "./utils/tutorWelcome";
 import { refreshCourse } from "./utils/courseApi";
 import { stripMarkdownFormatting } from "./utils/stripMarkdown";
 import { toSpokenText } from "./utils/spokenText";
+import { nextSpeakablePiece } from "./utils/speakableChunks";
+import { assistantUnavailableMessage, formatDemoReply, matchDemoAnswer } from "./data/demoAnswers";
 import { readSidebarCollapsed, writeSidebarCollapsed } from "./utils/sidebarPreference";
 import "./App.css";
 
@@ -140,11 +143,11 @@ function AppShell() {
     [speak]
   );
 
-  const showPersona = mode === "qa" || (mode === "tutor" && !tutorScreen);
+  const showPersona = mode === "qa" || mode === "chat" || (mode === "tutor" && !tutorScreen);
   const showTutorPersonaRail = isDesktop && mode === "tutor" && tutorScreen === "dashboard";
 
   useAutoSpeakReply({
-    enabled: mode === "qa" || (mode === "tutor" && tutorScreen === "workspace"),
+    enabled: mode === "tutor" && tutorScreen === "workspace",
     isLoading,
     lastReply,
     speechText: mode === "tutor" ? tutorSpeechText : "",
@@ -191,6 +194,27 @@ function AppShell() {
     setMessages(draft.messages);
     setMode(draft.mode);
     setTutorScreen(null);
+    setCourseContext(null);
+    setSavedCourseId(null);
+    closeMenu();
+  }
+
+  function handleStartChat() {
+    resetChatSession();
+    newChat();
+    setMode("chat");
+    setTutorScreen(null);
+    setMessages([]);
+    setCourseContext(null);
+    setSavedCourseId(null);
+    closeMenu();
+  }
+
+  function handleStartCampus() {
+    resetChatSession();
+    setMode("campus");
+    setTutorScreen(null);
+    setMessages([]);
     setCourseContext(null);
     setSavedCourseId(null);
     closeMenu();
@@ -347,7 +371,47 @@ function AppShell() {
     let feedbackContext = null;
     let gotTokens = false;
     let pendingSpeech = "";
+    let spokenUpTo = 0;
     const assistantMessageId = crypto.randomUUID();
+    const shouldSpeakEarly =
+      (activeMode === "qa" || activeMode === "chat") && !readMutedPreference(userId);
+
+    function speakReadyPieces(fullText, flush) {
+      if (!shouldSpeakEarly) return;
+      let guard = 0;
+      while (guard < 6) {
+        const piece = nextSpeakablePiece(fullText, spokenUpTo);
+        if (!piece) break;
+        spokenUpTo = piece.end;
+        speakFormatted(piece.text);
+        guard += 1;
+      }
+      if (!flush) return;
+      const tail = nextSpeakablePiece(fullText, spokenUpTo, { flush: true });
+      if (tail) {
+        spokenUpTo = tail.end;
+        speakFormatted(tail.text);
+      }
+    }
+
+    function showUnavailable(question) {
+      const demo = matchDemoAnswer(question);
+      setMessages([
+        ...updatedMessages,
+        {
+          role: "assistant",
+          content: demo ? formatDemoReply(demo) : assistantUnavailableMessage(),
+          confidence: demo
+            ? {
+                sourceCount: 1,
+                message: `Verified fact from the ${demo.source}, checked ${demo.verified}`,
+                sources: [{ topic: demo.source }],
+              }
+            : null,
+        },
+      ]);
+      if (shouldSpeakEarly && demo) speakFormatted(demo.answer);
+    }
 
     const requestBody = {
       messages: updatedMessages,
@@ -387,7 +451,19 @@ function AppShell() {
       });
 
       if (!response.ok) {
+        const contentType = response.headers.get("content-type") || "";
         const data = await response.json().catch(() => ({}));
+        const unreachable =
+          response.status === 404 ||
+          response.status === 405 ||
+          response.status === 502 ||
+          response.status === 503 ||
+          response.status === 504 ||
+          contentType.includes("text/html");
+        if (unreachable) {
+          showUnavailable(text);
+          return;
+        }
         throw new Error(data.error || "Failed to get a response");
       }
 
@@ -429,6 +505,7 @@ function AppShell() {
           } else if (event.type === "token") {
             gotTokens = true;
             reply += event.text;
+            speakReadyPieces(reply, false);
             setMessages([
               ...updatedMessages,
               {
@@ -450,6 +527,7 @@ function AppShell() {
       }
 
       if (gotTokens) {
+        speakReadyPieces(reply, true);
         setMessages([
           ...updatedMessages,
           {
@@ -503,13 +581,15 @@ function AppShell() {
 
       const isNetworkError =
         err.message === "Failed to fetch" || err.name === "TypeError";
+      if (isNetworkError) {
+        showUnavailable(text);
+        return;
+      }
       setMessages([
         ...updatedMessages,
         {
           role: "assistant",
-          content: isNetworkError
-            ? "Can't reach the AI server. Open a terminal in the project folder and run: npm run server"
-            : err.message || "Sorry, something went wrong. Please try again.",
+          content: err.message || "Sorry, something went wrong. Please try again.",
           ...assistantExtras,
         },
       ]);
@@ -626,6 +706,8 @@ function AppShell() {
         onToggleCollapsed={toggleSidebarCollapsed}
         onClose={closeMenu}
         onNewChat={handleNewChat}
+        onStartChat={handleStartChat}
+        onStartCampus={handleStartCampus}
         onStartTutor={handleStartTutor}
         onSelectPrompt={handleSelectPrompt}
         onSelectConversation={handleSelectConversation}
@@ -682,6 +764,10 @@ function AppShell() {
               avatarState={tutorAvatarState}
               speechCaption={caption}
             />
+          )}
+
+          {mode === "campus" && (
+            <MapNavigator onOpenMenu={() => setMenuOpen(true)} onBackToQa={handleBackToQa} />
           )}
 
           {showPersona && (

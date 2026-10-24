@@ -161,6 +161,24 @@
   cursor: not-allowed;
 }
 
+.auth-page__guest {
+  appearance: none;
+  margin-top: 10px;
+  padding: 12px 20px;
+  border-radius: var(--ws-radius);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  background: transparent;
+  color: var(--tartan-white);
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.auth-page__guest:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
 .auth-page__footer {
   text-align: center;
   font-size: clamp(0.55rem, 1.4vw, 0.6875rem);

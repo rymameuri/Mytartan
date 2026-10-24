@@ -289,7 +289,7 @@ function formatDirectionsReply(route, current, destination) {
   return [header, ...route.directions.map((step, i) => `${i + 1}. ${step}`)].join("\n");
 }
 
-function MapNavigator() {
+function MapNavigator({ onOpenMenu, onBackToQa } = {}) {
   const [activeFloor, setActiveFloor] = useState("floor1");
   const [currentLocation, setCurrentLocation] = useState(null);
   const [destination, setDestination] = useState(null);
@@ -634,6 +634,16 @@ function MapNavigator() {
             <button type="button" className="map-navigator__btn" onClick={() => setShowQr(true)}>
               Scan QR
             </button>
+            {onBackToQa && (
+              <button type="button" className="map-navigator__btn" onClick={onBackToQa}>
+                Back to Q&amp;A
+              </button>
+            )}
+            {onOpenMenu && (
+              <button type="button" className="map-navigator__btn" onClick={onOpenMenu}>
+                Menu
+              </button>
+            )}
           </div>
 
           <div className="map-navigator__map-scroll">

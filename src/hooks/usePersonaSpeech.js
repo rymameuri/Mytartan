@@ -42,6 +42,9 @@ export function usePersonaSpeech(avatarRef) {
   const [isPreparingSpeech, setIsPreparingSpeech] = useState(false);
   const [caption, setCaption] = useState("");
   const speakTimerRef = useRef(null);
+  const queueRef = useRef([]);
+  const drainingRef = useRef(false);
+  const runIdRef = useRef(0);
   const revealTimerRef = useRef(null);
   const fallbackTimerRef = useRef(null);
   const boundarySeenRef = useRef(false);
@@ -150,18 +153,28 @@ export function usePersonaSpeech(avatarRef) {
       };
 
       window.speechSynthesis.speak(utterance);
+      return new Promise((resolve) => {
+        const done = () => resolve();
+        const previousEnd = utterance.onend;
+        const previousError = utterance.onerror;
+        utterance.onend = () => {
+          previousEnd?.();
+          done();
+        };
+        utterance.onerror = () => {
+          previousError?.();
+          done();
+        };
+      });
     },
     [clearRevealTimers, finishSpeaking, startTimedReveal, updateCaptionForWord]
   );
 
-  const speak = useCallback(
-    async (text) => {
+  const speakOne = useCallback(
+    async (normalized) => {
       clearTimeout(speakTimerRef.current);
       clearRevealTimers();
       clearCaption();
-
-      const normalized = normalizeSpeechCaption(toSpokenText(text));
-      if (!normalized) return;
 
       fullTextRef.current = normalized;
 
@@ -200,7 +213,7 @@ export function usePersonaSpeech(avatarRef) {
         }
       }
 
-      speakBrowser(normalized);
+      await speakBrowser(normalized);
     },
     [
       avatarRef,
@@ -213,7 +226,33 @@ export function usePersonaSpeech(avatarRef) {
     ]
   );
 
+  const speak = useCallback(
+    (text) => {
+      const normalized = normalizeSpeechCaption(toSpokenText(text));
+      if (!normalized) return;
+      queueRef.current.push(normalized);
+      if (drainingRef.current) return;
+
+      const runId = runIdRef.current;
+      drainingRef.current = true;
+      (async () => {
+        try {
+          while (queueRef.current.length && runId === runIdRef.current) {
+            const next = queueRef.current.shift();
+            await speakOne(next);
+          }
+        } finally {
+          if (runId === runIdRef.current) drainingRef.current = false;
+        }
+      })();
+    },
+    [speakOne]
+  );
+
   const stop = useCallback(() => {
+    runIdRef.current += 1;
+    queueRef.current = [];
+    drainingRef.current = false;
     clearTimeout(speakTimerRef.current);
     speakTimerRef.current = null;
     clearRevealTimers();
