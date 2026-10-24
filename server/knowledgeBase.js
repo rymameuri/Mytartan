@@ -9,8 +9,9 @@ const SYNONYMS_PATH = path.join(__dirname, "..", "data", "synonyms.json");
 const KEY_FACTS_PATH = path.join(__dirname, "..", "data", "key-facts.json");
 
 const HAIKU_MODEL = "claude-haiku-20240307";
-const RERANK_CANDIDATE_COUNT = 10;
-const RERANK_FALLBACK_COUNT = 5;
+const RERANK_CANDIDATE_COUNT = 6;
+const RERANK_FALLBACK_COUNT = 4;
+const RERANK_CHUNK_CHARS = 400;
 
 let documents = [];
 let synonyms = {};
@@ -209,9 +210,10 @@ function expandQuery(rawQuery) {
   }
 
   for (const token of q.split(/\s+/)) {
-    if (synonyms[token]) {
-      expansions.push(synonyms[token]);
-    }
+    const cleaned = token.replace(/[^a-z0-9-]/g, "");
+    const singular = cleaned.endsWith("s") ? cleaned.slice(0, -1) : "";
+    const canonical = (cleaned && synonyms[cleaned] && cleaned) || (singular && synonyms[singular] && singular);
+    if (canonical) expansions.push(synonyms[canonical]);
   }
 
   if (expansions.length) {
@@ -614,10 +616,39 @@ function tokenMatches(haystack, token) {
   if (token.length <= 3) {
     return new RegExp(`\\b${escaped}\\b`, "i").test(haystack);
   }
-  return haystack.includes(token);
+  if (haystack.includes(token)) return true;
+  // Plural/singular, but only on a whole word so "physics" does not hit "physical".
+  if (token.length > 4 && token.endsWith("s") && new RegExp(`\\b${token.slice(0, -1)}\\b`, "i").test(haystack)) {
+    return true;
+  }
+  if (token.length > 4 && !token.endsWith("s") && new RegExp(`\\b${escaped}s\\b`, "i").test(haystack)) {
+    return true;
+  }
+  return false;
 }
 
-function scoreDocumentTfidf(doc, queryTokens, queryLower) {
+const PHRASE_SYNONYM_SKIP = new Set([
+  "gpa", "qpa", "major", "majors", "deadline", "dates", "calendar", "register", "enroll",
+]);
+
+function collectQueryPhrases(rawQuery) {
+  const phrases = new Set();
+  const originalTokens = tokenizeForScoring(normalizeQuery(rawQuery));
+  for (let i = 0; i < originalTokens.length - 1; i += 1) {
+    const phrase = `${originalTokens[i]} ${originalTokens[i + 1]}`;
+    if (phrase.length >= 8) phrases.add(phrase);
+  }
+
+  const expanded = expandQuery(rawQuery).toLowerCase();
+  for (const [key, value] of Object.entries(synonyms)) {
+    if (PHRASE_SYNONYM_SKIP.has(key) || !expanded.includes(key)) continue;
+    const phrase = String(value).toLowerCase().trim();
+    if (phrase.includes(" ")) phrases.add(phrase);
+  }
+  return [...phrases];
+}
+
+function scoreDocumentTfidf(doc, queryTokens, queryLower, queryPhrases = []) {
   const haystack = getDocSearchText(doc);
   const firstLine = getFirstLine(doc);
   const topicLower = doc.topic.toLowerCase();
@@ -675,6 +706,14 @@ function scoreDocumentTfidf(doc, queryTokens, queryLower) {
 
   if (!matchedTerms) return 0;
 
+  let phraseHits = 0;
+  for (const phrase of queryPhrases) {
+    if (!phrase) continue;
+    if (topicLower.includes(phrase)) phraseHits += 3;
+    else if (haystack.includes(phrase)) phraseHits += 1;
+  }
+  if (phraseHits) score += 90 * phraseHits;
+
   if (queryLower.length > 3 && haystack.includes(queryLower)) {
     score += 6;
   }
@@ -691,17 +730,31 @@ function scoreDocumentTfidf(doc, queryTokens, queryLower) {
   if (doc.file.endsWith("student-handbook.txt") && /\b(integrity|conduct|policy|policies|rules)\b/.test(queryLower)) {
     score *= 1.4;
   }
+  if (/\bintegrity\b/.test(queryLower) && /statement-on-academic-integrity|student-handbook/.test(fileLower)) {
+    score += 140;
+  }
+  if (/\b(tafawq|tamaiyuz)\b/.test(queryLower) && /academic-calendar|calendars-schedules/.test(fileLower)) {
+    score *= 0.35;
+  }
+  if (
+    isCalendarDateQuery(queryLower) &&
+    !/\b(tafawq|tamaiyuz|scholarship|housing|visa|tuition|overload|minor|stuco|wifi|print)\b/.test(queryLower) &&
+    /academic-calendar|calendars-schedules/.test(fileLower)
+  ) {
+    score += 160;
+  }
 
   return score;
 }
 
 function rankDocuments(retrievalQuery) {
   const { normalizedQuery, queryTokens } = prepareQueryTokens(retrievalQuery);
+  const queryPhrases = collectQueryPhrases(retrievalQuery);
 
   return documents
     .map((doc) => ({
       doc,
-      score: scoreDocumentTfidf(doc, queryTokens, normalizedQuery),
+      score: scoreDocumentTfidf(doc, queryTokens, normalizedQuery, queryPhrases),
     }))
     .filter(({ score }) => score > 0)
     .sort((a, b) => b.score - a.score);
@@ -738,7 +791,7 @@ async function rerankCandidates(question, candidates) {
   const chunkLines = candidates
     .map(
       (entry, index) =>
-        `[${index}] Topic: ${entry.doc.topic}\n${entry.doc.body.slice(0, 700)}`
+        `[${index}] Topic: ${entry.doc.topic}\n${entry.doc.body.slice(0, RERANK_CHUNK_CHARS)}`
     )
     .join("\n\n");
 
@@ -767,19 +820,57 @@ async function rerankCandidates(question, candidates) {
 function packDocuments(rankedEntries, { limit, maxChars, maxDocChars, method }) {
   const selected = [];
   let chars = 0;
+  const seenFiles = new Set();
 
-  for (const { doc, score } of rankedEntries) {
-    if (selected.length >= limit || chars >= maxChars) break;
-    selected.push({
-      ...doc,
-      body: doc.body.slice(0, maxDocChars),
-      score,
-      method,
-    });
-    chars += Math.min(doc.body.length, maxDocChars);
+  function take(maxCopies) {
+    for (const { doc, score } of rankedEntries) {
+      if (selected.length >= limit || chars >= maxChars) return;
+      const copies = selected.filter((item) => item.file === doc.file).length;
+      if (copies >= maxCopies) continue;
+      selected.push({
+        ...doc,
+        body: doc.body.slice(0, maxDocChars),
+        score,
+        method,
+      });
+      seenFiles.add(doc.file);
+      chars += Math.min(doc.body.length, maxDocChars);
+    }
   }
 
+  take(1);
+  if (selected.length < limit) take(2);
   return selected;
+}
+
+function queryAnchorTokens(query) {
+  return tokenizeForScoring(normalizeQuery(expandQuery(query))).filter(
+    (token) => token.length >= 6 && !GENERIC_FACT_TOKENS.has(token)
+  );
+}
+
+function docCoversAnchors(doc, anchors) {
+  if (!anchors.length) return true;
+  const haystack = getDocSearchText(doc);
+  return anchors.some((token) => tokenMatches(haystack, token));
+}
+
+function keepCoveringDocs(query, ranked) {
+  const anchors = queryAnchorTokens(query);
+  if (!anchors.length) return ranked;
+  return ranked.filter(({ doc }) => docCoversAnchors(doc, anchors));
+}
+
+function shouldRerankCandidates(ranked) {
+  if (!ranked || ranked.length < 2) return false;
+  const top = ranked[0];
+  const topScore = top.score || 0;
+  const topFile = top.doc?.file;
+  const rival = ranked.find((entry, index) => index > 0 && entry.doc?.file !== topFile);
+  if (!rival) return false;
+  const second = rival.score || 0;
+  if (topScore >= 80 && second > 0 && topScore >= second * 1.85) return false;
+  return true;
 }
 
 function retrieveRelevantDocsSync(query, { limit = 3, maxChars = 5000, maxDocChars = 600 } = {}) {
@@ -787,8 +878,8 @@ function retrieveRelevantDocsSync(query, { limit = 3, maxChars = 5000, maxDocCha
   if (isProfessorNuiQuery(query)) return [getProfessorNuiDoc()];
   if (!documents.length) return [];
 
-  const ranked = rankDocuments(query);
-  return packDocuments(ranked.slice(0, limit), {
+  const ranked = keepCoveringDocs(query, rankDocuments(query));
+  return packDocuments(ranked, {
     limit,
     maxChars,
     maxDocChars,
@@ -831,15 +922,20 @@ async function retrieveRelevantDocsAsync(
   const usedQueryRewriting = rewrittenQuery.trim() !== query.trim();
   const retrievalQuery = rewrittenQuery;
 
-  const ranked = rankDocuments(retrievalQuery);
+  const ranked = keepCoveringDocs(retrievalQuery, rankDocuments(retrievalQuery));
   if (!ranked.length) {
     recordLastQuery({ rawQuery: query, retrievalQuery, usedQueryRewriting, usedReranking: false });
     return [];
   }
 
-  const candidates = ranked.slice(0, RERANK_CANDIDATE_COUNT);
-  const { ranked: reranked, usedReranking } = await rerankCandidates(retrievalQuery, candidates);
-  const finalRanked = reranked.length ? reranked : ranked.slice(0, RERANK_FALLBACK_COUNT);
+  let finalRanked = ranked;
+  let usedReranking = false;
+  if (shouldRerankCandidates(ranked)) {
+    const candidates = ranked.slice(0, RERANK_CANDIDATE_COUNT);
+    const result = await rerankCandidates(retrievalQuery, candidates);
+    finalRanked = result.ranked.length ? result.ranked : ranked.slice(0, RERANK_FALLBACK_COUNT);
+    usedReranking = result.usedReranking;
+  }
 
   const docs = packDocuments(finalRanked, {
     limit,
@@ -901,32 +997,48 @@ function loadKeyFacts() {
   return keyFactsCache;
 }
 
-function topicMatchesQuery(topic, queryLower, queryTokens) {
-  const topicLower = topic.toLowerCase();
-  const topicTokens = tokenizeForScoring(topicLower);
+const GENERIC_FACT_TOKENS = new Set([
+  "course", "courses", "student", "students", "fee", "fees", "cost", "campus",
+  "program", "programs", "semester", "credit", "credits", "service", "services",
+  "contact", "support", "application", "grant", "based", "need", "requirement",
+  "requirements", "registration", "deadline", "deadlines", "date", "dates",
+  "week", "unit", "units", "limit", "hall", "network", "names", "connect",
+  "setup", "address", "phone", "email", "free", "confidential", "gpa", "qpa",
+  "financial", "aid", "per", "amount", "payment", "grade", "point", "average",
+  "hours", "hour", "time", "labs",
+]);
 
-  if (topicTokens.some((token) => queryTokens.includes(token))) {
-    return true;
+function factMatchScore(topic, queryTokens) {
+  const topicTokens = tokenizeForScoring(topic);
+  let distinctive = 0;
+  for (const token of topicTokens) {
+    if (!queryTokens.includes(token)) continue;
+    if (!GENERIC_FACT_TOKENS.has(token) && token.length >= 5) {
+      distinctive += token.length;
+    }
   }
-
-  if (topicTokens.some((token) => token.length > 3 && queryLower.includes(token))) {
-    return true;
-  }
-
-  return queryTokens.some((token) => token.length > 3 && topicLower.includes(token));
+  return distinctive;
 }
 
 /**
  * Match query keywords against structured key-facts.json topic fields.
+ * A single generic word (fee, course, gpa) is not enough — that was pulling
+ * unrelated dollar amounts into the prompt.
  */
 function checkKeyFacts(query) {
   const facts = loadKeyFacts();
   if (!query?.trim() || !facts.length) return [];
 
-  const queryLower = query.toLowerCase();
   const queryTokens = tokenizeForScoring(normalizeQuery(expandQuery(query)));
+  const scored = facts
+    .map((fact) => ({ fact, distinctive: factMatchScore(fact.topic, queryTokens) }))
+    .filter((entry) => entry.distinctive > 0);
 
-  return facts.filter((fact) => topicMatchesQuery(fact.topic, queryLower, queryTokens));
+  if (!scored.length) return [];
+  const best = Math.max(...scored.map((entry) => entry.distinctive));
+  return scored
+    .filter((entry) => entry.distinctive >= best * 0.8)
+    .map((entry) => entry.fact);
 }
 
 function buildKeyFactsBlock(facts) {
@@ -978,12 +1090,18 @@ function computeConfidence(docs) {
 
   const sourceCount = docs.length;
   const sourceLabel = sourceCount === 1 ? "source" : "sources";
+  const topics = [];
+  for (const doc of docs) {
+    if (doc.topic && !topics.includes(doc.topic)) topics.push(doc.topic);
+    if (topics.length >= 3) break;
+  }
+  const topicNote = topics.length ? `: ${topics.join(", ")}` : "";
 
   return {
     score: scorePercent,
     sourceCount,
     method,
-    message: `Scotty is ${scorePercent}% confident in this answer based on ${sourceCount} ${sourceLabel}`,
+    message: `Scotty is ${scorePercent}% confident in this answer based on ${sourceCount} ${sourceLabel}${topicNote}`,
     sources: docs.map((d) => ({
       topic: d.topic,
       file: d.file,
@@ -1003,6 +1121,7 @@ module.exports = {
   buildKeyFactsBlock,
   checkKeyFacts,
   computeConfidence,
+  shouldRerankCandidates,
   getRetrievalStatus,
   isProfessorNuiQuery,
   getProfessorNuiReply: () => PROFESSOR_NUI_REPLY,

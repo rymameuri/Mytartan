@@ -62,6 +62,24 @@ describe("GET /api/kb/status", () => {
 // ─── POST /api/chat — validation ──────────────────────────────────────────────
 
 describe("POST /api/chat — input validation", () => {
+  test("asks for a question when the user message is blank", async () => {
+    const res = await request(app)
+      .post("/api/chat")
+      .send({ messages: [{ role: "user", content: "   " }], mode: "qa" });
+    expect(res.status).toBe(200);
+    expect(res.body.reply).toMatch(/what you want to know/i);
+    expect(res.body.metadata.timings.retrievalMs).toBe(0);
+  });
+
+  test("includes retrieval timing on a knowledge-base reply", async () => {
+    const res = await request(app)
+      .post("/api/chat")
+      .send({ messages: [{ role: "user", content: "What is StuCo?" }], mode: "qa" });
+    expect(res.status).toBe(200);
+    expect(res.body.metadata.timings.retrievalMs).toEqual(expect.any(Number));
+    expect(res.body.metadata.timings.usedReranking).toBe(false);
+  });
+
   test("returns 400 when messages is missing", async () => {
     const res = await request(app)
       .post("/api/chat")
@@ -172,6 +190,24 @@ describe("POST /api/chat — input validation", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.reply).not.toMatch(/^Hey — Scotty here/);
+  });
+
+  test("leads a TAFAWQ answer with the verified 4.0 GPA when no model is configured", async () => {
+    const res = await request(app)
+      .post("/api/chat")
+      .send({ messages: [{ role: "user", content: "What GPA do I need for tafawq?" }], mode: "qa" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.reply.trim().startsWith("TAFAWQ merit scholarship requires a cumulative GPA of 4.0.")).toBe(true);
+  });
+
+  test("does not brush off an Arabic question as small talk when no model is configured", async () => {
+    const res = await request(app)
+      .post("/api/chat")
+      .send({ messages: [{ role: "user", content: "ما هو ستوكو؟" }], mode: "qa" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.reply).not.toMatch(/i'm here/i);
   });
 
   test("returns confidence metadata for KB-grounded replies", async () => {

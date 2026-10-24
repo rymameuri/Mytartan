@@ -545,14 +545,24 @@ function buildSystemPrompt(
 
 function answerFromKnowledgeBase(userQuery) {
   const docs = retrieveRelevantDocs(userQuery, { limit: 2, maxDocChars: 2000 });
-  if (!docs.length) {
+  const facts = checkKeyFacts(userQuery);
+  if (!docs.length && !facts.length) {
     return { reply: NO_KB_MATCH_REPLY, confidence: computeConfidence([]) };
   }
 
-  const blocks = docs.map((doc) => `**${doc.topic}**\n${doc.body.trim()}`);
-  const reply = `${blocks.join("\n\n---\n\n")}\n\nFrom the official myCMU-Q stuff if you want more:\n${MYCMUQ_STUDENT_AFFAIRS_URL}`;
+  const parts = [];
+  if (facts.length) {
+    parts.push(facts.map((fact) => fact.value).join("\n\n"));
+  }
+  if (docs.length) {
+    parts.push(docs.map((doc) => `**${doc.topic}**\n${doc.body.trim()}`).join("\n\n---\n\n"));
+  }
+  const reply = `${parts.join("\n\n")}\n\nFrom the official myCMU-Q stuff if you want more:\n${MYCMUQ_STUDENT_AFFAIRS_URL}`;
 
-  return { reply, confidence: computeConfidence(docs) };
+  const confidenceDocs = docs.length
+    ? docs
+    : [{ score: 80, method: "key-fact", topic: facts[0].source, file: "data/key-facts.json" }];
+  return { reply, confidence: computeConfidence(confidenceDocs) };
 }
 
 function sendSseEvent(res, payload) {
@@ -1051,7 +1061,7 @@ async function getChatReply(systemPrompt, messages, aiOptions) {
   return chatWithAnthropic(systemPrompt, messages, aiOptions);
 }
 
-function buildReplyMeta({ mode, userQuery, confidence = null, keyFacts = [] }) {
+function buildReplyMeta({ mode, userQuery, confidence = null, keyFacts = [], timings = null }) {
   return {
     mode,
     userQuery,
@@ -1060,6 +1070,7 @@ function buildReplyMeta({ mode, userQuery, confidence = null, keyFacts = [] }) {
       id: fact.id,
       topic: fact.topic,
     })),
+    timings,
   };
 }
 
@@ -1103,6 +1114,10 @@ async function sendChatReply(
       userQuery: metadata.userQuery,
       keyFacts: metadata.keyFacts,
     };
+    if (metadata.timings) {
+      payload.timings = metadata.timings;
+      payload.metadata.timings = metadata.timings;
+    }
   }
   return res.json(payload);
 }
@@ -1149,6 +1164,17 @@ async function handleChatRequest(req, res, { stream = false } = {}) {
     });
   }
 
+  if (!userQuery.trim()) {
+    return sendChatReply(res, "Tell me what you want to know about CMU-Q.", {
+      stream,
+      replyMeta: buildReplyMeta({
+        mode,
+        userQuery,
+        timings: { retrievalMs: 0, usedQueryRewriting: false, usedReranking: false },
+      }),
+    });
+  }
+
   if (KB_MODES.has(mode) && isProfessorNuiQuery(userQuery)) {
     const reply = getProfessorNuiReply();
     const professorNuiConfidence = computeConfidence([{ score: 999, method: "keyword" }]);
@@ -1178,7 +1204,15 @@ async function handleChatRequest(req, res, { stream = false } = {}) {
   }
 
   const recentMessages = messages.slice(-5);
+  const retrievalStarted = Date.now();
   const { docs, confidence } = await retrieveForQuery(mode, userQuery, recentMessages);
+  const retrievalMs = Date.now() - retrievalStarted;
+  const lastRetrieval = getRetrievalStatus().lastQuery || {};
+  const timings = {
+    retrievalMs,
+    usedQueryRewriting: Boolean(lastRetrieval.usedQueryRewriting),
+    usedReranking: Boolean(lastRetrieval.usedReranking),
+  };
   const keyFacts = KB_MODES.has(mode) ? checkKeyFacts(userQuery) : [];
   const studentContext = buildStudentContext(req.user?.profile);
   const canvasContext = req.user?.id ? await getCanvasContext(req.user.id) : null;
@@ -1199,7 +1233,7 @@ async function handleChatRequest(req, res, { stream = false } = {}) {
   const courseContextBlock =
     mode === "tutor" ? formatCourseContextBlock(courseContext) : "";
 
-  const replyMeta = buildReplyMeta({ mode, userQuery, confidence, keyFacts });
+  const replyMeta = buildReplyMeta({ mode, userQuery, confidence, keyFacts, timings });
 
   const campusFactQuery = isCampusFactQuery(userQuery);
   const requireKbAnswer =
@@ -1210,7 +1244,7 @@ async function handleChatRequest(req, res, { stream = false } = {}) {
     const noMatchConfidence = computeConfidence([]);
     return sendChatReply(res, reply, {
       stream,
-      replyMeta: buildReplyMeta({ mode, userQuery, confidence: noMatchConfidence, keyFacts }),
+      replyMeta: buildReplyMeta({ mode, userQuery, confidence: noMatchConfidence, keyFacts, timings }),
     });
   }
 
@@ -1227,7 +1261,8 @@ async function handleChatRequest(req, res, { stream = false } = {}) {
 
   if (!hasAiKey()) {
     if (KB_MODES.has(mode)) {
-      if (!campusFactQuery) {
+      const looksLikeQuestion = /[?\u0600-\u06FF]/.test(userQuery);
+      if (!campusFactQuery && !looksLikeQuestion) {
         return sendChatReply(res, CASUAL_NO_AI_REPLY, {
           stream,
           replyMeta: buildReplyMeta({
@@ -1247,6 +1282,7 @@ async function handleChatRequest(req, res, { stream = false } = {}) {
           userQuery,
           confidence: kbConfidence,
           keyFacts: kbKeyFacts,
+          timings,
         }),
       });
     }
@@ -1272,10 +1308,18 @@ async function handleChatRequest(req, res, { stream = false } = {}) {
       sendReplyMetadata(res, replyMeta);
 
       let reply = "";
+      const llmStarted = Date.now();
+      let recordedTtft = false;
       await streamChatReply(systemPrompt, messages, (text) => {
+        if (!recordedTtft) {
+          recordedTtft = true;
+          timings.llmTtftMs = Date.now() - llmStarted;
+          sendSseEvent(res, { type: "timings", timings: { ...timings } });
+        }
         reply += text;
         sendSseEvent(res, { type: "token", text });
       }, aiOptions);
+      timings.llmMs = Date.now() - llmStarted;
 
       if (mode === "tutor" && reply.trim()) {
         const speechText = await generateTutorSpeechScript(
@@ -1302,8 +1346,10 @@ async function handleChatRequest(req, res, { stream = false } = {}) {
       return res.end();
     }
 
+    const llmStarted = Date.now();
     const reply = await getChatReply(systemPrompt, messages, aiOptions);
-    const payload = { reply };
+    timings.llmMs = Date.now() - llmStarted;
+    const payload = { reply, timings };
     if (replyMeta.confidence) {
       payload.confidence = replyMeta.confidence;
     }
@@ -1311,6 +1357,7 @@ async function handleChatRequest(req, res, { stream = false } = {}) {
       mode: replyMeta.mode,
       userQuery: replyMeta.userQuery,
       keyFacts: replyMeta.keyFacts,
+      timings,
     };
     if (mode === "tutor" && reply.trim()) {
       payload.speech = await generateTutorSpeechScript(
@@ -1513,7 +1560,7 @@ app.post("/api/tts", async (req, res) => {
     return res.status(400).json({ error: "text is required" });
   }
 
-  const modelId = process.env.ELEVENLABS_MODEL_ID?.trim() || "eleven_multilingual_v2";
+  const modelId = process.env.ELEVENLABS_MODEL_ID?.trim() || "eleven_flash_v2_5";
 
   try {
     const response = await axios.post(

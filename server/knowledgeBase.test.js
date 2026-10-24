@@ -12,6 +12,7 @@ const {
   buildKeyFactsBlock,
   checkKeyFacts,
   computeConfidence,
+  shouldRerankCandidates,
 } = require("./knowledgeBase");
 
 // Load the real knowledge base before all tests
@@ -236,6 +237,17 @@ describe("checkKeyFacts", () => {
     expect(checkKeyFacts("xyzzy frobble quuxington")).toEqual([]);
   });
 
+  test("does not attach unrelated fees to a parking question", () => {
+    const facts = checkKeyFacts("How much is the student parking fee per semester?");
+    expect(facts.map((fact) => fact.id)).not.toContain("idCardReplacementFee");
+    expect(facts.map((fact) => fact.id)).not.toContain("fireSafetyPenaltyFee");
+  });
+
+  test("does not attach the overload cap to a registration question", () => {
+    const facts = checkKeyFacts("How do I register for courses?");
+    expect(facts.map((fact) => fact.id)).not.toContain("courseOverloadUnitLimit");
+  });
+
   test("buildKeyFactsBlock marks facts as authoritative", () => {
     const facts = checkKeyFacts("TAMAIYUZ application deadline");
     const block = buildKeyFactsBlock(facts);
@@ -277,6 +289,46 @@ describe("computeConfidence", () => {
     const results = retrieveRelevantDocs("How much is tuition per semester?", { limit: 2 });
     const conf = computeConfidence(results);
     expect(conf.score).toBeGreaterThanOrEqual(80);
+  });
+
+  test("names the matched page in the confidence message", () => {
+    const results = retrieveRelevantDocs("What is StuCo?", { limit: 2 });
+    const conf = computeConfidence(results);
+    expect(conf.message).toMatch(/StuCo/i);
+    expect(conf.sources[0].topic).toBeTruthy();
+  });
+
+  test("retrieves financial aid for the slang question 'what is fa?'", () => {
+    const results = retrieveRelevantDocs("What is fa?");
+    expect(results.some((doc) => doc.file.includes("financial-aid"))).toBe(true);
+  });
+
+  test("retrieves the Information Systems overview instead of sprinkler systems", () => {
+    const results = retrieveRelevantDocs("What is the Information Systems program?", { limit: 2 });
+    expect(results[0].file).toMatch(/information-systems/i);
+    expect(results[0].file).not.toMatch(/fire-extinguisher/i);
+  });
+
+  test("retrieves the financial aid page for a TAFAWQ GPA question", () => {
+    const results = retrieveRelevantDocs("What GPA do I need for tafawq?", { limit: 2 });
+    expect(results[0].file).toMatch(/financial-aid/i);
+  });
+
+  test("skips the rerank model call when the top page is far ahead", () => {
+    expect(
+      shouldRerankCandidates([
+        { score: 400, doc: { file: "a.txt" } },
+        { score: 390, doc: { file: "a.txt" } },
+        { score: 120, doc: { file: "b.txt" } },
+      ])
+    ).toBe(false);
+    expect(
+      shouldRerankCandidates([
+        { score: 210, doc: { file: "a.txt" } },
+        { score: 180, doc: { file: "b.txt" } },
+      ])
+    ).toBe(true);
+    expect(shouldRerankCandidates([{ score: 90, doc: { file: "a.txt" } }])).toBe(false);
   });
 
   test("assigns high confidence to strong matches", () => {

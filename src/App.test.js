@@ -11,6 +11,7 @@ test('renders login form when not authenticated', () => {
   render(<App />);
   expect(screen.getByRole('tab', { name: /log in/i })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /^log in$/i })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /continue to the demo/i })).toBeInTheDocument();
 });
 
 test('renders without crashing', () => {

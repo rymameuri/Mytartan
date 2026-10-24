@@ -43,6 +43,7 @@
 
 .pv-mode-tabs {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 4px;
   margin-left: 0;
@@ -75,6 +76,16 @@
   background: rgba(255, 255, 255, 0.18);
   color: var(--tartan-white);
   box-shadow: 0 3px 10px rgba(28, 4, 10, 0.16);
+}
+
+.pv-grounding {
+  margin: 10px auto 0;
+  max-width: 38rem;
+  padding: 0 16px;
+  text-align: center;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.72);
 }
 
 .pv-interaction-tabs {
